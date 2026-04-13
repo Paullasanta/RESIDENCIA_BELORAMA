@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  ADMIN
+  RESIDENTE
+  COCINERO
+}
+
+enum DiaSemana {
+  LUNES
+  MARTES
+  MIERCOLES
+  JUEVES
+  VIERNES
+  SABADO
+  DOMINGO
+}
+
+enum EstadoTurno {
+  LIBRE
+  OCUPADO
+  SOLICITADO
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PARCIAL
+  PAGADO
+}
+
+enum EstadoProducto {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+}
+
+enum TipoMenu {
+  DESAYUNO
+  ALMUERZO
+  CENA
+}
+
+model User {
+  id          String      @id @default(cuid())
+  nombre      String
+  email       String      @unique
+  password    String
+  rol         Rol         @default(RESIDENTE)
+  residenciaId String?
+  residencia  Residencia? @relation(fields: [residenciaId], references: [id])
+  residente   Residente?
+  egresos     Egreso[]
+  createdAt   DateTime    @default(now())
+}
+
+model Residencia {
+  id           String                  @id @default(cuid())
+  nombre       String
+  direccion    String
+  descripcion  String?
+  fotos        String[]
+  capacidad    Int
+  activa       Boolean                 @default(true)
+  users        User[]
+  habitaciones Habitacion[]
+  lavadoras    Lavadora[]
+  turnos       TurnoLavanderia[]
+  publicaciones PublicacionHabitacion[]
+  egresos      Egreso[]
+  menus        MenuResidencia[]
+  createdAt    DateTime                @default(now())
+}
+
+model Habitacion {
+  id           String                  @id @default(cuid())
+  residenciaId String
+  residencia   Residencia              @relation(fields: [residenciaId], references: [id])
+  numero       String
+  piso         Int
+  capacidad    Int
+  disponible   Boolean                 @default(true)
+  fotos        String[]
+  residentes   Residente[]
+  publicacion  PublicacionHabitacion?
+}
+
+model Residente {
+  id                String            @id @default(cuid())
+  userId            String            @unique
+  user              User              @relation(fields: [userId], references: [id])
+  habitacionId      String?
+  habitacion        Habitacion?       @relation(fields: [habitacionId], references: [id])
+  activo            Boolean           @default(true)
+  fechaIngreso      DateTime          @default(now())
+  turnos            TurnoLavanderia[]
+  pagos             Pago[]
+  productos         ProductoMarketplace[]
+  asistencias       AsistenciaComida[]
+}
+
+model Lavadora {
+  id           String            @id @default(cuid())
+  residenciaId String
+  residencia   Residencia        @relation(fields: [residenciaId], references: [id])
+  nombre       String
+  activa       Boolean           @default(true)
+  turnos       TurnoLavanderia[]
+}
+
+model TurnoLavanderia {
+  id           String      @id @default(cuid())
+  lavadoraId   String
+  lavadora     Lavadora    @relation(fields: [lavadoraId], references: [id])
+  residenciaId String
+  residencia   Residencia  @relation(fields: [residenciaId], references: [id])
+  dia          DiaSemana
+  horaInicio   String
+  horaFin      String
+  residenteId  String?
+  residente    Residente?  @relation(fields: [residenteId], references: [id])
+  estado       EstadoTurno @default(LIBRE)
+}
+
+model Pago {
+  id           String     @id @default(cuid())
+  residenteId  String
+  residente    Residente  @relation(fields: [residenteId], references: [id])
+  monto        Float
+  montoPagado  Float      @default(0)
+  comprobante  String?
+  estado       EstadoPago @default(PENDIENTE)
+  cuotas       Cuota[]
+  createdAt    DateTime   @default(now())
+}
+
+model Cuota {
+  id               String   @id @default(cuid())
+  pagoId           String
+  pago             Pago     @relation(fields: [pagoId], references: [id])
+  monto            Float
+  pagado           Boolean  @default(false)
+  fechaVencimiento DateTime
+}
+
+model Menu {
+  id          String           @id @default(cuid())
+  tipo        TipoMenu
+  nombre      String
+  descripcion String?
+  fecha       DateTime
+  activo      Boolean          @default(true)
+  residencias MenuResidencia[]
+  asistencias AsistenciaComida[]
+  createdAt   DateTime         @default(now())
+}
+
+model MenuResidencia {
+  id           String     @id @default(cuid())
+  menuId       String
+  menu         Menu       @relation(fields: [menuId], references: [id])
+  residenciaId String
+  residencia   Residencia @relation(fields: [residenciaId], references: [id])
+}
+
+model AsistenciaComida {
+  id          String    @id @default(cuid())
+  menuId      String
+  menu        Menu      @relation(fields: [menuId], references: [id])
+  residenteId String
+  residente   Residente @relation(fields: [residenteId], references: [id])
+  asiste      Boolean   @default(true)
+}
+
+model PublicacionHabitacion {
+  id           String     @id @default(cuid())
+  habitacionId String     @unique
+  habitacion   Habitacion @relation(fields: [habitacionId], references: [id])
+  residenciaId String
+  residencia   Residencia @relation(fields: [residenciaId], references: [id])
+  titulo       String
+  descripcion  String?
+  fotos        String[]
+  coordLat     Float?
+  coordLng     Float?
+  activa       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+}
+
+model ProductoMarketplace {
+  id          String         @id @default(cuid())
+  residenteId String
+  residente   Residente      @relation(fields: [residenteId], references: [id])
+  titulo      String
+  descripcion String?
+  precio      Float
+  fotos       String[]
+  estado      EstadoProducto @default(PENDIENTE)
+  createdAt   DateTime       @default(now())
+}
+
+model Egreso {
+  id           String     @id @default(cuid())
+  adminId      String
+  admin        User       @relation(fields: [adminId], references: [id])
+  concepto     String
+  monto        Float
+  categoria    String
+  residenciaId String?
+  residencia   Residencia? @relation(fields: [residenciaId], references: [id])
+  fecha        DateTime   @default(now())
+}
