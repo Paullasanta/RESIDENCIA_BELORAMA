@@ -48,12 +48,12 @@ enum TipoMenu {
 }
 
 model User {
-  id          String      @id @default(cuid())
+  id          Int         @id @default(autoincrement())
   nombre      String
   email       String      @unique
   password    String
   rol         Rol         @default(RESIDENTE)
-  residenciaId String?
+  residenciaId Int?
   residencia  Residencia? @relation(fields: [residenciaId], references: [id])
   residente   Residente?
   egresos     Egreso[]
@@ -61,7 +61,7 @@ model User {
 }
 
 model Residencia {
-  id           String                  @id @default(cuid())
+  id           Int                     @id @default(autoincrement())
   nombre       String
   direccion    String
   descripcion  String?
@@ -79,8 +79,8 @@ model Residencia {
 }
 
 model Habitacion {
-  id           String                  @id @default(cuid())
-  residenciaId String
+  id           Int                     @id @default(autoincrement())
+  residenciaId Int
   residencia   Residencia              @relation(fields: [residenciaId], references: [id])
   numero       String
   piso         Int
@@ -92,10 +92,10 @@ model Habitacion {
 }
 
 model Residente {
-  id                String            @id @default(cuid())
-  userId            String            @unique
+  id                Int               @id @default(autoincrement())
+  userId            Int               @unique
   user              User              @relation(fields: [userId], references: [id])
-  habitacionId      String?
+  habitacionId      Int?
   habitacion        Habitacion?       @relation(fields: [habitacionId], references: [id])
   activo            Boolean           @default(true)
   fechaIngreso      DateTime          @default(now())
@@ -106,8 +106,8 @@ model Residente {
 }
 
 model Lavadora {
-  id           String            @id @default(cuid())
-  residenciaId String
+  id           Int               @id @default(autoincrement())
+  residenciaId Int
   residencia   Residencia        @relation(fields: [residenciaId], references: [id])
   nombre       String
   activa       Boolean           @default(true)
@@ -115,22 +115,22 @@ model Lavadora {
 }
 
 model TurnoLavanderia {
-  id           String      @id @default(cuid())
-  lavadoraId   String
+  id           Int         @id @default(autoincrement())
+  lavadoraId   Int
   lavadora     Lavadora    @relation(fields: [lavadoraId], references: [id])
-  residenciaId String
+  residenciaId Int
   residencia   Residencia  @relation(fields: [residenciaId], references: [id])
   dia          DiaSemana
   horaInicio   String
   horaFin      String
-  residenteId  String?
+  residenteId  Int?
   residente    Residente?  @relation(fields: [residenteId], references: [id])
   estado       EstadoTurno @default(LIBRE)
 }
 
 model Pago {
-  id           String     @id @default(cuid())
-  residenteId  String
+  id           Int        @id @default(autoincrement())
+  residenteId  Int
   residente    Residente  @relation(fields: [residenteId], references: [id])
   monto        Float
   montoPagado  Float      @default(0)
@@ -141,8 +141,8 @@ model Pago {
 }
 
 model Cuota {
-  id               String   @id @default(cuid())
-  pagoId           String
+  id               Int      @id @default(autoincrement())
+  pagoId           Int
   pago             Pago     @relation(fields: [pagoId], references: [id])
   monto            Float
   pagado           Boolean  @default(false)
@@ -150,7 +150,7 @@ model Cuota {
 }
 
 model Menu {
-  id          String           @id @default(cuid())
+  id          Int              @id @default(autoincrement())
   tipo        TipoMenu
   nombre      String
   descripcion String?
@@ -162,27 +162,27 @@ model Menu {
 }
 
 model MenuResidencia {
-  id           String     @id @default(cuid())
-  menuId       String
+  id           Int        @id @default(autoincrement())
+  menuId       Int
   menu         Menu       @relation(fields: [menuId], references: [id])
-  residenciaId String
+  residenciaId Int
   residencia   Residencia @relation(fields: [residenciaId], references: [id])
 }
 
 model AsistenciaComida {
-  id          String    @id @default(cuid())
-  menuId      String
+  id          Int       @id @default(autoincrement())
+  menuId      Int
   menu        Menu      @relation(fields: [menuId], references: [id])
-  residenteId String
+  residenteId Int
   residente   Residente @relation(fields: [residenteId], references: [id])
   asiste      Boolean   @default(true)
 }
 
 model PublicacionHabitacion {
-  id           String     @id @default(cuid())
-  habitacionId String     @unique
+  id           Int        @id @default(autoincrement())
+  habitacionId Int        @unique
   habitacion   Habitacion @relation(fields: [habitacionId], references: [id])
-  residenciaId String
+  residenciaId Int
   residencia   Residencia @relation(fields: [residenciaId], references: [id])
   titulo       String
   descripcion  String?
@@ -194,8 +194,8 @@ model PublicacionHabitacion {
 }
 
 model ProductoMarketplace {
-  id          String         @id @default(cuid())
-  residenteId String
+  id          Int            @id @default(autoincrement())
+  residenteId Int
   residente   Residente      @relation(fields: [residenteId], references: [id])
   titulo      String
   descripcion String?
@@ -206,13 +206,13 @@ model ProductoMarketplace {
 }
 
 model Egreso {
-  id           String     @id @default(cuid())
-  adminId      String
+  id           Int        @id @default(autoincrement())
+  adminId      Int
   admin        User       @relation(fields: [adminId], references: [id])
   concepto     String
   monto        Float
   categoria    String
-  residenciaId String?
+  residenciaId Int?
   residencia   Residencia? @relation(fields: [residenciaId], references: [id])
   fecha        DateTime   @default(now())
 }

@@ -1,5 +1,5 @@
 import { PrismaClient, Rol, DiaSemana, EstadoTurno, TipoMenu } from '@prisma/client'
-import bcrypt from 'bcryptjs'
+
 
 const prisma = new PrismaClient()
 
@@ -25,7 +25,7 @@ async function main() {
         data: {
             nombre: 'Admin Belorama',
             email: 'admin@belorama.com',
-            password: await bcrypt.hash('admin123', 10),
+            password: 'admin123',
             rol: Rol.ADMIN,
         }
     })
@@ -35,7 +35,7 @@ async function main() {
         data: {
             nombre: 'Carlos Cocinero',
             email: 'cocinero@belorama.com',
-            password: await bcrypt.hash('cocina123', 10),
+            password: 'cocina123',
             rol: Rol.COCINERO,
         }
     })
@@ -106,7 +106,7 @@ async function main() {
                 data: {
                     nombre: r.nombre,
                     email: r.email,
-                    password: await bcrypt.hash('res123', 10),
+                    password: 'res123',
                     rol: Rol.RESIDENTE,
                     residenciaId: r.resId,
                 }

@@ -11,7 +11,7 @@ export default async function EditarResidentePage({ params }: EditarResidentePag
   const { id } = await params
   
   const [residente, residencias] = await Promise.all([
-    getResidente(id),
+    getResidente(Number(id)),
     getResidenciasConHabitaciones()
   ])
 

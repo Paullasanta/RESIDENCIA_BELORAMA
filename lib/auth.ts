@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from './prisma'
-import bcrypt from 'bcryptjs'
+
 
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -21,8 +21,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                 if (!user) return null
 
-                const passwordOk = await bcrypt.compare(credentials.password as string, user.password)
-                if (!passwordOk) return null
+                if (user.password !== credentials.password) return null
 
                 return {
                     id: user.id,
@@ -36,7 +35,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
-                token.id = user.id
+                token.id = Number(user.id)
                 token.rol = (user as any).rol
                 token.nombre = (user as any).nombre
             }
@@ -44,7 +43,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
         async session({ session, token }) {
             if (token && session.user) {
-                session.user.id = token.id as string
+                session.user.id = Number(token.id)
                 session.user.rol = token.rol as string
                 session.user.nombre = token.nombre as string
             }

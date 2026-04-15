@@ -20,7 +20,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
   const [habitacionId, setHabitacionId] = useState(initialData?.habitacionId || '')
 
   // Filtrar habitaciones disponibles de la residencia seleccionada
-  const residenciaSeleccionada = residencias.find(r => r.id === residenciaId)
+  const residenciaSeleccionada = residencias.find(r => r.id.toString() === residenciaId.toString())
   const habitacionesDisponibles = residenciaSeleccionada?.habitaciones || []
 
   async function handleSubmit(formData: FormData) {
@@ -117,8 +117,8 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
           >
             <option value="">Seleccionar habitación...</option>
             {/* Si es edición, mostramos la habitación actual aunque no esté "disponible" en la lista general */}
-            {initialData?.habitacion && !habitacionesDisponibles.find((h:any) => h.id === initialData.habitacionId) && (
-                <option value={initialData.habitacionId}>
+            {initialData?.habitacion && !habitacionesDisponibles.find((h:any) => h.id.toString() === initialData.habitacionId.toString()) && (
+                <option value={initialData.habitacionId.toString()}>
                     Hab. {initialData.habitacion.numero} (Actual)
                 </option>
             )}

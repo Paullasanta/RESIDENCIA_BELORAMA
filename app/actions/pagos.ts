@@ -6,13 +6,14 @@ import { revalidatePath } from 'next/cache'
 
 export async function createPago(data: any) {
   const { residenteId, monto, numCuotas, periodicidad } = data
+  const residenteIdNum = Number(residenteId)
   const montoTotal = parseFloat(monto)
 
   try {
     const pago = await prisma.$transaction(async (tx) => {
       const nuevoPago = await tx.pago.create({
         data: {
-          residenteId,
+          residenteId: residenteIdNum,
           monto: montoTotal,
           montoPagado: 0,
           estado: EstadoPago.PENDIENTE,
@@ -54,7 +55,7 @@ export async function createPago(data: any) {
   }
 }
 
-export async function toggleCuota(cuotaId: string, pagado: boolean) {
+export async function toggleCuota(cuotaId: number, pagado: boolean) {
   try {
     const result = await prisma.$transaction(async (tx) => {
       // 1. Actualizar la cuota
@@ -99,7 +100,7 @@ export async function toggleCuota(cuotaId: string, pagado: boolean) {
   }
 }
 
-export async function deletePago(id: string) {
+export async function deletePago(id: number) {
   try {
     await prisma.$transaction(async (tx) => {
       // Borrar primero las cuotas (Prisma lo haría si hay cascade, pero aseguramos)
@@ -116,7 +117,7 @@ export async function deletePago(id: string) {
   }
 }
 
-export async function getPago(id: string) {
+export async function getPago(id: number) {
   return await prisma.pago.findUnique({
     where: { id },
     include: {

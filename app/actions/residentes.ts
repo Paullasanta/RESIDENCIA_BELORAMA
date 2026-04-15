@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { Rol } from '@prisma/client'
-import bcrypt from 'bcryptjs'
+
 import { revalidatePath } from 'next/cache'
 
 export async function getResidenciasConHabitaciones() {
@@ -17,7 +17,7 @@ export async function getResidenciasConHabitaciones() {
   })
 }
 
-export async function getResidente(id: string) {
+export async function getResidente(id: number) {
   return await prisma.residente.findUnique({
     where: { id },
     include: {
@@ -34,13 +34,13 @@ export async function createResidente(data: any) {
   const nombre = data.nombre as string
   const email = data.email as string
   const password = data.password as string
+  
   const residenciaId = data.residenciaId === "" ? undefined : data.residenciaId as string
   const habitacionId = data.habitacionId === "" ? undefined : data.habitacionId as string
 
-  console.log('Creando residente con datos:', { nombre, email, residenciaId, habitacionId })
-
   try {
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const residenciaIdNum = residenciaId ? Number(residenciaId) : null
+    const habitacionIdNum = habitacionId ? Number(habitacionId) : null
 
     const result = await prisma.$transaction(async (tx) => {
       // 1. Crear Usuario (Acceso)
@@ -48,9 +48,9 @@ export async function createResidente(data: any) {
         data: {
           nombre,
           email,
-          password: hashedPassword,
+          password,
           rol: Rol.RESIDENTE,
-          residenciaId: residenciaId || null
+          residenciaId: residenciaIdNum
         }
       })
 
@@ -58,16 +58,16 @@ export async function createResidente(data: any) {
       const residente = await tx.residente.create({
         data: {
           userId: user.id,
-          habitacionId: habitacionId || null,
+          habitacionId: habitacionIdNum,
           activo: true,
           fechaIngreso: new Date()
         }
       })
 
       // 3. Ocupar Habitación si se asignó una
-      if (habitacionId) {
+      if (habitacionIdNum) {
         await tx.habitacion.update({
-          where: { id: habitacionId },
+          where: { id: habitacionIdNum },
           data: { disponible: false }
         })
       }
@@ -84,12 +84,15 @@ export async function createResidente(data: any) {
   }
 }
 
-export async function updateResidente(id: string, data: any) {
+export async function updateResidente(id: number, data: any) {
   const nombre = data.nombre as string
   const email = data.email as string
   const password = data.password as string
   const residenciaId = data.residenciaId === "" ? undefined : data.residenciaId as string
   const habitacionId = data.habitacionId === "" ? undefined : data.habitacionId as string
+  
+  const residenciaIdNum = residenciaId ? Number(residenciaId) : null
+  const habitacionIdNum = habitacionId ? Number(habitacionId) : null
 
   console.log('Actualizando residente ID:', id, { nombre, email, residenciaId, habitacionId })
 
@@ -106,11 +109,11 @@ export async function updateResidente(id: string, data: any) {
       const userData: any = { 
         nombre, 
         email, 
-        residenciaId: residenciaId || null 
+        residenciaId: residenciaIdNum 
       }
       
       if (password && password.trim() !== "") {
-        userData.password = await bcrypt.hash(password, 10)
+        userData.password = password
       }
 
       await tx.user.update({
@@ -119,7 +122,7 @@ export async function updateResidente(id: string, data: any) {
       })
 
       // 2. Manejar cambio de Habitación
-      if (currentResidente.habitacionId !== (habitacionId || null)) {
+      if (currentResidente.habitacionId !== habitacionIdNum) {
         // Liberar habitación anterior
         if (currentResidente.habitacionId) {
           await tx.habitacion.update({
@@ -128,9 +131,9 @@ export async function updateResidente(id: string, data: any) {
           })
         }
         // Ocupar nueva habitación
-        if (habitacionId) {
+        if (habitacionIdNum) {
           await tx.habitacion.update({
-            where: { id: habitacionId },
+            where: { id: habitacionIdNum },
             data: { disponible: false }
           })
         }
@@ -140,7 +143,7 @@ export async function updateResidente(id: string, data: any) {
       const updated = await tx.residente.update({
         where: { id },
         data: { 
-          habitacionId: habitacionId || null 
+          habitacionId: habitacionIdNum 
         }
       })
 
@@ -156,7 +159,7 @@ export async function updateResidente(id: string, data: any) {
   }
 }
 
-export async function deleteResidente(id: string) {
+export async function deleteResidente(id: number) {
   try {
     const res = await prisma.residente.findUnique({
       where: { id },

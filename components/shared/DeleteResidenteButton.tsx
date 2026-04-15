@@ -4,7 +4,7 @@ import { useTransition } from 'react'
 import { deleteResidente } from '@/app/actions/residentes'
 import { Trash2, Loader2 } from 'lucide-react'
 
-export function DeleteResidenteButton({ id, nombre }: { id: string, nombre: string }) {
+export function DeleteResidenteButton({ id, nombre }: { id: number, nombre: string }) {
   const [isPending, startTransition] = useTransition()
 
   async function handleDelete() {
