@@ -1,0 +1,192 @@
+'use server'
+
+import { prisma } from '@/lib/prisma'
+import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
+
+const habitacionSchema = z.object({
+  residenciaId: z.number(),
+  numero: z.string().min(1, 'El número de habitación es requerido'),
+  piso: z.number().min(0),
+  capacidad: z.number().min(1),
+  estado: z.enum(['LIBRE', 'OCUPADO', 'RESERVADO', 'POR_LIBERARSE']),
+})
+
+export async function createHabitacion(data: z.infer<typeof habitacionSchema>) {
+  try {
+    const validated = habitacionSchema.parse(data)
+    
+    // Verificar capacidad de la residencia
+    const residencia = await prisma.residencia.findUnique({
+        where: { id: validated.residenciaId },
+        include: { _count: { select: { habitaciones: true } } }
+    })
+
+    if (!residencia) throw new Error('Residencia no encontrada')
+    
+    // Si queremos respetar el límite de "capacidad" (que suele ser de personas, no de habitaciones)
+    // Pero si el usuario dice "respetando el limite de lo que esta en residencia", 
+    // tal vez se refiera a la capacidad total de personas.
+    
+    const res = await prisma.habitacion.create({
+      data: validated
+    })
+    
+    revalidatePath(`/modules/residencias/${validated.residenciaId}`)
+    return { success: true, data: res }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Error al crear la habitación' }
+  }
+}
+
+export async function importHabitacionesCSV(residenciaId: number, rows: any[]) {
+  try {
+    const statusMap: Record<string, 'LIBRE' | 'OCUPADO' | 'RESERVADO' | 'POR_LIBERARSE'> = {
+        'libre': 'LIBRE',
+        'ocupado': 'OCUPADO',
+        'reservado': 'RESERVADO',
+        'por liberarse': 'POR_LIBERARSE',
+        'free': 'LIBRE',
+        'occupied': 'OCUPADO'
+    }
+
+    const habitacionesData = rows.map(row => ({
+        residenciaId,
+        numero: String(row.habitacion || row.room),
+        piso: Number(row.piso || row.floor || 1),
+        capacidad: Number(row.capacidad || 1),
+        estado: statusMap[String(row.disponibilidad || row.status).toLowerCase()] || 'LIBRE'
+    }))
+
+    await prisma.habitacion.createMany({
+        data: habitacionesData,
+        skipDuplicates: true
+    })
+
+    revalidatePath(`/modules/residencias/${residenciaId}`)
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: 'Error al importar las habitaciones.' }
+  }
+}
+
+export async function updateHabitacion(id: number, data: Partial<z.infer<typeof habitacionSchema>>) {
+  try {
+    const res = await prisma.habitacion.update({
+      where: { id },
+      data
+    })
+    revalidatePath(`/modules/residencias/${res.residenciaId}`)
+    return { success: true, data: res }
+  } catch (error: any) {
+    return { success: false, error: 'Error al actualizar la habitación' }
+  }
+}
+
+export async function getResidentesParaAsignar(residenciaId: number) {
+  return await prisma.residente.findMany({
+    where: { 
+      user: { residenciaId },
+      activo: true
+    },
+    include: {
+      user: true,
+      habitacion: true
+    },
+    orderBy: { user: { nombre: 'asc' } }
+  })
+}
+
+export async function assignResidenteToHabitacion(residenteId: number, habitacionId: number | null, residenciaId: number) {
+  try {
+    await prisma.$transaction(async (tx) => {
+      const actual = await tx.residente.findUnique({ where: { id: residenteId } })
+      if (!actual) throw new Error('Residente no encontrado')
+
+      // Liberar la anterior si existe
+      if (actual.habitacionId && actual.habitacionId !== habitacionId) {
+        await tx.habitacion.update({
+          where: { id: actual.habitacionId },
+          data: { estado: 'LIBRE' }
+        })
+      }
+
+      // Ocupar la nueva
+      if (habitacionId) {
+        await tx.habitacion.update({
+          where: { id: habitacionId },
+          data: { estado: 'OCUPADO' }
+        })
+      }
+
+      await tx.residente.update({
+        where: { id: residenteId },
+        data: { habitacionId }
+      })
+    })
+
+    revalidatePath(`/modules/residencias/${residenciaId}`)
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+import { writeFile, unlink } from 'fs/promises'
+import path from 'path'
+
+export async function uploadHabitacionFotos(habitacionId: number, residenciaId: number, formData: FormData) {
+  try {
+    const files = formData.getAll('fotos') as File[]
+    if (files.length === 0) return { success: false, error: 'No se encontraron archivos' }
+
+    const savedUrls: string[] = []
+
+    for (const file of files) {
+      const buffer = Buffer.from(await file.arrayBuffer())
+      const filename = `${Date.now()}_${file.name.replace(/\\s+/g, '_')}`
+      // The public absolute path on local storage
+      const filepath = path.join(process.cwd(), 'public', 'uploads', 'habitaciones', filename)
+      
+      await writeFile(filepath, buffer)
+      savedUrls.push(`/uploads/habitaciones/${filename}`)
+    }
+
+    const hab = await prisma.habitacion.findUnique({ where: { id: habitacionId } })
+    const nuevasFotos = [...(hab?.fotos || []), ...savedUrls]
+
+    await prisma.habitacion.update({
+      where: { id: habitacionId },
+      data: { fotos: nuevasFotos }
+    })
+
+    revalidatePath(`/modules/residencias/${residenciaId}`)
+    return { success: true, fotos: nuevasFotos }
+  } catch (error: any) {
+    console.error('Error uploading:', error)
+    return { success: false, error: 'Error subiendo fotos al servidor estático.' }
+  }
+}
+
+export async function deleteHabitacionFoto(habitacionId: number, residenciaId: number, fotoUrl: string) {
+  try {
+    const filename = fotoUrl.split('/').pop()
+    if (filename) {
+      const filepath = path.join(process.cwd(), 'public', 'uploads', 'habitaciones', filename)
+      try { await unlink(filepath) } catch (e) { /* file might strictly not exist anymore */ }
+    }
+
+    const hab = await prisma.habitacion.findUnique({ where: { id: habitacionId } })
+    const remaining = (hab?.fotos || []).filter(f => f !== fotoUrl)
+
+    await prisma.habitacion.update({
+      where: { id: habitacionId },
+      data: { fotos: remaining }
+    })
+
+    revalidatePath(`/modules/residencias/${residenciaId}`)
+    return { success: true, fotos: remaining }
+  } catch (error: any) {
+    return { success: false, error: 'Error eliminando la foto.' }
+  }
+}

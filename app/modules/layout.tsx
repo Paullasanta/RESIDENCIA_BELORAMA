@@ -1,0 +1,92 @@
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { NavLink } from '@/components/shared/NavLink'
+import { LogoutButton } from '@/components/shared/LogoutButton'
+import {
+    LayoutDashboard, Building2, Users, DollarSign,
+    WashingMachine, UtensilsCrossed, ShoppingBag,
+    Megaphone, Settings
+} from 'lucide-react'
+
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+    const session = await auth()
+
+    if (!session) {
+        redirect('/login')
+    }
+
+    const { rol, nombre, permisos } = session.user
+
+    // Permisos Helpers
+    const hasPerm = (p: string) => permisos?.includes(p) || rol === 'ADMIN'
+
+    // Configuración universal de navegación agnóstica al rol
+    const navItems = [
+        { href: '/modules/dashboard',     label: 'Dashboard',         icon: <LayoutDashboard size={18} />, show: true },
+        { href: '/modules/residencias',   label: 'Residencias',       icon: <Building2 size={18} />,       show: hasPerm('MANAGE_RESIDENCIAS') || rol === 'RESIDENTE' },
+        { href: '/modules/residentes',    label: 'Residentes',        icon: <Users size={18} />,           show: hasPerm('MANAGE_RESIDENTES') },
+        { href: '/modules/pagos',         label: 'Cobros y Pagos',    icon: <DollarSign size={18} />,      show: hasPerm('MANAGE_PAYMENTS') || rol === 'RESIDENTE' },
+        { href: '/modules/lavanderia',    label: 'Lavandería',        icon: <WashingMachine size={18} />,  show: true },
+        { href: '/modules/comida',        label: 'Gestión de Comidas',icon: <UtensilsCrossed size={18} />, show: true },
+        { href: '/modules/marketplace',   label: 'Marketplace',       icon: <ShoppingBag size={18} />,     show: true },
+        { href: '/modules/egresos',       label: 'Gastos Residentes', icon: <DollarSign size={18} />,      show: hasPerm('MANAGE_EGRESOS') },
+        { href: '/modules/avisos',        label: 'Avisos',            icon: <Megaphone size={18} />,       show: true },
+        { href: '/modules/configuracion', label: 'Configuración',     icon: <Settings size={18} />,        show: hasPerm('ADMIN_SETTINGS') || rol === 'ADMIN' },
+    ]
+
+    // Estilos dinámicos según el rol principal
+    const theme = {
+        ADMIN: { title: 'Belorama Admin', logo: 'bg-[#1D9E75] text-white' },
+        COCINERO: { title: 'Cocina Central', logo: 'bg-[#085041] text-white' },
+        RESIDENTE: { title: 'Mi Residencia', logo: 'bg-[#EF9F27] text-black' }
+    }[rol as 'ADMIN' | 'COCINERO' | 'RESIDENTE'] || { title: 'Dashboard', logo: 'bg-[#072E1F] text-white' }
+
+    return (
+        <div className="flex bg-[#F8FAF8] min-h-screen text-gray-900 font-sans">
+            {/* Sidebar Desktop */}
+            <aside className="w-72 bg-[#072E1F] text-white hidden md:flex flex-col p-6 sticky top-0 h-screen shadow-2xl z-30 shrink-0">
+                <div className="flex items-center gap-4 mb-10 px-2">
+                    <div className={`w-12 h-12 ${theme.logo} rounded-2xl flex items-center justify-center font-black text-xl shadow-inner`}>
+                        B
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-black tracking-tight leading-tight">{theme.title}</h2>
+                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-0.5">SISTEMA BELORAMA</p>
+                    </div>
+                </div>
+
+                <nav className="flex-1 space-y-1.5 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
+                    {navItems.filter(i => i.show).map((item) => (
+                        <NavLink key={item.href} href={item.href} activeColor="bg-[#1D9E75]/20 text-[#1D9E75] border-l-4 border-[#1D9E75]">
+                            <span className="flex items-center gap-3 font-semibold text-sm">
+                                {item.icon}
+                                {item.label}
+                            </span>
+                        </NavLink>
+                    ))}
+                </nav>
+
+                <div className="pt-6 border-t border-white/10 mt-6 space-y-4">
+                    <div className="px-4">
+                        <p className="text-xs font-black text-white/50 uppercase tracking-widest mb-1">Usuario</p>
+                        <p className="text-sm font-bold truncate">{nombre}</p>
+                    </div>
+                    <LogoutButton />
+                </div>
+            </aside>
+
+            {/* Main Content */}
+            <main className="flex-1 p-8 lg:p-12 overflow-y-auto relative">
+                <header className="md:hidden flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                         <div className={`w-10 h-10 ${theme.logo} rounded-xl flex items-center justify-center font-black text-sm`}>B</div>
+                         <h1 className="font-black text-gray-900">{theme.title}</h1>
+                    </div>
+                </header>
+                <div className="max-w-7xl mx-auto">
+                    {children}
+                </div>
+            </main>
+        </div>
+    )
+}
