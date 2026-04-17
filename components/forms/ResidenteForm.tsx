@@ -42,52 +42,59 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
   }
 
   return (
-    <form action={handleSubmit} className="space-y-6 bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
+    <form action={handleSubmit} className="space-y-8 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-2xl shadow-gray-200/50">
       {error && (
-        <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm">
-          {error}
+        <div className="p-5 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-bold flex items-center gap-3 animate-in shake duration-500">
+           <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-gray-700">Nombre Completo</label>
-          <input
-            name="nombre"
-            defaultValue={initialData?.user?.nombre}
-            required
-            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20 outline-none transition-all"
-            placeholder="Ej. Juan Pérez"
-          />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Sección: Información Personal */}
+        <div className="space-y-6 col-span-full">
+            <h3 className="text-sm font-black text-[#1D9E75] uppercase tracking-[0.2em] mb-2">Información Personal</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Nombre Completo</label>
+                <input
+                    name="nombre"
+                    defaultValue={initialData?.user?.nombre}
+                    required
+                    className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
+                    placeholder="Ej. Juan Pérez"
+                />
+                </div>
+
+                <div className="space-y-2">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Correo Electrónico</label>
+                <input
+                    name="email"
+                    type="email"
+                    defaultValue={initialData?.user?.email}
+                    required
+                    className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
+                    placeholder="juan@email.com"
+                />
+                </div>
+            </div>
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-bold text-gray-700">Correo Electrónico</label>
-          <input
-            name="email"
-            type="email"
-            defaultValue={initialData?.user?.email}
-            required
-            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20 outline-none transition-all"
-            placeholder="juan@email.com"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-gray-700">
-            Contraseña {initialData && <span className="text-xs font-normal text-gray-400">(Dejar en blanco para no cambiar)</span>}
+          <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">
+            Contraseña {initialData && <span className="text-[10px] font-bold text-[#EF9F27] ml-2">(Opcional)</span>}
           </label>
           <input
             name="password"
             type="password"
             required={!initialData}
-            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20 outline-none transition-all"
+            className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
             placeholder="••••••••"
           />
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-bold text-gray-700">Residencia</label>
+          <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Residencia</label>
           <select
             name="residenciaId"
             value={residenciaId}
@@ -96,7 +103,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
               setHabitacionId('') // Reset habitacion when residencia changes
             }}
             required
-            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20 outline-none transition-all bg-white"
+            className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 appearance-none cursor-pointer"
           >
             <option value="">Seleccionar residencia...</option>
             {residencias.map((res) => (
@@ -106,17 +113,16 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-bold text-gray-700">Habitación</label>
+          <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Habitación</label>
           <select
             name="habitacionId"
             value={habitacionId}
             onChange={(e) => setHabitacionId(e.target.value)}
             required
             disabled={!residenciaId}
-            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20 outline-none transition-all bg-white disabled:bg-gray-50 disabled:text-gray-400"
+            className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 appearance-none cursor-pointer disabled:opacity-50"
           >
             <option value="">Seleccionar habitación...</option>
-            {/* Si es edición, mostramos la habitación actual aunque no esté "disponible" en la lista general */}
             {initialData?.habitacion && !habitacionesDisponibles.find((h: any) => h.id.toString() === initialData.habitacionId.toString()) && (
               <option value={initialData.habitacionId.toString()}>
                 Hab. {initialData.habitacion.numero} (Actual)
@@ -127,30 +133,77 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
             ))}
           </select>
         </div>
+
+        {!initialData && (
+          <>
+            <div className="pt-8 mt-4 border-t border-gray-50 col-span-full">
+              <h3 className="text-sm font-black text-[#EF9F27] uppercase tracking-[0.2em] mb-2">Configuración Financiera Inicial</h3>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6">Se generarán los registros de deuda correspondientes.</p>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Monto Mensual (Renta)</label>
+              <div className="relative group/input">
+                <span className="absolute left-5 inset-y-0 flex items-center text-gray-300 font-black group-focus-within/input:text-[#1D9E75] transition-colors">$</span>
+                <input
+                  name="montoMensual"
+                  type="number"
+                  step="0.01"
+                  defaultValue="0"
+                  className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Garantía (Total)</label>
+              <div className="relative group/input">
+                <span className="absolute left-5 inset-y-0 flex items-center text-gray-300 font-black group-focus-within/input:text-[#1D9E75] transition-colors">$</span>
+                <input
+                  name="montoGarantia"
+                  type="number"
+                  step="0.01"
+                  defaultValue="0"
+                  className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Dividir Garantía en</label>
+              <select
+                name="cuotasGarantia"
+                className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 appearance-none cursor-pointer"
+              >
+                {[1, 2, 3, 4, 5, 6].map(n => (
+                  <option key={n} value={n}>{n} {n === 1 ? 'parte' : 'partes'}</option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
       </div>
 
-      <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-50">
-        <Button
+      <div className="flex items-center justify-end gap-4 pt-10 border-t border-gray-50">
+        <button
           type="button"
-          variant="outline"
           onClick={() => router.back()}
-          className="rounded-xl"
+          className="px-8 py-4 rounded-2xl text-xs font-black text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all uppercase tracking-widest"
         >
-          <X size={18} className="mr-2" />
           Cancelar
-        </Button>
-        <Button
+        </button>
+        <button
           type="submit"
           disabled={isPending}
-          className="bg-[#1D9E75] hover:bg-[#167e5d] text-white rounded-xl px-8 shadow-lg shadow-[#1D9E75]/20"
+          className="bg-[#1D9E75] hover:bg-[#167e5d] text-white rounded-2xl px-12 py-4 font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-[#1D9E75]/20 disabled:opacity-50 flex items-center gap-3"
         >
           {isPending ? (
-            <Loader2 size={18} className="animate-spin mr-2" />
+            <Loader2 size={18} className="animate-spin" />
           ) : (
-            <Save size={18} className="mr-2" />
+            <Save size={18} />
           )}
-          {initialData ? 'Actualizar Residente' : 'Crear Residente'}
-        </Button>
+          {initialData ? 'Actualizar Perfil' : 'Dar de Alta Residente'}
+        </button>
       </div>
     </form>
   )

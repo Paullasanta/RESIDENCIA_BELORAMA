@@ -47,6 +47,11 @@ enum EstadoHabitacion {
   RESERVADO
   POR_LIBERARSE
 }
+enum Prioridad {
+  NORMAL
+  URGENTE
+  IMPORTANTE
+}
 
 enum TipoMenu {
   DESAYUNO
@@ -65,6 +70,8 @@ model User {
   residencia  Residencia? @relation(fields: [residenciaId], references: [id])
   residente   Residente?
   egresos     Egreso[]
+  avisos      Aviso[]
+  reacciones  Reaccion[]
   createdAt   DateTime    @default(now())
 }
 
@@ -109,6 +116,7 @@ model Residencia {
   publicaciones PublicacionHabitacion[]
   egresos      Egreso[]
   menus        MenuResidencia[]
+  avisos       Aviso[]
   createdAt    DateTime                @default(now())
 }
 
@@ -166,6 +174,7 @@ model Pago {
   id           Int        @id @default(autoincrement())
   residenteId  Int
   residente    Residente  @relation(fields: [residenteId], references: [id])
+  concepto     String     @default("Pago")
   monto        Float
   montoPagado  Float      @default(0)
   comprobante  String?
@@ -229,8 +238,8 @@ model PublicacionHabitacion {
 
 model ProductoMarketplace {
   id          Int            @id @default(autoincrement())
-  residenteId Int
-  residente   Residente      @relation(fields: [residenteId], references: [id])
+  residenteId Int?
+  residente   Residente?     @relation(fields: [residenteId], references: [id])
   titulo      String
   descripcion String?
   precio      Float
@@ -249,4 +258,36 @@ model Egreso {
   residenciaId Int?
   residencia   Residencia? @relation(fields: [residenciaId], references: [id])
   fecha        DateTime   @default(now())
+}
+
+model Aviso {
+  id           Int         @id @default(autoincrement())
+  titulo       String
+  contenido    String
+  prioridad    Prioridad   @default(NORMAL)
+  fotos        String[]
+  residenciaId Int?
+  residencia   Residencia? @relation(fields: [residenciaId], references: [id])
+  autorId      Int
+  autor        User        @relation(fields: [autorId], references: [id])
+  reacciones   Reaccion[]
+  createdAt    DateTime    @default(now())
+}
+
+model Reaccion {
+  id        Int      @id @default(autoincrement())
+  emoji     String
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  avisoId   Int
+  aviso     Aviso    @relation(fields: [avisoId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, avisoId, emoji])
+}
+
+model Configuracion {
+  id    Int    @id @default(autoincrement())
+  clave String @unique
+  valor String
 }

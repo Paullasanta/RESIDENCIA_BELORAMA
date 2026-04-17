@@ -7,27 +7,30 @@ export async function createPago(data: any) {
   try {
     const residenteId = Number(data.residenteId)
     const monto = Number(data.monto)
-    const cuotasCount = Number(data.cuotas || 0)
+    const concepto = (data.concepto as string) || 'Pago General'
+    const cuotasCount = Number(data.numCuotas || 1)
 
     const pago = await prisma.pago.create({
       data: {
         residenteId,
         monto,
-        montoPagado: cuotasCount > 0 ? 0 : monto,
-        estado: cuotasCount > 0 ? 'PENDIENTE' : 'PAGADO',
-        cuotas: cuotasCount > 0 ? {
+        concepto,
+        montoPagado: 0,
+        estado: 'PENDIENTE',
+        cuotas: {
           create: Array.from({ length: cuotasCount }, (_, i) => ({
             monto: monto / cuotasCount,
             pagado: false,
-            fechaVencimiento: new Date(Date.now() + (i + 1) * 30 * 24 * 60 * 60 * 1000),
+            fechaVencimiento: new Date(Date.now() + i * 30 * 24 * 60 * 60 * 1000),
           }))
-        } : undefined
+        }
       }
     })
 
-    revalidatePath('/admin/pagos')
+    revalidatePath('/modules/pagos')
     return { success: true, data: pago }
   } catch (error: any) {
+    console.error('Error in createPago:', error)
     return { success: false, error: 'Error al registrar el pago' }
   }
 }
@@ -54,9 +57,11 @@ export async function updateCuota(id: number, pagado: boolean) {
       data: { montoPagado: totalPagado, estado }
     })
 
-    revalidatePath('/admin/pagos')
+    revalidatePath('/modules/pagos')
+    revalidatePath(`/modules/pagos/${cuota.pagoId}`)
     return { success: true }
   } catch (error: any) {
+    console.error('Error in updateCuota:', error)
     return { success: false, error: 'Error al actualizar cuota' }
   }
 }

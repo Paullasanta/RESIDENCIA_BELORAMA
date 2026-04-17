@@ -21,7 +21,7 @@ export async function createMenu(data: any) {
       }
     })
 
-    revalidatePath('/admin/comida')
+    revalidatePath('/modules/comida')
     return { success: true, data: menu }
   } catch (error: any) {
     return { success: false, error: 'Error al crear el menú' }
@@ -34,26 +34,18 @@ export async function registrarAsistenciaComida(residenteId: number, menuId: num
       where: { residenteId, menuId }
     })
 
-    if (asiste) {
-      if (existing) {
-        await prisma.asistenciaComida.update({
-          where: { id: existing.id },
-          data: { asiste: true }
-        })
-      } else {
-        await prisma.asistenciaComida.create({
-          data: { residenteId, menuId, asiste: true }
-        })
-      }
+    if (existing) {
+      await prisma.asistenciaComida.update({
+        where: { id: existing.id },
+        data: { asiste }
+      })
     } else {
-      if (existing) {
-        await prisma.asistenciaComida.delete({
-          where: { id: existing.id }
-        })
-      }
+      await prisma.asistenciaComida.create({
+        data: { residenteId, menuId, asiste }
+      })
     }
 
-    revalidatePath('/admin/comida')
+    revalidatePath('/modules/comida')
     return { success: true }
   } catch (error: any) {
     return { success: false, error: 'Error al registrar asistencia' }
@@ -66,7 +58,7 @@ export async function toggleMenuEstado(id: number, activo: boolean) {
       where: { id },
       data: { activo }
     })
-    revalidatePath('/admin/comida')
+    revalidatePath('/modules/comida')
     return { success: true }
   } catch (error: any) {
     return { success: false, error: 'Error al actualizar estado del menú' }

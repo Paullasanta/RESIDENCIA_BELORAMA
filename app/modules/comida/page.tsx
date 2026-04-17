@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { UtensilsCrossed, Calendar, CheckCircle, Plus } from 'lucide-react'
 import Link from 'next/link'
+import { AsistenciaButtons } from '@/components/comida/AsistenciaButtons'
 
 const TIPO_LABEL: Record<string, string> = {
     DESAYUNO: 'Desayuno', ALMUERZO: 'Almuerzo', CENA: 'Cena',
@@ -57,15 +58,43 @@ export default async function ComidaPage() {
                     description={residenciaId ? " Consulta los menús de tu residencia y confirma tu asistencia." : "Planifica y gestiona los menús de las residencias."}
                 />
                 {canManage && (
-                    <Link
-                        href="/modules/comida/nuevo"
-                        className="flex items-center gap-2 bg-[#1D9E75] text-white px-6 py-3 rounded-2xl font-black hover:bg-[#085041] transition-all shadow-xl shadow-[#1D9E75]/20"
-                    >
-                        <Plus size={18} />
-                        Nuevo Menú
-                    </Link>
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/modules/comida/nuevo"
+                            className="flex items-center gap-2 bg-[#1D9E75] text-white px-6 py-3 rounded-2xl font-black hover:bg-[#085041] transition-all shadow-xl shadow-[#1D9E75]/20"
+                        >
+                            <Plus size={18} />
+                            Nuevo Menú
+                        </Link>
+                    </div>
                 )}
             </div>
+
+            {/* Admin Stats / Weekly Summary */}
+            {canManage && menus.length > 0 && (
+                <div className="bg-[#072E1F] rounded-[2.5rem] p-8 text-white shadow-2xl shadow-[#072E1F]/20 flex flex-col md:flex-row items-center gap-8 border border-white/5 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <div className="w-16 h-16 bg-[#1D9E75] rounded-2xl flex items-center justify-center shadow-lg">
+                        <UtensilsCrossed size={32} />
+                    </div>
+                    <div className="flex-1 text-center md:text-left">
+                        <h3 className="text-xl font-black">Planificación Semanal</h3>
+                        <p className="text-sm text-white/60 font-medium">Resumen de raciones confirmadas para los próximos días.</p>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full md:w-auto">
+                        {['DESAYUNO', 'ALMUERZO', 'CENA'].map(tipo => {
+                            const count = menus
+                                .filter(m => m.tipo === tipo)
+                                .reduce((s, m) => s + (m._count?.asistencias || 0), 0)
+                            return (
+                                <div key={tipo} className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col items-center min-w-[100px]">
+                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">{tipo}</span>
+                                    <span className="text-2xl font-black">{count}</span>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
 
             {menus.length === 0 ? (
                 <EmptyState
@@ -100,28 +129,21 @@ export default async function ComidaPage() {
                                     {canManage && (
                                         <div className="mt-6 flex items-center gap-4 py-4 border-t border-gray-50">
                                             <div className="flex -space-x-2">
-                                                {[1,2,3].map(i => <div key={i} className="w-8 h-8 rounded-full border-4 border-white bg-gray-100 flex items-center justify-center text-[8px] font-bold">+</div>)}
+                                                {[1,2,3].map(i => <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-green-50 flex items-center justify-center text-[10px] font-black text-[#1D9E75]">✓</div>)}
                                             </div>
                                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                {menu._count.asistencias} Asistencias Confirmadas
+                                                {menu._count.asistencias} Confirmados
                                             </p>
                                         </div>
                                     )}
                                 </div>
 
-                                {!canManage && (
-                                    <div className="mt-auto p-4 bg-gray-50/50 border-t border-gray-50 flex items-center gap-3">
-                                        <button className={`flex-1 py-3.5 rounded-2xl font-black text-xs transition-all shadow-sm ${
-                                            asiste === true ? 'bg-green-500 text-white shadow-green-200' : 'bg-white border border-gray-100 text-[#1D9E75] hover:bg-green-50'
-                                        }`}>
-                                            {asiste === true ? 'CONFIRMADO' : 'CONFIRMAR ASISTENCIA'}
-                                        </button>
-                                        <button className={`w-14 h-12 flex items-center justify-center rounded-2xl font-black transition-all ${
-                                            asiste === false ? 'bg-red-500 text-white' : 'bg-white border border-gray-100 text-red-500 hover:bg-red-50'
-                                        }`}>
-                                            {asiste === false ? '✓' : '✗'}
-                                        </button>
-                                    </div>
+                                {!canManage && residenteId && (
+                                    <AsistenciaButtons 
+                                        residenteId={residenteId} 
+                                        menuId={menu.id} 
+                                        asiste={asiste} 
+                                    />
                                 )}
                             </div>
                         )

@@ -125,30 +125,30 @@ export default async function PagosPage() {
                             {pagos.map((pago: any) => (
                                 <tr key={pago.id} className="hover:bg-gray-50/50 transition-colors group">
                                     <td className="px-8 py-5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-[#EF9F27]/10 flex items-center justify-center text-[#EF9F27] font-black">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-2xl bg-[#EF9F27]/10 flex items-center justify-center text-[#EF9F27] font-black text-xs">
                                                 {pago.residente.user.nombre.charAt(0)}
                                             </div>
                                             <div>
-                                                <p className="font-bold text-gray-900">{pago.residente.user.nombre}</p>
-                                                <p className="text-xs text-gray-400 font-medium">{pago.residente.user.email}</p>
+                                                <p className="font-bold text-gray-900 leading-none mb-1">{pago.residente.user.nombre}</p>
+                                                <p className="text-[10px] text-[#EF9F27] font-black uppercase tracking-widest">{pago.concepto || 'Cobro General'}</p>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-5 font-black text-gray-900">${pago.monto.toLocaleString('es-MX')}</td>
-                                    <td className="px-8 py-5 font-bold text-[#1D9E75]">${pago.montoPagado.toLocaleString('es-MX')}</td>
+                                    <td className="px-8 py-5 font-black text-gray-900 tracking-tighter text-base">${pago.monto.toLocaleString('es-MX')}</td>
+                                    <td className="px-8 py-5 font-bold text-[#1D9E75] tracking-tight">${pago.montoPagado.toLocaleString('es-MX')}</td>
                                     <td className="px-8 py-5">
                                         <StatusBadge status={pago.estado as any} />
                                     </td>
-                                    <td className="px-8 py-5 text-gray-400 text-xs font-bold uppercase tracking-tighter">
+                                    <td className="px-8 py-5 text-gray-400 text-[10px] font-black uppercase tracking-widest">
                                         {new Date(pago.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
                                     </td>
                                     <td className="px-8 py-5 text-right">
                                         <Link
-                                            href={`/pagos/${pago.id}`}
-                                            className="inline-flex h-9 items-center justify-center px-4 rounded-xl text-xs font-black bg-gray-100 text-gray-600 hover:bg-[#1D9E75] hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                                            href={`/modules/pagos/${pago.id}`}
+                                            className="inline-flex h-9 items-center justify-center px-5 rounded-xl text-[10px] font-black bg-gray-100 text-gray-400 hover:bg-[#1D9E75] hover:text-white transition-all opacity-0 group-hover:opacity-100 uppercase tracking-widest"
                                         >
-                                            MODIFICAR
+                                            GESTIONAR
                                         </Link>
                                     </td>
                                 </tr>

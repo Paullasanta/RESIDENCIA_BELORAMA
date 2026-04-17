@@ -52,7 +52,7 @@ export function PagoForm({ residentes }: PagoFormProps) {
           <select
             name="residenteId"
             required
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20 outline-none transition-all bg-white"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20 outline-none transition-all bg-white font-medium"
           >
             <option value="">Seleccionar residente...</option>
             {residentes.map((r) => (
@@ -61,6 +61,19 @@ export function PagoForm({ residentes }: PagoFormProps) {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+            <DollarSign size={16} className="text-[#1D9E75]" />
+            Concepto del Cobro
+          </label>
+          <input
+            name="concepto"
+            required
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#1D9E75] focus:ring-2 focus:ring-[#1D9E75]/20 outline-none transition-all font-medium"
+            placeholder="Ej. Mensualidad Mayo, Garantía, etc"
+          />
         </div>
 
         {/* Monto Total */}

@@ -36,6 +36,10 @@ export async function createResidente(data: any) {
   const residenciaId = data.residenciaId === "" ? null : Number(data.residenciaId)
   const habitacionId = data.habitacionId === "" ? null : Number(data.habitacionId)
 
+  const montoMensual = Number(data.montoMensual || 0)
+  const montoGarantia = Number(data.montoGarantia || 0)
+  const cuotasGarantia = Number(data.cuotasGarantia || 1)
+
   try {
     const result = await prisma.$transaction(async (tx) => {
       // 1. Obtener el ID del rol de residente
@@ -68,6 +72,46 @@ export async function createResidente(data: any) {
         await tx.habitacion.update({
           where: { id: habitacionId },
           data: { estado: 'OCUPADO' }
+        })
+      }
+
+      // 5. Generar Cobros Iniciales
+      if (montoMensual > 0) {
+        await tx.pago.create({
+          data: {
+            residenteId: residente.id,
+            concepto: 'Alquiler Inicial',
+            monto: montoMensual,
+            estado: 'PENDIENTE',
+            cuotas: {
+              create: {
+                monto: montoMensual,
+                fechaVencimiento: new Date()
+              }
+            }
+          }
+        })
+      }
+
+      if (montoGarantia > 0) {
+        const montoPorCuota = montoGarantia / cuotasGarantia
+        await tx.pago.create({
+          data: {
+            residenteId: residente.id,
+            concepto: 'Garantía',
+            monto: montoGarantia,
+            estado: 'PENDIENTE',
+            cuotas: {
+              create: Array.from({ length: cuotasGarantia }).map((_, i) => {
+                const fecha = new Date()
+                fecha.setMonth(fecha.getMonth() + i)
+                return {
+                  monto: montoPorCuota,
+                  fechaVencimiento: fecha
+                }
+              })
+            }
+          }
         })
       }
 

@@ -1,4 +1,5 @@
 import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/shared/NavLink'
 import { LogoutButton } from '@/components/shared/LogoutButton'
@@ -16,6 +17,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }
 
     const { rol, nombre, permisos } = session.user
+
+    // Fetch dynamic branding
+    const systemNameConfig = await prisma.configuracion.findUnique({ where: { clave: 'SYSTEM_NAME' } })
+    const systemName = systemNameConfig?.valor || 'Belorama'
 
     // Permisos Helpers
     const hasPerm = (p: string) => permisos?.includes(p) || rol === 'ADMIN'
@@ -36,10 +41,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     // Estilos dinámicos según el rol principal
     const theme = {
-        ADMIN: { title: 'Belorama Admin', logo: 'bg-[#1D9E75] text-white' },
+        ADMIN: { title: `${systemName} Admin`, logo: 'bg-[#1D9E75] text-white' },
         COCINERO: { title: 'Cocina Central', logo: 'bg-[#085041] text-white' },
         RESIDENTE: { title: 'Mi Residencia', logo: 'bg-[#EF9F27] text-black' }
-    }[rol as 'ADMIN' | 'COCINERO' | 'RESIDENTE'] || { title: 'Dashboard', logo: 'bg-[#072E1F] text-white' }
+    }[rol as 'ADMIN' | 'COCINERO' | 'RESIDENTE'] || { title: systemName, logo: 'bg-[#072E1F] text-white' }
 
     return (
         <div className="flex bg-[#F8FAF8] min-h-screen text-gray-900 font-sans">
