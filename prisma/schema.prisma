@@ -198,6 +198,7 @@ model Menu {
   nombre      String
   descripcion String?
   fecha       DateTime
+  fechaLimite DateTime?
   activo      Boolean          @default(true)
   residencias MenuResidencia[]
   asistencias AsistenciaComida[]

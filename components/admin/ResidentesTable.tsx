@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Users, Edit2, Download } from 'lucide-react'
+import { Search, Users, Edit2, Download, FileText } from 'lucide-react'
 import Link from 'next/link'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { DeleteResidenteButton } from '@/components/shared/DeleteResidenteButton'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 interface ResidentesTableProps {
     residentes: any[]
@@ -23,6 +25,64 @@ export function ResidentesTable({ residentes }: ResidentesTableProps) {
             r.habitacion?.residencia?.nombre?.toLowerCase().includes(query)
         )
     })
+
+    const handleExportPDF = () => {
+        const doc = new jsPDF()
+        const now = new Date()
+        const dateString = now.toLocaleDateString('es-MX', { 
+            day: '2-digit', 
+            month: 'long', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })
+
+        // Header
+        doc.setFontSize(22)
+        doc.setTextColor(29, 158, 117) // #1D9E75
+        doc.text('BELORAMA', 14, 20)
+        
+        doc.setFontSize(16)
+        doc.setTextColor(7, 46, 31) // #072E1F
+        doc.text('Reporte de Residentes', 14, 30)
+        
+        doc.setFontSize(10)
+        doc.setTextColor(150, 150, 150)
+        doc.text(`Generado el: ${dateString}`, 14, 38)
+
+        // Table Data Preparation
+        const tableRows = filteredResidentes.map((r) => [
+            r.user.nombre,
+            r.user.email,
+            r.habitacion ? `Hab. ${r.habitacion.numero} (Piso ${r.habitacion.piso})` : 'Sin asignar',
+            r.habitacion?.residencia?.nombre || '—',
+            r.pagos[0] ? `$${r.pagos[0].monto.toLocaleString('es-MX')}` : '—',
+            r.pagos[0]?.estado || '—',
+            new Date(r.fechaIngreso).toLocaleDateString('es-MX')
+        ])
+
+        autoTable(doc, {
+            startY: 45,
+            head: [['Nombre', 'Email', 'Habitación', 'Residencia', 'Último Pago', 'Estado', 'Ingreso']],
+            body: tableRows,
+            headStyles: { 
+                fillColor: [29, 158, 117], // #1D9E75
+                textColor: [255, 255, 255],
+                fontSize: 10,
+                fontStyle: 'bold'
+            },
+            alternateRowStyles: {
+                fillColor: [248, 250, 248] // #F8FAF8
+            },
+            styles: {
+                fontSize: 9,
+                cellPadding: 4
+            },
+            margin: { top: 45 }
+        })
+
+        window.open(doc.output('bloburl'), '_blank')
+    }
 
     return (
         <div className="space-y-6">
@@ -50,11 +110,19 @@ export function ResidentesTable({ residentes }: ResidentesTableProps) {
 
                 <div className="flex items-center gap-3">
                     <button 
-                        onClick={() => alert('Próximamente: Exportación a Excel/PDF')}
+                        onClick={handleExportPDF}
+                        disabled={filteredResidentes.length === 0}
+                        className="flex items-center gap-2 px-6 py-4 bg-white border border-gray-100 rounded-2xl text-xs font-black text-gray-400 hover:text-[#1D9E75] hover:border-[#1D9E75] transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed group"
+                    >
+                        <FileText size={16} className="group-hover:scale-110 transition-transform" />
+                        PDF
+                    </button>
+                    <button 
+                        onClick={() => alert('Excel próximamente')}
                         className="flex items-center gap-2 px-6 py-4 bg-white border border-gray-100 rounded-2xl text-xs font-black text-gray-400 hover:text-[#1D9E75] hover:border-[#1D9E75] transition-all shadow-sm"
                     >
                         <Download size={16} />
-                        EXPORTAR
+                        EXCEL
                     </button>
                 </div>
             </div>

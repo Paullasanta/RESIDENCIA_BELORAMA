@@ -2,8 +2,10 @@ import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { PayCuotaButton } from '@/components/shared/PayCuotaButton'
+import { PayAllButton } from '@/components/shared/PayAllButton'
 import { notFound } from 'next/navigation'
-import { Calendar, User, DollarSign, CreditCard } from 'lucide-react'
+import { Calendar, User, CreditCard, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 
 export default async function DetallePagoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: idStr } = await params
@@ -22,9 +24,21 @@ export default async function DetallePagoPage({ params }: { params: Promise<{ id
   if (!pago) notFound()
 
   const saldoPendiente = pago.monto - pago.montoPagado
+  const allPaid = saldoPendiente <= 0
 
   return (
-    <div className="space-y-10 animate-in fade-in zoom-in-95 duration-500 max-w-5xl mx-auto">
+    <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between">
+          <Link 
+            href="/modules/pagos" 
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-100 rounded-2xl text-xs font-black text-gray-400 hover:text-[#072E1F] hover:shadow-lg transition-all"
+          >
+            <ArrowLeft size={16} />
+            VOLVER A PAGOS
+          </Link>
+          {saldoPendiente > 0 && <PayAllButton pagoId={pago.id} isDisabled={allPaid} />}
+      </div>
+
       <PageHeader
         title={`Detalle de Cobro: ${pago.concepto}`}
         description={`Gestión de cuotas y estado de cuenta para ${pago.residente.user.nombre}.`}

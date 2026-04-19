@@ -12,6 +12,7 @@ export async function createMenu(data: any) {
         descripcion: data.descripcion,
         tipo: data.tipo as TipoMenu,
         fecha: new Date(data.fecha),
+        fechaLimite: data.fechaLimite ? new Date(data.fechaLimite) : null,
         activo: true,
         residencias: {
           create: data.residenciaIds.map((id: number) => ({
@@ -28,8 +29,75 @@ export async function createMenu(data: any) {
   }
 }
 
+export async function publishDailyMenu(data: any) {
+  try {
+    const { fecha, fechaLimite, residenciaIds, desayuno, almuerzo, cena } = data;
+    const baseDate = new Date(fecha);
+    const limitDate = fechaLimite ? new Date(fechaLimite) : null;
+
+    const createPromises = [];
+
+    // Desayuno
+    if (desayuno?.nombre) {
+      createPromises.push(prisma.menu.create({
+        data: {
+          tipo: 'DESAYUNO',
+          nombre: desayuno.nombre,
+          descripcion: desayuno.descripcion,
+          fecha: baseDate,
+          fechaLimite: limitDate,
+          residencias: { create: residenciaIds.map((id: number) => ({ residenciaId: id })) }
+        }
+      }));
+    }
+
+    // Almuerzo
+    if (almuerzo?.nombre) {
+      createPromises.push(prisma.menu.create({
+        data: {
+          tipo: 'ALMUERZO',
+          nombre: almuerzo.nombre,
+          descripcion: almuerzo.descripcion,
+          fecha: baseDate,
+          fechaLimite: limitDate,
+          residencias: { create: residenciaIds.map((id: number) => ({ residenciaId: id })) }
+        }
+      }));
+    }
+
+    // Cena
+    if (cena?.nombre) {
+      createPromises.push(prisma.menu.create({
+        data: {
+          tipo: 'CENA',
+          nombre: cena.nombre,
+          descripcion: cena.descripcion,
+          fecha: baseDate,
+          fechaLimite: limitDate,
+          residencias: { create: residenciaIds.map((id: number) => ({ residenciaId: id })) }
+        }
+      }));
+    }
+
+    await Promise.all(createPromises);
+
+    revalidatePath('/modules/comida')
+    return { success: true }
+  } catch (error: any) {
+    console.error(error);
+    return { success: false, error: 'Error al publicar los menús del día' }
+  }
+}
+
 export async function registrarAsistenciaComida(residenteId: number, menuId: number, asiste: boolean) {
   try {
+    const menu = await prisma.menu.findUnique({ where: { id: menuId } });
+    if (!menu) return { success: false, error: 'Menú no encontrado' }
+
+    if (menu.fechaLimite && new Date() > menu.fechaLimite) {
+      return { success: false, error: 'La fecha límite de confirmación ha expirado' }
+    }
+
     const existing = await prisma.asistenciaComida.findFirst({
       where: { residenteId, menuId }
     })

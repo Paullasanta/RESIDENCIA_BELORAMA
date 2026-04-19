@@ -65,3 +65,31 @@ export async function updateCuota(id: number, pagado: boolean) {
     return { success: false, error: 'Error al actualizar cuota' }
   }
 }
+
+export async function payAllCuotas(pagoId: number) {
+  try {
+    // Update all cuotas
+    await prisma.cuota.updateMany({
+      where: { pagoId },
+      data: { pagado: true }
+    })
+
+    const pago = await prisma.pago.findUnique({ where: { id: pagoId } })
+    
+    // Update the main payment
+    await prisma.pago.update({
+      where: { id: pagoId },
+      data: {
+        montoPagado: pago?.monto || 0,
+        estado: 'PAGADO'
+      }
+    })
+
+    revalidatePath('/modules/pagos')
+    revalidatePath(`/modules/pagos/${pagoId}`)
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error in payAllCuotas:', error)
+    return { success: false, error: 'Error al cobrar todo el saldo' }
+  }
+}

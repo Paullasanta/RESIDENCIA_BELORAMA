@@ -2,22 +2,36 @@
 
 import { useTransition } from 'react'
 import { registrarAsistenciaComida } from '@/app/actions/comida'
-import { Check, X, Loader2 } from 'lucide-react'
+import { Check, X, Loader2, Lock } from 'lucide-react'
 
 interface AsistenciaButtonsProps {
   residenteId: number
   menuId: number
   asiste: boolean | undefined
+  isLocked?: boolean
 }
 
-export function AsistenciaButtons({ residenteId, menuId, asiste }: AsistenciaButtonsProps) {
+export function AsistenciaButtons({ residenteId, menuId, asiste, isLocked }: AsistenciaButtonsProps) {
   const [isPending, startTransition] = useTransition()
 
   function handleAction(value: boolean) {
-    if (isPending) return
+    if (isPending || isLocked) return
     startTransition(async () => {
       await registrarAsistenciaComida(residenteId, menuId, value)
     })
+  }
+
+  if (isLocked) {
+    return (
+      <div className="mt-auto p-4 bg-gray-50/50 border-t border-gray-50 flex items-center justify-between gap-3 opacity-80 cursor-not-allowed">
+        <div className="flex items-center gap-2 text-xs font-black text-gray-500 uppercase tracking-widest pl-2">
+            <Lock size={14} className="text-red-400" /> Plazo Vencido
+        </div>
+        <div className="px-4 py-2 bg-white rounded-xl border border-gray-100 text-[10px] font-black uppercase text-gray-400">
+            {asiste === true ? <span className="text-[#1D9E75]">Confirmado</span> : asiste === false ? <span className="text-red-400">Rechazado</span> : 'Sin respuesta'}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -50,9 +64,9 @@ export function AsistenciaButtons({ residenteId, menuId, asiste }: AsistenciaBut
           asiste === false 
             ? 'bg-red-500 text-white shadow-red-200' 
             : 'bg-white border border-gray-100 text-red-500 hover:bg-red-50'
-        } disabled:opacity-50`}
+        } disabled:opacity-50 border`}
       >
-        {asiste === false ? '✓' : '✗'}
+        {asiste === false ? '✗' : <X size={20} />}
       </button>
     </div>
   )
