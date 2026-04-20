@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
     const router = useRouter()
@@ -36,20 +38,29 @@ export default function LoginPage() {
         <div className="min-h-screen flex w-full bg-[#072E1F] sm:bg-[#F4F6F4]">
             {/* Mitad Izquierda Formulario (Left Side) */}
             <div className="flex flex-col flex-1 shadow-none sm:shadow-2xl overflow-hidden bg-white z-10 w-full sm:rounded-r-[2.5rem] lg:w-5/12 xl:w-1/3 relative shrink-0">
+                
+                {/* Botón Volver */}
+                <div className="absolute top-8 left-8 z-20">
+                    <Link 
+                        href="/" 
+                        className="flex items-center gap-2 text-gray-400 hover:text-[#1D9E75] font-black text-[10px] uppercase tracking-widest transition-all group"
+                    >
+                        <div className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center group-hover:bg-[#1D9E75]/10">
+                            <ArrowLeft size={16} />
+                        </div>
+                        Volver al Inicio
+                    </Link>
+                </div>
+
                 <div className="w-full flex-1 flex flex-col justify-center p-8 sm:p-12 md:p-14 relative">
                     <div className="w-full max-w-[380px] mx-auto space-y-8 relative z-10">
                         {/* Logo & Header */}
                         <div className="space-y-2">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-12 h-12 bg-[#1D9E75] rounded-xl flex items-center justify-center shadow-lg shadow-[#1D9E75]/30">
-                                    <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                    </svg>
-                                </div>
-                                <h1 className="text-3xl font-bold tracking-tight text-gray-900">Belorama</h1>
+                            <div className="mb-6">
+                                <h1 className="text-3xl font-black tracking-tighter text-[#1D9E75] uppercase tracking-[0.2em]">Belorama</h1>
                             </div>
-                            <h2 className="text-2xl font-bold tracking-tight text-gray-900">¡Hola de nuevo!</h2>
-                            <p className="text-sm text-gray-500 font-medium">Ingresa tus credenciales para acceder a tu cuenta centralizada.</p>
+                            <h2 className="text-2xl font-black tracking-tight text-[#072E1F]">¡Hola de nuevo!</h2>
+                            <p className="text-sm text-gray-400 font-medium leading-relaxed">Ingresa tus credenciales para acceder a tu panel de gestión centralizado.</p>
                         </div>
 
                         {/* Formulario */}

@@ -12,6 +12,7 @@ declare module 'next-auth' {
             rol: string
             permisos: string[]
             residenciaId?: number | null
+            imagen?: string | null
         }
     }
 }
@@ -49,19 +50,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     rol: user.role?.name || 'RESIDENTE',
                     permisos: user.role?.permissions.map(p => p.permission.key) || [],
                     residenciaId: user.residenciaId,
+                    imagen: user.imagen,
                 }
             }
         })
     ],
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger, session }) {
             if (user) {
                 token.id = Number(user.id)
                 token.rol = (user as any).rol
                 token.nombre = (user as any).nombre
                 token.permisos = (user as any).permisos
                 token.residenciaId = (user as any).residenciaId
+                token.imagen = (user as any).imagen
             }
+            
+            // Manejar actualización de sesión en tiempo real
+            if (trigger === "update" && session?.user) {
+                if (session.user.imagen) token.imagen = session.user.imagen
+                if (session.user.nombre) token.nombre = session.user.nombre
+            }
+            
             return token
         },
         async session({ session, token }) {
@@ -71,6 +81,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 session.user.nombre = token.nombre as string
                 session.user.permisos = token.permisos as string[]
                 ;(session.user as any).residenciaId = token.residenciaId as number | null
+                session.user.imagen = token.imagen as string | null
             }
             return session
         }

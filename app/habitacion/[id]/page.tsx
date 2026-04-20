@@ -59,15 +59,15 @@ export default async function HabitacionDetallePage({ params }: { params: Promis
                 <span>Volver a la búsqueda</span>
               </Link>
               <div className="hidden sm:flex items-center gap-2">
-                <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
-                  <BedDouble className="w-3.5 h-3.5 text-white" />
+                <div className="w-8 h-8 bg-[#1D9E75] rounded-xl flex items-center justify-center shadow-lg shadow-[#1D9E75]/20">
+                  <BedDouble className="w-4 h-4 text-white" />
                 </div>
                 <span className="text-base font-bold text-gray-900">Belorama</span>
               </div>
             </div>
             <Link
               href="/auth/login"
-              className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center justify-center px-6 py-2.5 bg-[#1D9E75] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#072E1F] transition-all shadow-xl shadow-[#1D9E75]/20"
             >
               Iniciar Sesión
             </Link>
@@ -126,7 +126,7 @@ export default async function HabitacionDetallePage({ params }: { params: Promis
               </div>
 
               <div className="flex items-center gap-1.5 mt-3 text-gray-500">
-                <MapPin className="w-4 h-4 flex-shrink-0 text-blue-500" />
+                <MapPin className="w-4 h-4 flex-shrink-0 text-[#1D9E75]" />
                 <span className="text-sm">{habitacion.residencia.direccion}</span>
               </div>
             </div>
@@ -134,29 +134,29 @@ export default async function HabitacionDetallePage({ params }: { params: Promis
             {/* Características */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-5 border-y border-gray-100">
               <div className="flex flex-col items-center gap-1.5 text-center">
-                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                  <BedDouble className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 bg-[#1D9E75]/10 rounded-xl flex items-center justify-center">
+                  <BedDouble className="w-5 h-5 text-[#1D9E75]" />
                 </div>
                 <span className="text-lg font-bold text-gray-900">{habitacion.capacidad}</span>
                 <span className="text-xs text-gray-500">{habitacion.capacidad === 1 ? 'Persona' : 'Personas'}</span>
               </div>
               <div className="flex flex-col items-center gap-1.5 text-center">
-                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                  <Layers className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 bg-[#1D9E75]/10 rounded-xl flex items-center justify-center">
+                  <Layers className="w-5 h-5 text-[#1D9E75]" />
                 </div>
                 <span className="text-lg font-bold text-gray-900">Piso {habitacion.piso}</span>
                 <span className="text-xs text-gray-500">Nivel</span>
               </div>
               <div className="flex flex-col items-center gap-1.5 text-center">
-                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 bg-[#1D9E75]/10 rounded-xl flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-[#1D9E75]" />
                 </div>
                 <span className="text-lg font-bold text-gray-900 line-clamp-1 text-sm">{habitacion.residencia.nombre}</span>
                 <span className="text-xs text-gray-500">Residencia</span>
               </div>
               <div className="flex flex-col items-center gap-1.5 text-center">
-                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                  <Users className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 bg-[#1D9E75]/10 rounded-xl flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#1D9E75]" />
                 </div>
                 <span className="text-lg font-bold text-gray-900">{habitacion.residencia.capacidad}</span>
                 <span className="text-xs text-gray-500">Cap. residencia</span>
@@ -173,7 +173,7 @@ export default async function HabitacionDetallePage({ params }: { params: Promis
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-3">Ubicación</h2>
               <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
-                <MapPin className="w-4 h-4 text-blue-500" />
+                <MapPin className="w-4 h-4 text-[#1D9E75]" />
                 <span>{habitacion.residencia.direccion}</span>
               </div>
               <div className="rounded-xl overflow-hidden border border-gray-200 h-64 sm:h-80">
@@ -201,9 +201,9 @@ export default async function HabitacionDetallePage({ params }: { params: Promis
 
               <Link
                 href="/auth/login"
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors shadow-sm"
+                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-[#072E1F] text-white font-black text-xs uppercase tracking-widest hover:bg-[#1D9E75] transition-all shadow-xl shadow-[#072E1F]/20"
               >
-                <Mail className="w-4 h-4" />
+                <Mail size={16} />
                 Iniciar Sesión para Contactar
               </Link>
 

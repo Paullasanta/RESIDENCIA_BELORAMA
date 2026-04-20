@@ -31,8 +31,12 @@ export async function getResidente(id: number) {
 
 export async function createResidente(data: any) {
   const nombre = data.nombre as string
+  const apellidos = data.apellidos as string
+  const dni = data.dni as string
   const email = data.email as string
-  const password = data.password as string
+  const password = dni // Contraseña por defecto es el DNI
+  const telefono = data.telefono as string
+  
   const residenciaId = data.residenciaId === "" ? null : Number(data.residenciaId)
   const habitacionId = data.habitacionId === "" ? null : Number(data.habitacionId)
 
@@ -40,7 +44,26 @@ export async function createResidente(data: any) {
   const montoGarantia = Number(data.montoGarantia || 0)
   const cuotasGarantia = Number(data.cuotasGarantia || 1)
 
+  // Nuevos campos para confirmación de pago
+  const pagoConfirmado = data.pagoConfirmado === true || data.pagoConfirmado === 'true'
+  const comprobanteUrl = data.comprobanteUrl as string || null
+
   try {
+    // Verificar si el correo o DNI ya existen
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email },
+          { dni }
+        ]
+      }
+    })
+
+    if (existing) {
+      if (existing.email === email) throw new Error('El correo electrónico ya está registrado')
+      if (existing.dni === dni) throw new Error('El DNI ya está registrado')
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // 1. Obtener el ID del rol de residente
       const role = await tx.role.findFirst({ where: { name: 'RESIDENTE' } })
@@ -49,9 +72,12 @@ export async function createResidente(data: any) {
       // 2. Crear Usuario
       const user = await tx.user.create({
         data: {
+          dni,
           nombre,
+          apellidos,
           email,
           password,
+          telefono,
           roleId: role.id,
           residenciaId: residenciaId
         }
@@ -82,10 +108,13 @@ export async function createResidente(data: any) {
             residenteId: residente.id,
             concepto: 'Alquiler Inicial',
             monto: montoMensual,
-            estado: 'PENDIENTE',
+            montoPagado: 0,
+            comprobante: pagoConfirmado ? comprobanteUrl : null,
+            estado: pagoConfirmado ? 'EN_REVISION' : 'PENDIENTE',
             cuotas: {
               create: {
                 monto: montoMensual,
+                pagado: false,
                 fechaVencimiento: new Date()
               }
             }
@@ -100,13 +129,16 @@ export async function createResidente(data: any) {
             residenteId: residente.id,
             concepto: 'Garantía',
             monto: montoGarantia,
-            estado: 'PENDIENTE',
+            montoPagado: 0,
+            comprobante: pagoConfirmado ? comprobanteUrl : null,
+            estado: pagoConfirmado ? 'EN_REVISION' : 'PENDIENTE',
             cuotas: {
               create: Array.from({ length: cuotasGarantia }).map((_, i) => {
                 const fecha = new Date()
                 fecha.setMonth(fecha.getMonth() + i)
                 return {
                   monto: montoPorCuota,
+                  pagado: false,
                   fechaVencimiento: fecha
                 }
               })
@@ -118,7 +150,7 @@ export async function createResidente(data: any) {
       return residente
     })
 
-    revalidatePath('/admin/residentes')
+    revalidatePath('/modules/residentes')
     return { success: true, data: result }
   } catch (error: any) {
     console.error('Error creating residente:', error)
@@ -127,24 +159,46 @@ export async function createResidente(data: any) {
 }
 
 export async function updateResidente(id: number, data: any) {
+  const dni = data.dni as string
   const nombre = data.nombre as string
+  const apellidos = data.apellidos as string
   const email = data.email as string
   const password = data.password as string
+  const telefono = data.telefono as string
+  
   const residenciaId = data.residenciaId === "" ? null : Number(data.residenciaId)
   const habitacionId = data.habitacionId === "" ? null : Number(data.habitacionId)
 
   try {
     const currentResidente = await prisma.residente.findUnique({
       where: { id },
-      include: { habitacion: true }
+      include: { user: true, habitacion: true }
     })
 
     if (!currentResidente) throw new Error('Residente no encontrado')
 
+    // Verificar conflictos con otros usuarios
+    const conflict = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email },
+          { dni }
+        ],
+        NOT: { id: currentResidente.userId }
+      }
+    })
+
+    if (conflict) {
+      if (conflict.email === email) throw new Error('El correo electrónico ya está en uso por otro usuario')
+      if (conflict.dni === dni) throw new Error('El DNI ya está en uso por otro usuario')
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // 1. Actualizar Usuario
-      const userData: any = { nombre, email, residenciaId }
+      const userData: any = { dni, nombre, apellidos, email, residenciaId, telefono }
       if (password && password.trim() !== "") userData.password = password
+
+      if (data.imagen) userData.imagen = data.imagen
 
       await tx.user.update({
         where: { id: currentResidente.userId },
@@ -174,7 +228,7 @@ export async function updateResidente(id: number, data: any) {
       })
     })
 
-    revalidatePath('/admin/residentes')
+    revalidatePath('/modules/residentes')
     return { success: true, data: result }
   } catch (error: any) {
     return { success: false, error: error.message || 'Error al actualizar residente' }

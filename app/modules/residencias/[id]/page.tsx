@@ -69,7 +69,7 @@ export default async function ResidenciaDetallePage({ params }: { params: Promis
                 {[
                     { label: 'Habitaciones', value: stats.total, color: 'bg-gray-50 text-gray-600', icon: <Home size={20} /> },
                     { label: 'Libres', value: stats.libres, color: 'bg-green-50 text-green-600', icon: <div className="w-2 h-2 rounded-full bg-green-500" /> },
-                    { label: 'Ocupadas', value: stats.ocupadas, color: 'bg-blue-50 text-blue-600', icon: <div className="w-2 h-2 rounded-full bg-blue-500" /> },
+                    { label: 'Ocupadas', value: stats.ocupadas, color: 'bg-indigo-50 text-indigo-600', icon: <div className="w-2 h-2 rounded-full bg-indigo-500" /> },
                     { label: 'Reservadas', value: stats.reservadas, color: 'bg-orange-50 text-orange-600', icon: <div className="w-2 h-2 rounded-full bg-orange-500" /> },
                 ].map((stat, i) => (
                     <div key={i} className={`${stat.color} p-6 rounded-[2rem] border border-white shadow-sm flex flex-col gap-2`}>

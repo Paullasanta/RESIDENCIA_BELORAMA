@@ -4,7 +4,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { PayCuotaButton } from '@/components/shared/PayCuotaButton'
 import { PayAllButton } from '@/components/shared/PayAllButton'
 import { notFound } from 'next/navigation'
-import { Calendar, User, CreditCard, ArrowLeft } from 'lucide-react'
+import { Calendar, User, CreditCard, ArrowLeft, FileText, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function DetallePagoPage({ params }: { params: Promise<{ id: string }> }) {
@@ -72,6 +72,23 @@ export default async function DetallePagoPage({ params }: { params: Promise<{ id
                                 <p className="text-[10px] font-bold uppercase">Pendiente</p>
                                 <p className="text-xl font-black">${saldoPendiente.toLocaleString('es-MX')}</p>
                             </div>
+                        </div>
+                    )}
+
+                    {pago.comprobante && (
+                        <div className="pt-4">
+                            <a 
+                                href={pago.comprobante} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="w-full flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100 text-blue-600 hover:bg-blue-50 transition-all group"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <FileText size={18} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Ver Comprobante</span>
+                                </div>
+                                <ExternalLink size={14} className="opacity-50 group-hover:opacity-100 transition-opacity" />
+                            </a>
                         </div>
                     )}
 

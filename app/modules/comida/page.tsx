@@ -2,22 +2,25 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { UtensilsCrossed, Calendar, Plus, Clock } from 'lucide-react'
+import { UtensilsCrossed, Calendar, Plus, Clock, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { AsistenciaButtons } from '@/components/comida/AsistenciaButtons'
 
 const TIPO_LABEL: Record<string, string> = {
     DESAYUNO: 'Desayuno', ALMUERZO: 'Almuerzo', CENA: 'Cena',
 }
-const TIPO_COLOR: Record<string, string> = {
-    DESAYUNO: 'bg-orange-50 text-orange-700 border-orange-100',
-    ALMUERZO: 'bg-blue-50 text-blue-700 border-blue-100',
-    CENA: 'bg-purple-50 text-purple-700 border-purple-100',
+
+const TIPO_COLOR_BAR: Record<string, string> = {
+    DESAYUNO: 'bg-orange-500',
+    ALMUERZO: 'bg-blue-500',
+    CENA: 'bg-indigo-500',
 }
 
 export default async function ComidaPage() {
     const session = await auth()
-    const { rol, permisos } = session!.user
+    if (!session) return null
+
+    const { rol, permisos } = session.user
     const canManage = rol === 'ADMIN' || rol === 'COCINERO' || permisos?.includes('COMIDAS_POST')
 
     let residenciaId: number | null = null
@@ -25,7 +28,7 @@ export default async function ComidaPage() {
     
     if (rol === 'RESIDENTE') {
         const profile = await prisma.residente.findFirst({
-            where: { user: { email: session!.user.email as string } },
+            where: { user: { email: session.user.email as string } },
             select: { id: true, habitacion: { select: { residenciaId: true } } }
         })
         residenciaId = profile?.habitacion?.residenciaId ?? null
@@ -33,7 +36,6 @@ export default async function ComidaPage() {
     }
 
     const hoy = new Date()
-    // Convert current local date to UTC midnight (aligns with DB saves from input type=date)
     const inicioDia = new Date(Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()))
 
     const menus = await prisma.menu.findMany({
@@ -49,7 +51,7 @@ export default async function ComidaPage() {
         orderBy: [{ fecha: 'asc' }, { tipo: 'asc' }]
     })
 
-    // Calcular cupos totales implícitos (opt-out)
+    // Datos maestros para el conteo global por residencia
     const residentesActivos = await prisma.residente.findMany({
         where: { activo: true },
         select: { id: true, habitacion: { select: { residenciaId: true } } }
@@ -84,144 +86,117 @@ export default async function ComidaPage() {
     const dailyPlans = Object.values(groupedMenus);
 
     return (
-        <div className="space-y-10 animate-in fade-in zoom-in-95 duration-500">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <PageHeader
-                    title="Alimentación y Nutrición"
-                    description={residenciaId ? " Consulta tus menús. Recuerda que tu asistencia está confirmada por defecto a menos que marques lo contrario." : "Planifica y gestiona los menús de las residencias."}
-                />
+        <div className="space-y-12 animate-in fade-in duration-700">
+            {/* Header Section */}
+            <div className="flex items-center justify-between gap-4 border-b border-gray-100 pb-6">
+                <div>
+                    <h1 className="text-3xl font-black text-[#072E1F] tracking-tight">Cartilla de Alimentación</h1>
+                    <p className="text-sm text-gray-400 font-medium mt-1">Suministro diario proyectado basado en residentes activos.</p>
+                </div>
                 {canManage && (
-                    <div className="flex items-center gap-3">
-                        <Link
-                            href="/modules/comida/nuevo"
-                            className="flex items-center gap-2 bg-[#1D9E75] text-white px-6 py-3 rounded-[1.25rem] font-black hover:bg-[#167e5d] transition-all shadow-xl shadow-[#1D9E75]/20"
-                        >
-                            <Plus size={18} />
-                            Programar Día
-                        </Link>
-                    </div>
+                    <Link
+                        href="/modules/comida/nuevo"
+                        className="bg-[#072E1F] text-white px-5 py-3 rounded-xl font-bold text-xs hover:bg-black transition-all flex items-center gap-2"
+                    >
+                        <Plus size={14} />
+                        PROGRAMAR MENÚ
+                    </Link>
                 )}
             </div>
 
-            {/* Admin Stats / Weekly Summary */}
-            {canManage && menusCalculados.length > 0 && (
-                <div className="bg-[#072E1F] rounded-[2.5rem] p-8 text-white shadow-2xl shadow-[#072E1F]/20 flex flex-col md:flex-row items-center gap-8 border border-white/5 animate-in fade-in slide-in-from-top-4 duration-700">
-                    <div className="w-16 h-16 bg-[#1D9E75] rounded-2xl flex items-center justify-center shadow-lg">
-                        <UtensilsCrossed size={32} />
-                    </div>
-                    <div className="flex-1 text-center md:text-left">
-                        <h3 className="text-xl font-black">Planificación Semanal</h3>
-                        <p className="text-sm text-white/60 font-medium">Resumen de raciones efectivas esperadas (Cupos totales - Cancelados).</p>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full md:w-auto">
-                        {['DESAYUNO', 'ALMUERZO', 'CENA'].map(tipo => {
-                            const count = menusCalculados
-                                .filter(m => m.tipo === tipo)
-                                .reduce((s, m) => s + m.totalConfirmados, 0)
-                            return (
-                                <div key={tipo} className="bg-white/5 border border-white/10 p-4 rounded-2xl flex flex-col items-center min-w-[100px]">
-                                    <span className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">{tipo}</span>
-                                    <span className="text-2xl font-black">{count}</span>
-                                </div>
-                            )
-                        })}
-                    </div>
-                </div>
-            )}
-
             {dailyPlans.length === 0 ? (
                 <EmptyState
-                    icon={<UtensilsCrossed size={64} />}
-                    title="No hay menús programados"
-                    description="Pronto verás aquí la programación de comidas por defecto."
+                    icon={<UtensilsCrossed size={64} className="opacity-5" />}
+                    title="No hay programación"
+                    description="Vuelve más tarde para consultar la cartilla nutricional."
                 />
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {dailyPlans.map((plan: any) => {
                         const isLocked = plan.fechaLimite ? hoy > new Date(plan.fechaLimite) : false;
+                        const dateObj = new Date(plan.fecha);
                         
                         return (
-                            <div key={plan.fecha.toString()} className="bg-white rounded-[2.5rem] shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden flex flex-col group hover:shadow-2xl transition-all duration-300">
-                                {/* Header del Día */}
-                                <div className="p-7 pb-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/50 group-hover:bg-[#1D9E75]/5 transition-colors">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-white border border-gray-100 shadow-sm flex flex-col items-center justify-center text-[#1D9E75]">
-                                            <span className="text-[9px] font-black uppercase tracking-widest leading-none">{new Date(plan.fecha).toLocaleDateString('es-MX', { weekday: 'short' })}</span>
-                                            <span className="text-lg font-black leading-none mt-0.5">{new Date(plan.fecha).getUTCDate()}</span>
-                                        </div>
-                                        <h3 className="text-lg font-black text-gray-900 capitalize">
-                                            {new Date(plan.fecha).toLocaleDateString('es-MX', { month: 'long', timeZone: 'UTC' })}
+                            <div key={plan.fecha.toString()} className="bg-white border border-gray-200 rounded-[1.5rem] shadow-sm flex flex-col overflow-hidden hover:border-gray-400 transition-all duration-300">
+                                {/* Header Minimalista */}
+                                <div className="p-6 pb-4 border-b border-gray-100 bg-gray-50/20">
+                                    <div className="flex items-baseline justify-between mb-1">
+                                        <h3 className="text-xl font-black text-[#072E1F] uppercase tracking-tighter">
+                                            {dateObj.toLocaleDateString('es-MX', { weekday: 'long', timeZone: 'UTC' })}
                                         </h3>
+                                        <span className="text-sm font-black text-gray-300">
+                                            {dateObj.getUTCDate()}
+                                        </span>
                                     </div>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">
+                                        {dateObj.toLocaleDateString('es-MX', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
+                                    </p>
+                                    
                                     {plan.fechaLimite && (
-                                        <div className="text-right flex flex-col items-end">
-                                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1 flex items-center gap-1">
-                                                Límite <Clock size={10} />
-                                            </p>
-                                            <p className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isLocked ? 'bg-red-50 text-red-500' : 'bg-[#EF9F27]/10 text-[#EF9F27]'}`}>
-                                               {new Date(plan.fechaLimite).toLocaleString('es-MX', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'})}
-                                            </p>
+                                        <div className={`mt-4 flex items-center gap-2 text-[9px] font-bold ${isLocked ? 'text-red-400' : 'text-gray-400'}`}>
+                                            <Clock size={12} />
+                                            LIM: {new Date(plan.fechaLimite).toLocaleDateString('es-MX', { day:'2-digit', month: 'short' })} {new Date(plan.fechaLimite).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
                                         </div>
                                     )}
                                 </div>
-                                
-                                {/* Lista de Comidas */}
-                                <div className="p-4 space-y-4 bg-gray-50/30">
-                                   {['DESAYUNO', 'ALMUERZO', 'CENA'].map(tipo => {
-                                       const menu = plan.menus.find((m: any) => m.tipo === tipo);
-                                       if (!menu) {
-                                           return (
-                                               <div key={tipo} className="border-2 border-gray-100 border-dashed rounded-3xl overflow-hidden bg-gray-50/50 flex flex-col items-center justify-center py-8 opacity-60">
-                                                   <span className="px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-gray-200 text-gray-400 mb-2 bg-white shadow-sm">
-                                                       {TIPO_LABEL[tipo]}
-                                                   </span>
-                                                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Sin programación</p>
-                                               </div>
-                                           )
-                                       }
-                                       
-                                       const miAsistencia = menu.asistencias.find((a: any) => a.residenteId === residenteId);
-                                       const asiste = miAsistencia ? miAsistencia.asiste : true; // DEFAULT TRUE IMPLÍCITO
-                                       
-                                       return (
-                                           <div key={menu.id} className="border border-gray-100 rounded-3xl overflow-hidden hover:border-[#1D9E75]/30 transition-colors bg-white shadow-sm flex flex-col h-full relative">
-                                               <div className="p-5 flex-1">
-                                                   <div className="flex items-center justify-between mb-3">
-                                                       <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${TIPO_COLOR[menu.tipo] || 'bg-gray-50'}`}>
-                                                            {TIPO_LABEL[menu.tipo] || menu.tipo}
-                                                        </span>
-                                                        {canManage && (
-                                                            <div className="text-[10px] font-black text-[#1D9E75] bg-[#1D9E75]/10 px-2.5 py-1 rounded-md uppercase tracking-wider title='Total Activos menos Cancelaciones'">
-                                                                {menu.totalConfirmados} Efectivas
-                                                            </div>
-                                                        )}
-                                                   </div>
-                                                   <h4 className="font-black text-gray-900 text-lg leading-tight group-hover:text-[#1D9E75] transition-colors">{menu.nombre}</h4>
-                                                   {menu.descripcion && <p className="text-xs font-medium text-gray-400 mt-1">{menu.descripcion}</p>}
-                                                   
-                                                   {/* Residencias Asignadas */}
-                                                   {canManage && menu.residencias && menu.residencias.length > 0 && (
-                                                       <div className="mt-4 pt-3 border-t border-gray-50 flex flex-wrap gap-1.5">
-                                                           {menu.residencias.map((r: any) => (
-                                                               <span key={r.residenciaId} className="px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-[8px] font-black uppercase text-gray-500 tracking-wider">
-                                                                   {r.residencia.nombre}
-                                                               </span>
-                                                           ))}
-                                                       </div>
-                                                   )}
-                                               </div>
-                                               
-                                               {!canManage && residenteId && (
-                                                   <AsistenciaButtons 
-                                                       residenteId={residenteId} 
-                                                       menuId={menu.id} 
-                                                       asiste={asiste} 
-                                                       isLocked={isLocked}
-                                                   />
-                                               )}
-                                           </div>
-                                       )
-                                   })}
+
+                                {/* Cuerpo de Cartilla */}
+                                <div className="p-0 flex-1 divide-y divide-gray-50">
+                                    {['DESAYUNO', 'ALMUERZO', 'CENA'].map(tipo => {
+                                        const menu = plan.menus.find((m: any) => m.tipo === tipo);
+
+                                        if (!menu) {
+                                            return (
+                                                <div key={tipo} className="p-5 flex items-center justify-between opacity-20 grayscale">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-1 h-6 rounded-full ${TIPO_COLOR_BAR[tipo]}`} />
+                                                        <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{TIPO_LABEL[tipo]}</span>
+                                                    </div>
+                                                    <span className="text-[10px] font-bold italic text-gray-400">---</span>
+                                                </div>
+                                            )
+                                        }
+
+                                        const miAsistencia = menu.asistencias.find((a: any) => a.residenteId === residenteId);
+                                        const asiste = miAsistencia ? miAsistencia.asiste : true;
+
+                                        return (
+                                            <div key={menu.id} className="p-5 flex flex-col gap-3 group relative hover:bg-gray-50/50 transition-colors">
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex items-start gap-3 min-w-0">
+                                                        <div className={`w-1 h-8 rounded-full shrink-0 ${TIPO_COLOR_BAR[tipo]}`} />
+                                                        <div className="min-w-0">
+                                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{TIPO_LABEL[tipo]}</p>
+                                                            <h4 className="font-black text-[#072E1F] text-xs leading-tight line-clamp-2">{menu.nombre}</h4>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {/* El Contador Numérico para Admin */}
+                                                    {canManage ? (
+                                                        <div className="bg-[#072E1F] text-white px-3 py-2 rounded-lg font-black text-lg min-w-[50px] text-center shadow-lg shadow-[#072E1F]/20 flex flex-col items-center">
+                                                            <span>{menu.totalConfirmados}</span>
+                                                            <span className="text-[7px] text-white/50 uppercase tracking-tighter mt-0.5">Raciones</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center justify-center">
+                                                            {/* Placeholder or subtle check for resident? */}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Controles Minimalistas para Residente */}
+                                                {!canManage && residenteId && (
+                                                    <AsistenciaButtons 
+                                                        residenteId={residenteId} 
+                                                        menuId={menu.id} 
+                                                        asiste={asiste} 
+                                                        isLocked={isLocked}
+                                                        variant="cartilla"
+                                                    />
+                                                )}
+                                            </div>
+                                        )
+                                    })}
                                 </div>
                             </div>
                         )

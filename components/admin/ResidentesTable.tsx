@@ -156,10 +156,31 @@ export function ResidentesTable({ residentes }: ResidentesTableProps) {
                                                 <div className="w-12 h-12 rounded-[1.25rem] bg-[#1D9E75]/5 flex items-center justify-center text-[#1D9E75] font-black text-sm border border-[#1D9E75]/10 shadow-sm group-hover:scale-110 transition-transform">
                                                     {r.user.nombre.charAt(0).toUpperCase()}
                                                 </div>
-                                                <div>
+                                                <Link 
+                                                    href={`/modules/residentes/${r.id}/editar`}
+                                                    className="hover:underline hover:text-[#1D9E75] transition-all"
+                                                >
                                                     <p className="font-black text-[#072E1F] text-base leading-none mb-1.5">{r.user.nombre}</p>
-                                                    <p className="text-xs text-gray-400 font-bold tracking-tight">{r.user.email}</p>
-                                                </div>
+                                                    <div className="flex items-center gap-2 text-xs font-bold tracking-tight">
+                                                        <span className="text-gray-400">{r.user.email}</span>
+                                                        <span className="text-gray-300">•</span>
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                e.preventDefault();
+                                                                navigator.clipboard.writeText(r.user.dni || '');
+                                                                const target = e.currentTarget;
+                                                                const originalText = target.innerText;
+                                                                target.innerText = '¡Copiado!';
+                                                                setTimeout(() => target.innerText = originalText, 2000);
+                                                            }}
+                                                            className="text-[#1D9E75] bg-[#1D9E75]/5 px-2 py-0.5 rounded-md border border-[#1D9E75]/10 hover:bg-[#1D9E75] hover:text-white transition-all active:scale-95"
+                                                            title="Clic para copiar DNI"
+                                                        >
+                                                            DNI: {r.user.dni ?? '—'}
+                                                        </button>
+                                                    </div>
+                                                </Link>
                                             </div>
                                         </td>
                                         <td className="px-10 py-6">
@@ -193,10 +214,10 @@ export function ResidentesTable({ residentes }: ResidentesTableProps) {
                                             </span>
                                         </td>
                                         <td className="px-10 py-6">
-                                            <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-300">
+                                            <div className="flex items-center justify-end gap-3 transition-all duration-300">
                                                 <Link
                                                     href={`/modules/residentes/${r.id}/editar`}
-                                                    className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-[#1D9E75] hover:bg-green-50 rounded-xl transition-all border border-transparent hover:border-green-100 shadow-sm hover:shadow-green-100/20"
+                                                    className="w-10 h-10 flex items-center justify-center text-[#1D9E75] bg-green-50/50 hover:bg-[#1D9E75] hover:text-white rounded-[1.25rem] transition-all border border-[#1D9E75]/10 shadow-sm shadow-[#1D9E75]/5"
                                                     title="Editar residente"
                                                 >
                                                     <Edit2 size={18} />

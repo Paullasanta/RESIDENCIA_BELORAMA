@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/shared/NavLink'
 import { LogoutButton } from '@/components/shared/LogoutButton'
+import { SidebarHeader } from '@/components/shared/SidebarHeader'
 import {
     LayoutDashboard, Building2, Users, DollarSign,
     WashingMachine, UtensilsCrossed, ShoppingBag,
@@ -36,6 +37,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         { href: '/modules/marketplace',   label: 'Marketplace',       icon: <ShoppingBag size={18} />,     show: true },
         { href: '/modules/egresos',       label: 'Gastos Residentes', icon: <DollarSign size={18} />,      show: hasPerm('MANAGE_EGRESOS') },
         { href: '/modules/avisos',        label: 'Avisos',            icon: <Megaphone size={18} />,       show: true },
+        { href: '/modules/perfil',        label: 'Mi Perfil',         icon: <Users size={18} />,           show: true },
         { href: '/modules/configuracion', label: 'Configuración',     icon: <Settings size={18} />,        show: hasPerm('ADMIN_SETTINGS') || rol === 'ADMIN' },
     ]
 
@@ -50,15 +52,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="flex bg-[#F8FAF8] min-h-screen text-gray-900 font-sans">
             {/* Sidebar Desktop */}
             <aside className="w-72 bg-[#072E1F] text-white hidden md:flex flex-col p-6 sticky top-0 h-screen shadow-2xl z-30 shrink-0">
-                <div className="flex items-center gap-4 mb-10 px-2">
-                    <div className={`w-12 h-12 ${theme.logo} rounded-2xl flex items-center justify-center font-black text-xl shadow-inner`}>
-                        B
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-black tracking-tight leading-tight">{theme.title}</h2>
-                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-0.5">SISTEMA BELORAMA</p>
-                    </div>
-                </div>
+                <SidebarHeader 
+                    title={theme.title}
+                    logoStyle={theme.logo}
+                    systemName="SISTEMA BELORAMA"
+                    userImage={session.user.imagen}
+                    userName={session.user.nombre}
+                />
 
                 <nav className="flex-1 space-y-1.5 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
                     {navItems.filter(i => i.show).map((item) => (
