@@ -20,10 +20,11 @@ export default async function ComidaPage() {
     const session = await auth()
     if (!session) return null
 
-    const { rol, permisos } = session.user
+    const { rol, permisos, residenciaId: sessionResId } = session.user
     const canManage = rol === 'ADMIN' || rol === 'COCINERO' || permisos?.includes('COMIDAS_POST')
+    const isGlobalAdmin = rol === 'ADMIN' && !sessionResId
 
-    let residenciaId: number | null = null
+    let residenciaId: number | null = sessionResId || null
     let residenteId: number | null = null
     
     if (rol === 'RESIDENTE') {
@@ -31,7 +32,7 @@ export default async function ComidaPage() {
             where: { user: { email: session.user.email as string } },
             select: { id: true, habitacion: { select: { residenciaId: true } } }
         })
-        residenciaId = profile?.habitacion?.residenciaId ?? null
+        residenciaId = profile?.habitacion?.residenciaId ?? sessionResId ?? null
         residenteId = profile?.id ?? null
     }
 
@@ -42,7 +43,7 @@ export default async function ComidaPage() {
         where: {
             activo: true,
             fecha: { gte: inicioDia },
-            ...(residenciaId ? { residencias: { some: { residenciaId } } } : {})
+            ...(isGlobalAdmin ? {} : { residencias: { some: { residenciaId: residenciaId || -1 } } })
         },
         include: {
             asistencias: true,
@@ -51,16 +52,34 @@ export default async function ComidaPage() {
         orderBy: [{ fecha: 'asc' }, { tipo: 'asc' }]
     })
 
-    // Datos maestros para el conteo global por residencia
+    // Datos maestros para el conteo global por residencia (filtrado si no es global admin)
     const residentesActivos = await prisma.residente.findMany({
-        where: { activo: true },
-        select: { id: true, habitacion: { select: { residenciaId: true } } }
+        where: { 
+            activo: true,
+            ...(isGlobalAdmin ? {} : { user: { residenciaId: residenciaId || -1 } })
+        },
+        select: { 
+            id: true, 
+            alergias: true,
+            restriccionesAlimentarias: true,
+            habitacion: { select: { residenciaId: true } },
+            user: { select: { nombre: true } }
+        }
     })
     
     const countByResidencia: Record<number, number> = {}
+    const alertasNutricionales: { nombre: string, alerta: string }[] = []
+
     residentesActivos.forEach(r => {
         const rId = r.habitacion?.residenciaId
         if (rId) countByResidencia[rId] = (countByResidencia[rId] || 0) + 1
+        
+        if (r.alergias || r.restriccionesAlimentarias) {
+            alertasNutricionales.push({
+                nombre: r.user.nombre,
+                alerta: [r.alergias, r.restriccionesAlimentarias].filter(Boolean).join(' / ')
+            })
+        }
     })
 
     const menusCalculados = menus.map(menu => {
@@ -103,6 +122,29 @@ export default async function ComidaPage() {
                     </Link>
                 )}
             </div>
+
+            {/* Alertas Nutricionales para Cocina */}
+            {canManage && alertasNutricionales.length > 0 && (
+                <div className="bg-amber-50 border border-amber-100 rounded-3xl p-6 flex flex-col md:flex-row gap-6 items-start animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="bg-amber-500 text-white p-3 rounded-2xl shadow-lg shadow-amber-500/20">
+                        <UtensilsCrossed size={24} />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-black text-amber-800 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            Alertas de Nutrición y Alergias
+                            <span className="bg-amber-200 text-amber-800 text-[10px] px-2 py-0.5 rounded-full">{alertasNutricionales.length}</span>
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                            {alertasNutricionales.map((alerta, idx) => (
+                                <div key={idx} className="bg-white/60 border border-amber-200 px-3 py-1.5 rounded-xl flex flex-col">
+                                    <span className="text-[10px] font-black text-amber-900">{alerta.nombre}</span>
+                                    <span className="text-[9px] font-bold text-amber-600 uppercase tracking-tighter">{alerta.alerta}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {dailyPlans.length === 0 ? (
                 <EmptyState

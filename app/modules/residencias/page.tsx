@@ -1,3 +1,4 @@
+import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -6,7 +7,12 @@ import { ResidenciaCard } from '@/components/admin/ResidenciaCard'
 import { AddResidenciaButton } from '@/components/admin/AddResidenciaButton'
 
 export default async function ResidenciasPage() {
+    const session = await auth()
+    const { residenciaId, rol } = session!.user
+    const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
+
     const residencias = await prisma.residencia.findMany({
+        where: isGlobalAdmin ? {} : { id: residenciaId || -1 },
         select: {
             id: true,
             nombre: true,
@@ -29,9 +35,9 @@ export default async function ResidenciasPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <PageHeader
                     title="Residencias"
-                    description="Gestiona todas las residencias del sistema."
+                    description={isGlobalAdmin ? "Gestiona todas las residencias del sistema." : "Información de tu residencia."}
                 />
-                <AddResidenciaButton />
+                {isGlobalAdmin && <AddResidenciaButton />}
             </div>
 
             {residencias.length === 0 ? (

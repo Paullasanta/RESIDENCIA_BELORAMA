@@ -208,6 +208,33 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
           </select>
         </div>
 
+        <div className="pt-8 mt-4 border-t border-gray-50 col-span-full">
+            <h3 className="text-sm font-black text-[#EF9F27] uppercase tracking-[0.2em] mb-2">Salud y Nutrición</h3>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6">Esta información es vital para el equipo de cocina.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Alergias</label>
+                    <input
+                        name="alergias"
+                        defaultValue={initialData?.alergias}
+                        className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#EF9F27] focus:ring-4 focus:ring-[#EF9F27]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
+                        placeholder="Ej. Maní, Lactosa, Mariscos..."
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Restricciones Alimentarias</label>
+                    <input
+                        name="restriccionesAlimentarias"
+                        defaultValue={initialData?.restriccionesAlimentarias}
+                        className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#EF9F27] focus:ring-4 focus:ring-[#EF9F27]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
+                        placeholder="Ej. Vegano, Sin Sal, Diabético..."
+                    />
+                </div>
+            </div>
+        </div>
+
         {!initialData && (
           <>
             <div className="pt-8 mt-4 border-t border-gray-50 col-span-full">

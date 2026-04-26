@@ -55,6 +55,13 @@ enum Prioridad {
   IMPORTANTE
 }
 
+enum EstadoTicket {
+  PENDIENTE
+  EN_PROCESO
+  RESUELTO
+  CANCELADO
+}
+
 enum TipoMenu {
   DESAYUNO
   ALMUERZO
@@ -126,6 +133,7 @@ model Residencia {
   egresos      Egreso[]
   menus        MenuResidencia[]
   avisos       Aviso[]
+  tickets      TicketMantenimiento[]
   createdAt    DateTime                @default(now())
 }
 
@@ -154,6 +162,9 @@ model Residente {
   pagos             Pago[]
   productos         ProductoMarketplace[]
   asistencias       AsistenciaComida[]
+  mantenimiento     TicketMantenimiento[]
+  alergias          String?
+  restriccionesAlimentarias String?
 }
 
 model Lavadora {
@@ -296,6 +307,20 @@ model Reaccion {
   createdAt DateTime @default(now())
 
   @@unique([userId, avisoId, emoji])
+}
+
+model TicketMantenimiento {
+  id           Int          @id @default(autoincrement())
+  residenteId  Int
+  residente    Residente    @relation(fields: [residenteId], references: [id])
+  residenciaId Int
+  residencia   Residencia   @relation(fields: [residenciaId], references: [id])
+  titulo       String
+  descripcion  String
+  prioridad    Prioridad    @default(NORMAL)
+  estado       EstadoTicket @default(PENDIENTE)
+  fotos        String[]
+  createdAt    DateTime     @default(now())
 }
 
 model Configuracion {

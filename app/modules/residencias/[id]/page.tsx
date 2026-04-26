@@ -1,5 +1,6 @@
+import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Home, Users, ArrowLeft, Upload, Plus } from 'lucide-react'
 import Link from 'next/link'
@@ -11,8 +12,17 @@ import { ManageHabitacionModal } from '@/components/admin/ManageHabitacionModal'
 export const dynamic = 'force-dynamic'
 
 export default async function ResidenciaDetallePage({ params }: { params: Promise<{ id: string }> }) {
+    const session = await auth()
+    const { residenciaId, rol } = session!.user
     const { id: idStr } = await params
     const id = parseInt(idStr)
+
+    // Protección: Si no es Admin Global, debe coincidir con su residenciaId
+    if (rol !== 'ADMIN' || residenciaId) {
+        if (id !== residenciaId) {
+            redirect('/modules/residencias')
+        }
+    }
     
     const residencia = await prisma.residencia.findUnique({
         where: { id },

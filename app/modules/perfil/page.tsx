@@ -3,7 +3,8 @@
 import { useState, useTransition, useEffect } from 'react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { updateProfile } from '@/app/actions/perfil'
-import { User, Mail, Phone, Lock, Camera, Save, AlertCircle, CheckCircle2, ShieldCheck, HeartPulse, Calendar } from 'lucide-react'
+import { User, Mail, Phone, Lock, Save, AlertCircle, CheckCircle2, ShieldCheck, HeartPulse, Calendar } from 'lucide-react'
+import { getInitials } from '@/lib/utils'
 import { useSession } from 'next-auth/react'
 
 export default function PerfilPage() {
@@ -11,7 +12,6 @@ export default function PerfilPage() {
     const [isPending, startTransition] = useTransition()
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
     const [userData, setUserData] = useState<any>(null)
-    const [uploading, setUploading] = useState(false)
 
     useEffect(() => {
         if (session?.user?.id) {
@@ -23,32 +23,7 @@ export default function PerfilPage() {
 
     if (!userData) return <div className="p-8 text-center animate-pulse font-black text-gray-300 tracking-widest uppercase text-xs">Cargando perfil...</div>
 
-    async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0]
-        if (!file) return
 
-        setUploading(true)
-        const formData = new FormData()
-        formData.append('file', file)
-
-        try {
-            const res = await fetch('/api/upload', { method: 'POST', body: formData })
-            const { url } = await res.json()
-            
-            startTransition(async () => {
-                const result = await updateProfile({ imagen: url })
-                if (result.success) {
-                    setUserData({ ...userData, imagen: url })
-                    await update()
-                    setMessage({ type: 'success', text: 'Foto de perfil actualizada' })
-                }
-            })
-        } catch (error) {
-            setMessage({ type: 'error', text: 'Error al subir imagen' })
-        } finally {
-            setUploading(false)
-        }
-    }
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -85,24 +60,9 @@ export default function PerfilPage() {
                 <div className="space-y-8">
                     <div className="bg-white rounded-[3rem] p-10 border border-gray-100 shadow-xl shadow-gray-200/30 flex flex-col items-center text-center">
                         <div className="relative group">
-                            <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden bg-gray-100 border-4 border-white shadow-2xl relative">
-                                {userData.imagen ? (
-                                    <img src={userData.imagen} alt="Perfil" className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-[#EF9F27]/10 text-[#EF9F27]">
-                                        <User size={64} strokeWidth={1.5} />
-                                    </div>
-                                )}
-                                {uploading && (
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
-                                        <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    </div>
-                                )}
+                            <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden bg-[#EF9F27]/10 border-4 border-white shadow-2xl relative flex items-center justify-center text-[#EF9F27] font-black text-5xl">
+                                {getInitials(userData.nombre)}
                             </div>
-                            <label className="absolute -bottom-2 -right-2 w-12 h-12 bg-[#1D9E75] text-white rounded-2xl flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-all border-4 border-white group-hover:bg-[#072E1F]">
-                                <Camera size={20} />
-                                <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                            </label>
                         </div>
 
                         <div className="mt-8 space-y-1">

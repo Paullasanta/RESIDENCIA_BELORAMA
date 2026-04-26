@@ -3,7 +3,8 @@
 import { useState, useTransition, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { updateProfile } from '@/app/actions/perfil'
-import { User, Mail, Phone, Lock, Camera, X, Save, CheckCircle2, AlertCircle, HeartPulse, Calendar } from 'lucide-react'
+import { User, Mail, Phone, Lock, X, Save, CheckCircle2, AlertCircle, HeartPulse, Calendar } from 'lucide-react'
+import { getInitials } from '@/lib/utils'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
@@ -18,8 +19,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     const [isPending, startTransition] = useTransition()
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
     const [userData, setUserData] = useState<any>(null)
-    const [uploading, setUploading] = useState(false)
-    const [mounted, setMounted] = useState(false)
+    const [mounted, setMounted] = useState<boolean>(false)
 
     useEffect(() => {
         setMounted(true)
@@ -33,35 +33,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
     if (!isOpen || !mounted) return null
 
-    async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0]
-        if (!file) return
 
-        setUploading(true)
-        const formData = new FormData()
-        formData.append('file', file)
-
-        try {
-            const res = await fetch('/api/upload', { method: 'POST', body: formData })
-            const { url } = await res.json()
-            
-            startTransition(async () => {
-                const result = await updateProfile({ imagen: url })
-                if (result.success) {
-                    await update({ 
-                        user: { ...session?.user, imagen: url } 
-                    })
-                    router.refresh()
-                    setUserData({ ...userData, imagen: url })
-                    setMessage({ type: 'success', text: 'Foto actualizada' })
-                }
-            })
-        } catch (error) {
-            setMessage({ type: 'error', text: 'Error al subir imagen' })
-        } finally {
-            setUploading(false)
-        }
-    }
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -118,24 +90,9 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                             <div className="space-y-10">
                                 <div className="flex flex-col items-center gap-6 p-8 bg-gray-50/50 rounded-[2.5rem] border border-gray-100">
                                     <div className="relative">
-                                        <div className="w-32 h-32 rounded-[2rem] overflow-hidden bg-gray-200 border-4 border-white shadow-xl">
-                                            {userData.imagen ? (
-                                                <img src={userData.imagen} alt="Perfil" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center bg-[#EF9F27]/20 text-[#EF9F27]">
-                                                    <User size={48} />
-                                                </div>
-                                            )}
-                                            {uploading && (
-                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
-                                                    <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
-                                                </div>
-                                            )}
+                                        <div className="w-32 h-32 rounded-[2rem] overflow-hidden bg-[#EF9F27]/10 border-4 border-white shadow-xl flex items-center justify-center text-[#EF9F27] font-black text-4xl">
+                                            {getInitials(userData.nombre)}
                                         </div>
-                                        <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#1D9E75] text-white rounded-xl flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-all border-4 border-white">
-                                            <Camera size={18} />
-                                            <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                                        </label>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">DNI / Documento</p>

@@ -1,3 +1,4 @@
+import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -5,7 +6,12 @@ import { Receipt, TrendingDown, Plus } from 'lucide-react'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 
 export default async function EgresosPage() {
+    const session = await auth()
+    const { residenciaId, rol } = session!.user
+    const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
+
     const egresos = await prisma.egreso.findMany({
+        where: isGlobalAdmin ? {} : { residenciaId: residenciaId || -1 },
         include: {
             residencia: true,
             admin: true,

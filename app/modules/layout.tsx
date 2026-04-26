@@ -7,8 +7,10 @@ import { SidebarHeader } from '@/components/shared/SidebarHeader'
 import {
     LayoutDashboard, Building2, Users, DollarSign,
     WashingMachine, UtensilsCrossed, ShoppingBag,
-    Megaphone, Settings
+    Megaphone, Settings, Wrench, BarChart3
 } from 'lucide-react'
+
+import { MobileNavContainer } from '@/components/shared/MobileNavContainer'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
     const session = await auth()
@@ -35,7 +37,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         { href: '/modules/lavanderia',    label: 'Lavandería',        icon: <WashingMachine size={18} />,  show: true },
         { href: '/modules/comida',        label: 'Gestión de Comidas',icon: <UtensilsCrossed size={18} />, show: true },
         { href: '/modules/marketplace',   label: 'Marketplace',       icon: <ShoppingBag size={18} />,     show: true },
+        { href: '/modules/mantenimiento', label: 'Mantenimiento',     icon: <Wrench size={18} />,          show: true },
         { href: '/modules/egresos',       label: 'Gastos Residentes', icon: <DollarSign size={18} />,      show: hasPerm('MANAGE_EGRESOS') },
+        { href: '/modules/reportes',      label: 'Reportes y Analítica',icon: <BarChart3 size={18} />,     show: rol === 'ADMIN' },
         { href: '/modules/avisos',        label: 'Avisos',            icon: <Megaphone size={18} />,       show: true },
         { href: '/modules/perfil',        label: 'Mi Perfil',         icon: <Users size={18} />,           show: true },
         { href: '/modules/configuracion', label: 'Configuración',     icon: <Settings size={18} />,        show: hasPerm('ADMIN_SETTINGS') || rol === 'ADMIN' },
@@ -56,8 +60,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                     title={theme.title}
                     logoStyle={theme.logo}
                     systemName="SISTEMA BELORAMA"
-                    userImage={session.user.imagen}
-                    userName={session.user.nombre}
+                    userName={nombre}
                 />
 
                 <nav className="flex-1 space-y-1.5 overflow-y-auto pr-2 -mr-2 custom-scrollbar">
@@ -81,13 +84,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 p-8 lg:p-12 overflow-y-auto relative">
-                <header className="md:hidden flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
-                         <div className={`w-10 h-10 ${theme.logo} rounded-xl flex items-center justify-center font-black text-sm`}>B</div>
-                         <h1 className="font-black text-gray-900">{theme.title}</h1>
-                    </div>
-                </header>
+            <main className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto relative">
+                <MobileNavContainer 
+                    navItems={navItems}
+                    userName={nombre}
+                    theme={theme}
+                />
+                
                 <div className="max-w-7xl mx-auto">
                     {children}
                 </div>
@@ -95,3 +98,4 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
     )
 }
+

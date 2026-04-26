@@ -1,3 +1,4 @@
+import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { UserPlus } from 'lucide-react'
@@ -5,7 +6,16 @@ import Link from 'next/link'
 import { ResidentesTable } from '@/components/admin/ResidentesTable'
 
 export default async function ResidentesPage() {
+    const session = await auth()
+    const { residenciaId, rol } = session!.user
+
+    // Aislamiento: Si no es Admin Global (sin sede), filtrar por su residenciaId
+    const whereClause = (rol === 'ADMIN' && !residenciaId) ? {} : {
+        user: { residenciaId: residenciaId || -1 }
+    }
+
     const residentes = await prisma.residente.findMany({
+        where: whereClause,
         include: {
             user: true,
             habitacion: {

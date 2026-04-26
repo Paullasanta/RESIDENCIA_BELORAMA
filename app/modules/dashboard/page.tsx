@@ -8,23 +8,43 @@ import Link from 'next/link'
 
 export default async function DashboardPage() {
     const session = await auth()
-    const { rol, nombre, email } = session!.user
-    const isAdmin = rol === 'ADMIN'
+    const { rol, nombre, email, residenciaId } = session!.user
+    const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
 
-    if (isAdmin) {
+    if (rol === 'ADMIN') {
+        const whereResidenteResidencia = isGlobalAdmin ? {} : { user: { residenciaId: residenciaId || -1 } }
+        const wherePagoResidencia = isGlobalAdmin ? {} : { residente: { user: { residenciaId: residenciaId || -1 } } }
+
         const [totalResidentes, pagosMes, turnosActivos, publicacionesActivas, ultimosPagos] = await Promise.all([
-            prisma.residente.count({ where: { activo: true } }),
+            prisma.residente.count({ 
+                where: { 
+                    activo: true,
+                    ...whereResidenteResidencia
+                } 
+            }),
             prisma.pago.aggregate({
                 _sum: { montoPagado: true },
                 where: {
                     createdAt: {
                         gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
                     },
+                    ...wherePagoResidencia
                 },
             }),
-            prisma.turnoLavanderia.count({ where: { estado: 'OCUPADO' } }),
-            prisma.publicacionHabitacion.count({ where: { activa: true } }),
+            prisma.turnoLavanderia.count({ 
+                where: { 
+                    estado: 'OCUPADO',
+                    ...(isGlobalAdmin ? {} : { residenciaId: residenciaId || -1 })
+                } 
+            }),
+            prisma.publicacionHabitacion.count({ 
+                where: { 
+                    activa: true,
+                    ...(isGlobalAdmin ? {} : { residenciaId: residenciaId || -1 })
+                } 
+            }),
             prisma.pago.findMany({
+                where: wherePagoResidencia,
                 take: 6,
                 orderBy: { createdAt: 'desc' },
                 include: { residente: { include: { user: { select: { nombre: true, email: true } } } } }

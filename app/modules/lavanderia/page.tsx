@@ -15,21 +15,23 @@ const DIA_LABEL: Record<string, string> = {
 
 export default async function LavanderiaPage() {
     const session = await auth()
-    const { rol, permisos } = session!.user
+    const { rol, permisos, residenciaId: sessionResId } = session!.user
     const canManage = rol === 'ADMIN' || permisos?.includes('MANAGE_LAVANDERIA')
+    const isGlobalAdmin = rol === 'ADMIN' && !sessionResId
 
-    // Si es residente, filtrar por su residencia
-    let residenciaId: number | null = null
+    // Aislamiento: Si no es Admin Global, filtrar por el residenciaId de su sesión o perfil
+    let residenciaId: number | null = sessionResId || null
+    
     if (rol === 'RESIDENTE') {
         const profile = await prisma.residente.findFirst({
             where: { user: { email: session!.user.email as string } },
             select: { habitacion: { select: { residenciaId: true } } }
         })
-        residenciaId = profile?.habitacion?.residenciaId ?? null
+        residenciaId = profile?.habitacion?.residenciaId ?? sessionResId ?? null
     }
 
     const turnos = await prisma.turnoLavanderia.findMany({
-        where: residenciaId ? { residenciaId } : {},
+        where: isGlobalAdmin ? {} : { residenciaId: residenciaId || -1 },
         include: {
             lavadora: true,
             residente: { include: { user: true } },
@@ -38,11 +40,12 @@ export default async function LavanderiaPage() {
     })
 
     const lavadoras = await prisma.lavadora.findMany({
-        where: residenciaId ? { residenciaId } : {},
+        where: isGlobalAdmin ? {} : { residenciaId: residenciaId || -1 },
         orderBy: { nombre: 'asc' }
     })
     
     const residentes = canManage ? await prisma.residente.findMany({
+        where: isGlobalAdmin ? {} : { user: { residenciaId: residenciaId || -1 } },
         include: { user: true },
         orderBy: { user: { nombre: 'asc' } }
     }) : []

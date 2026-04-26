@@ -54,7 +54,7 @@ export default async function Home() {
                     Login
                   </Link>
                   <Link
-                    href="/auth/login"
+                    href="#disponibilidad"
                     className="bg-[#1D9E75] hover:bg-[#072E1F] text-white px-7 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-xl shadow-[#1D9E75]/20"
                   >
                     Reserva Ahora
@@ -113,7 +113,7 @@ export default async function Home() {
         </section>
 
         {/* Habitaciones Disponibles */}
-        <section className="bg-white py-24 rounded-t-[4rem] shadow-2xl shadow-[#072E1F]/5">
+        <section id="disponibilidad" className="bg-white py-24 rounded-t-[4rem] shadow-2xl shadow-[#072E1F]/5">
           <div className="max-w-7xl mx-auto px-6 lg:px-10">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
               <div className="space-y-4">
@@ -170,7 +170,7 @@ export default async function Home() {
                         </div>
 
                         <Link
-                          href={`/auth/login`}
+                          href={`/habitacion/${habitacion.id}`}
                           className="w-full bg-gray-50 group-hover:bg-[#072E1F] text-gray-400 group-hover:text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
                         >
                           Ver Disponibilidad

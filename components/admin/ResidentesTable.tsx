@@ -86,42 +86,35 @@ export function ResidentesTable({ residentes }: ResidentesTableProps) {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 {/* Buscador Autocompletable */}
-                <div className="relative group max-w-lg w-full">
+                <div className="relative group w-full lg:max-w-md">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#1D9E75] transition-colors">
-                        <Search size={20} />
+                        <Search size={18} />
                     </div>
                     <input
                         type="text"
-                        placeholder="Buscar por nombre, email o habitación..."
+                        placeholder="Buscar por nombre, email..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-12 pr-6 py-4 bg-white border border-gray-100 rounded-[1.5rem] shadow-sm shadow-gray-100/50 focus:ring-4 focus:ring-[#1D9E75]/5 focus:border-[#1D9E75] outline-none transition-all placeholder:text-gray-400 font-medium text-sm"
+                        className="w-full pl-12 pr-6 py-3 bg-white border border-gray-100 rounded-[1.25rem] shadow-sm focus:ring-4 focus:ring-[#1D9E75]/5 focus:border-[#1D9E75] outline-none transition-all placeholder:text-gray-400 font-medium text-sm"
                     />
-                    {search && (
-                    <div className="absolute right-5 inset-y-0 flex items-center">
-                            <span className="text-[10px] font-black text-[#1D9E75] uppercase tracking-widest bg-green-50 px-3 py-1.5 rounded-full border border-green-100 animate-in fade-in zoom-in duration-300">
-                                {filteredResidentes.length} {filteredResidentes.length === 1 ? 'coincidencia' : 'coincidencias'}
-                            </span>
-                    </div>
-                    )}
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 no-scrollbar">
                     <button 
                         onClick={handleExportPDF}
                         disabled={filteredResidentes.length === 0}
-                        className="flex items-center gap-2 px-6 py-4 bg-white border border-gray-100 rounded-2xl text-xs font-black text-gray-400 hover:text-[#1D9E75] hover:border-[#1D9E75] transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed group"
+                        className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-100 rounded-xl text-[10px] font-black text-gray-400 hover:text-[#1D9E75] hover:border-[#1D9E75] transition-all shadow-sm disabled:opacity-50 group whitespace-nowrap"
                     >
-                        <FileText size={16} className="group-hover:scale-110 transition-transform" />
+                        <FileText size={14} />
                         PDF
                     </button>
                     <button 
                         onClick={() => alert('Excel próximamente')}
-                        className="flex items-center gap-2 px-6 py-4 bg-white border border-gray-100 rounded-2xl text-xs font-black text-gray-400 hover:text-[#1D9E75] hover:border-[#1D9E75] transition-all shadow-sm"
+                        className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-100 rounded-xl text-[10px] font-black text-gray-400 hover:text-[#1D9E75] hover:border-[#1D9E75] transition-all shadow-sm whitespace-nowrap"
                     >
-                        <Download size={16} />
+                        <Download size={14} />
                         EXCEL
                     </button>
                 </div>
@@ -139,88 +132,60 @@ export function ResidentesTable({ residentes }: ResidentesTableProps) {
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-gray-50 bg-gray-50/20">
-                                    <th className="text-left px-10 py-6 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">Residente</th>
-                                    <th className="text-left px-10 py-6 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">Habitación</th>
-                                    <th className="text-left px-10 py-6 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">Residencia</th>
-                                    <th className="text-left px-10 py-6 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">Último Pago</th>
-                                    <th className="text-left px-10 py-6 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">Estado</th>
-                                    <th className="text-left px-10 py-6 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">Ingreso</th>
-                                    <th className="text-right px-10 py-6 text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">Acciones</th>
+                                    <th className="text-left px-4 md:px-10 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Residente</th>
+                                    <th className="text-left px-4 md:px-10 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Hab.</th>
+                                    <th className="hidden lg:table-cell text-left px-4 md:px-10 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Residencia</th>
+                                    <th className="text-left px-4 md:px-10 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Pago</th>
+                                    <th className="text-left px-4 md:px-10 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Estado</th>
+                                    <th className="hidden sm:table-cell text-left px-4 md:px-10 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Ingreso</th>
+                                    <th className="text-right px-4 md:px-10 py-4 text-[10px] font-black uppercase tracking-widest text-gray-400">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
                                 {filteredResidentes.map((r) => (
                                     <tr key={r.id} className="hover:bg-gray-50/50 transition-all group duration-300">
-                                        <td className="px-10 py-6">
-                                            <div className="flex items-center gap-5">
-                                                <div className="w-12 h-12 rounded-[1.25rem] bg-[#1D9E75]/5 flex items-center justify-center text-[#1D9E75] font-black text-sm border border-[#1D9E75]/10 shadow-sm group-hover:scale-110 transition-transform">
+                                        <td className="px-4 md:px-10 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="hidden sm:flex w-10 h-10 rounded-xl bg-[#1D9E75]/5 items-center justify-center text-[#1D9E75] font-black text-xs border border-[#1D9E75]/10">
                                                     {r.user.nombre.charAt(0).toUpperCase()}
                                                 </div>
                                                 <Link 
                                                     href={`/modules/residentes/${r.id}/editar`}
                                                     className="hover:underline hover:text-[#1D9E75] transition-all"
                                                 >
-                                                    <p className="font-black text-[#072E1F] text-base leading-none mb-1.5">{r.user.nombre}</p>
-                                                    <div className="flex items-center gap-2 text-xs font-bold tracking-tight">
-                                                        <span className="text-gray-400">{r.user.email}</span>
-                                                        <span className="text-gray-300">•</span>
-                                                        <button 
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                e.preventDefault();
-                                                                navigator.clipboard.writeText(r.user.dni || '');
-                                                                const target = e.currentTarget;
-                                                                const originalText = target.innerText;
-                                                                target.innerText = '¡Copiado!';
-                                                                setTimeout(() => target.innerText = originalText, 2000);
-                                                            }}
-                                                            className="text-[#1D9E75] bg-[#1D9E75]/5 px-2 py-0.5 rounded-md border border-[#1D9E75]/10 hover:bg-[#1D9E75] hover:text-white transition-all active:scale-95"
-                                                            title="Clic para copiar DNI"
-                                                        >
-                                                            DNI: {r.user.dni ?? '—'}
-                                                        </button>
-                                                    </div>
+                                                    <p className="font-black text-[#072E1F] text-sm leading-none mb-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] md:max-w-none">{r.user.nombre}</p>
+                                                    <p className="text-[10px] text-gray-400 font-bold truncate max-w-[120px] md:max-w-none">{r.user.email}</p>
                                                 </Link>
                                             </div>
                                         </td>
-                                        <td className="px-10 py-6">
-                                            {r.habitacion ? (
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="font-black text-gray-700 text-sm">Hab. {r.habitacion.numero}</span>
-                                                    <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded-md self-start border border-gray-100">Piso {r.habitacion.piso}</span>
-                                                </div>
-                                            ) : (
-                                                <span className="text-gray-300 italic font-black text-xs uppercase tracking-widest">Sin asignar</span>
-                                            )}
+                                        <td className="px-4 md:px-10 py-4">
+                                            <span className="font-black text-gray-700 text-xs">#{r.habitacion?.numero ?? '—'}</span>
                                         </td>
-                                        <td className="px-10 py-6">
-                                            <span className="font-black text-gray-500 uppercase text-[11px] tracking-widest">{r.habitacion?.residencia?.nombre ?? "—"}</span>
+                                        <td className="hidden lg:table-cell px-4 md:px-10 py-4 text-xs font-bold text-gray-400 uppercase">
+                                            {r.habitacion?.residencia?.nombre ?? "—"}
                                         </td>
-                                        <td className="px-10 py-6">
-                                            <span className="font-black text-[#072E1F] text-base tracking-tighter">
-                                                {r.pagos[0] ? `$${r.pagos[0].monto.toLocaleString('es-MX')}` : <span className="text-gray-200">—</span>}
+                                        <td className="px-4 md:px-10 py-4">
+                                            <span className="font-black text-[#072E1F] text-xs">
+                                                {r.pagos[0] ? `$${r.pagos[0].monto.toLocaleString('es-MX')}` : '—'}
                                             </span>
                                         </td>
-                                        <td className="px-10 py-6">
+                                        <td className="px-4 md:px-10 py-4">
                                             {r.pagos[0] ? (
                                                 <StatusBadge status={r.pagos[0].estado as any} />
                                             ) : (
                                                 <span className="text-gray-200">—</span>
                                             )}
                                         </td>
-                                        <td className="px-10 py-6">
-                                            <span className="text-[11px] font-black text-gray-400 uppercase tracking-tighter">
-                                                {new Date(r.fechaIngreso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                            </span>
+                                        <td className="hidden sm:table-cell px-4 md:px-10 py-4 text-[10px] font-bold text-gray-400 uppercase">
+                                            {new Date(r.fechaIngreso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
                                         </td>
-                                        <td className="px-10 py-6">
-                                            <div className="flex items-center justify-end gap-3 transition-all duration-300">
+                                        <td className="px-4 md:px-10 py-4">
+                                            <div className="flex items-center justify-end gap-2">
                                                 <Link
                                                     href={`/modules/residentes/${r.id}/editar`}
-                                                    className="w-10 h-10 flex items-center justify-center text-[#1D9E75] bg-green-50/50 hover:bg-[#1D9E75] hover:text-white rounded-[1.25rem] transition-all border border-[#1D9E75]/10 shadow-sm shadow-[#1D9E75]/5"
-                                                    title="Editar residente"
+                                                    className="w-8 h-8 flex items-center justify-center text-[#1D9E75] bg-green-50/50 rounded-lg border border-[#1D9E75]/10"
                                                 >
-                                                    <Edit2 size={18} />
+                                                    <Edit2 size={14} />
                                                 </Link>
                                                 <DeleteResidenteButton id={r.id} nombre={r.user.nombre} />
                                             </div>

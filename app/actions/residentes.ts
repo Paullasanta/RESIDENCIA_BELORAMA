@@ -89,7 +89,9 @@ export async function createResidente(data: any) {
           userId: user.id,
           habitacionId: habitacionId,
           activo: true,
-          fechaIngreso: new Date()
+          fechaIngreso: new Date(),
+          alergias: data.alergias || null,
+          restriccionesAlimentarias: data.restriccionesAlimentarias || null
         }
       })
 
@@ -224,7 +226,11 @@ export async function updateResidente(id: number, data: any) {
       // 3. Actualizar Residente
       return await tx.residente.update({
         where: { id },
-        data: { habitacionId }
+        data: { 
+          habitacionId,
+          alergias: data.alergias,
+          restriccionesAlimentarias: data.restriccionesAlimentarias
+        }
       })
     })
 

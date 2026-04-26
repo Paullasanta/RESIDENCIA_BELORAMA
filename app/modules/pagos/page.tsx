@@ -11,8 +11,9 @@ import ResidentPagoCard from '@/components/shared/ResidentPagoCard'
 
 export default async function PagosPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
     const session = await auth()
-    const { rol, permisos } = session!.user
+    const { rol, permisos, residenciaId } = session!.user
     const isAdmin = rol === 'ADMIN' || permisos?.includes('MANAGE_PAYMENTS')
+    const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
     const { filter } = await searchParams
 
     // Data fetching
@@ -22,6 +23,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     
     if (isAdmin) {
         pagosRaw = await prisma.pago.findMany({
+            where: isGlobalAdmin ? {} : { residente: { user: { residenciaId: residenciaId || -1 } } },
             include: {
                 residente: { 
                     include: { 
@@ -35,7 +37,10 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
         })
 
         residentesActivos = await prisma.residente.findMany({
-            where: { activo: true },
+            where: { 
+                activo: true,
+                ...(isGlobalAdmin ? {} : { user: { residenciaId: residenciaId || -1 } })
+            },
             include: { user: true, habitacion: true },
             orderBy: { user: { nombre: 'asc' } }
         })

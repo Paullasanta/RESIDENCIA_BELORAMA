@@ -8,7 +8,6 @@ export async function updateProfile(data: {
     nombre?: string,
     apellidos?: string,
     telefono?: string,
-    imagen?: string,
     password?: string,
     emergenciaNombre?: string,
     emergenciaTelefono?: string,
@@ -26,7 +25,6 @@ export async function updateProfile(data: {
             emergenciaTelefono: data.emergenciaTelefono,
         }
 
-        if (data.imagen) updateData.imagen = data.imagen
         if (data.password && data.password.trim() !== '') {
             updateData.password = data.password
         }
