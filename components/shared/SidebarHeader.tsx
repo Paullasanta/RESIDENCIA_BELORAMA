@@ -13,11 +13,8 @@ interface SidebarHeaderProps {
     userName: string
 }
 
-export function SidebarHeader({ title, logoStyle, systemName, userName: initialName }: SidebarHeaderProps) {
+export function SidebarHeader({ title, logoStyle, systemName, userName }: SidebarHeaderProps) {
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const { data: session } = useSession()
-
-    const userName = session?.user?.nombre || initialName
 
     return (
         <>

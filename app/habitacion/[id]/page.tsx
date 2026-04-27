@@ -76,38 +76,56 @@ export default async function HabitacionDetallePage({ params }: { params: Promis
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Galería de fotos */}
-        <div className="grid grid-cols-4 grid-rows-2 gap-2 h-[320px] sm:h-[420px] rounded-2xl overflow-hidden mb-8">
-          {/* Foto principal */}
-          <div className="col-span-4 sm:col-span-2 row-span-2 relative group cursor-pointer">
-            <img
-              src={mainPhoto}
-              alt={title}
-              className="w-full h-full object-cover group-hover:brightness-90 transition-all"
-            />
+        {/* Galería de fotos - Adaptativa según cantidad de imágenes */}
+        {photos.length === 1 && (
+          <div className="h-[320px] sm:h-[420px] rounded-2xl overflow-hidden mb-8">
+            <img src={photos[0]} alt={title} className="w-full h-full object-cover" />
           </div>
+        )}
 
-          {/* Miniaturas */}
-          {thumbPhotos.map((photo, i) => (
-            <div key={i} className={`relative group cursor-pointer hidden sm:block ${i === 3 ? 'relative' : ''}`}>
-              <img
-                src={photo}
-                alt={`${title} - foto ${i + 2}`}
-                className="w-full h-full object-cover group-hover:brightness-90 transition-all"
-              />
-              {i === 3 && photos.length > 5 && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <span className="text-white text-sm font-semibold">+{photos.length - 5} fotos</span>
-                </div>
-              )}
+        {photos.length === 2 && (
+          <div className="grid grid-cols-2 gap-2 h-[320px] sm:h-[420px] rounded-2xl overflow-hidden mb-8">
+            {photos.map((photo, i) => (
+              <div key={i} className="relative group cursor-pointer">
+                <img src={photo} alt={`${title} - foto ${i + 1}`} className="w-full h-full object-cover group-hover:brightness-90 transition-all" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {photos.length === 3 && (
+          <div className="grid grid-cols-2 gap-2 h-[320px] sm:h-[420px] rounded-2xl overflow-hidden mb-8">
+            <div className="relative group cursor-pointer row-span-2">
+              <img src={photos[0]} alt={title} className="w-full h-full object-cover group-hover:brightness-90 transition-all" />
             </div>
-          ))}
+            <div className="relative group cursor-pointer">
+              <img src={photos[1]} alt={`${title} - foto 2`} className="w-full h-full object-cover group-hover:brightness-90 transition-all" />
+            </div>
+            <div className="relative group cursor-pointer">
+              <img src={photos[2]} alt={`${title} - foto 3`} className="w-full h-full object-cover group-hover:brightness-90 transition-all" />
+            </div>
+          </div>
+        )}
 
-          {/* Relleno si hay menos de 4 miniaturas */}
-          {thumbPhotos.length < 4 && Array.from({ length: 4 - thumbPhotos.length }).map((_, i) => (
-            <div key={`fill-${i}`} className="hidden sm:block bg-gray-200" />
-          ))}
-        </div>
+        {photos.length >= 4 && (
+          <div className="grid grid-cols-4 grid-rows-2 gap-2 h-[320px] sm:h-[420px] rounded-2xl overflow-hidden mb-8">
+            {/* Foto principal */}
+            <div className="col-span-4 sm:col-span-2 row-span-2 relative group cursor-pointer">
+              <img src={photos[0]} alt={title} className="w-full h-full object-cover group-hover:brightness-90 transition-all" />
+            </div>
+            {/* Miniaturas */}
+            {photos.slice(1, 5).map((photo, i) => (
+              <div key={i} className="relative group cursor-pointer hidden sm:block">
+                <img src={photo} alt={`${title} - foto ${i + 2}`} className="w-full h-full object-cover group-hover:brightness-90 transition-all" />
+                {i === 3 && photos.length > 5 && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <span className="text-white text-sm font-semibold">+{photos.length - 5} fotos</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Contenido principal */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -196,19 +214,19 @@ export default async function HabitacionDetallePage({ params }: { params: Promis
             <div className="sticky top-24 bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
               <h2 className="text-lg font-bold text-gray-900">¿Te interesa esta habitación?</h2>
               <p className="text-sm text-gray-500">
-                Inicia sesión o crea una cuenta para contactar con el administrador y solicitar esta habitación.
+                Ponte en contacto directamente con el administrador para solicitar esta habitación o resolver tus dudas.
               </p>
 
-              <Link
-                href="/auth/login"
+              <a
+                href="tel:+51989766318"
                 className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-[#072E1F] text-white font-black text-xs uppercase tracking-widest hover:bg-[#1D9E75] transition-all shadow-xl shadow-[#072E1F]/20"
               >
-                <Mail size={16} />
-                Iniciar Sesión para Contactar
-              </Link>
+                <Phone size={16} />
+                Llamar al Administrador
+              </a>
 
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Hola, me interesa la ${title} en ${habitacion.residencia.nombre} (${habitacion.residencia.direccion}). ¿Está disponible?`)}`}
+                href={`https://wa.me/51989766318?text=${encodeURIComponent(`Hola, me interesa la ${title} en ${habitacion.residencia.nombre} (${habitacion.residencia.direccion}). ¿Está disponible?`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-green-600 text-white font-semibold text-sm hover:bg-green-700 transition-colors shadow-sm"

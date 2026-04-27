@@ -6,12 +6,16 @@ import { revalidatePath } from 'next/cache'
 
 export async function updateProfile(data: {
     nombre?: string,
-    apellidos?: string,
+    apellidoPaterno?: string,
+    apellidoMaterno?: string,
     telefono?: string,
     password?: string,
     emergenciaNombre?: string,
     emergenciaTelefono?: string,
-    fechaNacimiento?: string
+    emergenciaParentesco?: string,
+    fechaNacimiento?: string,
+    alergias?: string,
+    restriccionesAlimentarias?: string
 }) {
     const session = await auth()
     if (!session) return { success: false, error: 'No autorizado' }
@@ -19,17 +23,30 @@ export async function updateProfile(data: {
     try {
         const updateData: any = {
             nombre: data.nombre,
-            apellidos: data.apellidos,
+            apellidoPaterno: data.apellidoPaterno,
+            apellidoMaterno: data.apellidoMaterno,
             telefono: data.telefono,
             emergenciaNombre: data.emergenciaNombre,
             emergenciaTelefono: data.emergenciaTelefono,
+            emergenciaParentesco: data.emergenciaParentesco,
         }
 
         if (data.password && data.password.trim() !== '') {
             updateData.password = data.password
         }
-        if (data.fechaNacimiento) {
+        
+        if (data.fechaNacimiento && data.fechaNacimiento !== "") {
             updateData.fechaNacimiento = new Date(data.fechaNacimiento)
+        }
+
+        // Si hay datos de salud, actualizarlos en el perfil de residente
+        if (data.alergias !== undefined || data.restriccionesAlimentarias !== undefined) {
+            updateData.residente = {
+                update: {
+                    alergias: data.alergias,
+                    restriccionesAlimentarias: data.restriccionesAlimentarias
+                }
+            }
         }
 
         await prisma.user.update({

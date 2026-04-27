@@ -20,6 +20,8 @@ export function ResidentesTable({ residentes }: ResidentesTableProps) {
         const query = search.toLowerCase()
         return (
             r.user.nombre.toLowerCase().includes(query) ||
+            (r.user.apellidoPaterno?.toLowerCase().includes(query)) ||
+            (r.user.apellidoMaterno?.toLowerCase().includes(query)) ||
             r.user.email.toLowerCase().includes(query) ||
             r.habitacion?.numero?.toLowerCase().includes(query) ||
             r.habitacion?.residencia?.nombre?.toLowerCase().includes(query)
@@ -52,7 +54,7 @@ export function ResidentesTable({ residentes }: ResidentesTableProps) {
 
         // Table Data Preparation
         const tableRows = filteredResidentes.map((r) => [
-            r.user.nombre,
+            `${r.user.nombre} ${r.user.apellidoPaterno || ''} ${r.user.apellidoMaterno || ''}`,
             r.user.email,
             r.habitacion ? `Hab. ${r.habitacion.numero} (Piso ${r.habitacion.piso})` : 'Sin asignar',
             r.habitacion?.residencia?.nombre || '—',
@@ -153,7 +155,9 @@ export function ResidentesTable({ residentes }: ResidentesTableProps) {
                                                     href={`/modules/residentes/${r.id}/editar`}
                                                     className="hover:underline hover:text-[#1D9E75] transition-all"
                                                 >
-                                                    <p className="font-black text-[#072E1F] text-sm leading-none mb-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] md:max-w-none">{r.user.nombre}</p>
+                                                    <p className="font-black text-[#072E1F] text-sm leading-none mb-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] md:max-w-none">
+                                                        {r.user.nombre} {r.user.apellidoPaterno} {r.user.apellidoMaterno}
+                                                    </p>
                                                     <p className="text-[10px] text-gray-400 font-bold truncate max-w-[120px] md:max-w-none">{r.user.email}</p>
                                                 </Link>
                                             </div>

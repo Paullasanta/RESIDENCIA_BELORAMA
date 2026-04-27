@@ -40,7 +40,7 @@ export default async function Home() {
                 <span className="hidden sm:inline text-[9px] font-bold text-[#1D9E75] uppercase tracking-widest mt-1">Housing & coliving</span>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3 sm:gap-6">
               {session ? (
                 <Link
@@ -70,45 +70,18 @@ export default async function Home() {
 
       {/* Hero Section - Mobile Optimized */}
       <main className="flex-1">
-        <section className="relative pt-10 sm:pt-20 pb-16 sm:pb-32 overflow-hidden px-4">
+        <section className="relative pt-10 sm:pt-20 pb-6 sm:pb-10 overflow-hidden px-4">
           <div className="max-w-7xl mx-auto sm:px-6 lg:px-10 relative z-10">
             <div className="flex flex-col lg:flex-row items-center gap-10 sm:gap-16">
-              <div className="flex-1 text-center lg:text-left space-y-6 sm:space-y-8">
-                <div className="inline-flex items-center gap-2 bg-[#1D9E75]/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-[#1D9E75]/20">
-                  <Sparkles size={12} className="text-[#1D9E75] sm:w-3.5 sm:h-3.5" />
-                  <span className="text-[8px] sm:text-[10px] font-black text-[#1D9E75] uppercase tracking-[0.2em]">Experiencia V2</span>
-                </div>
-                
+              <div className="flex-1 text-center space-y-6 sm:space-y-8">
                 <h1 className="text-3xl sm:text-5xl lg:text-7xl font-black text-[#072E1F] leading-[1.1] sm:leading-[0.95] tracking-tighter">
                   Vive con Estilo, <br className="hidden sm:block" />
                   <span className="text-[#1D9E75]">Gestiona con Facilidad.</span>
                 </h1>
-                
-                <p className="text-sm sm:text-lg text-gray-500 font-medium max-w-xl mx-auto lg:mx-0 leading-relaxed px-4 sm:px-0">
-                  Descubre las mejores habitaciones en residencias exclusivas. Un sistema inteligente diseñado para que sólo te preocupes por disfrutar de tu hogar.
+
+                <p className="text-sm sm:text-lg text-gray-500 font-medium max-w-xl mx-auto text-center leading-relaxed px-4 sm:px-0">
+                  Explora las habitaciones disponibles en nuestras residencias. Disfruta de un ambiente cómodo, seguro y diseñado para ti.
                 </p>
-
-                <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
-                   <div className="flex items-center gap-3 bg-white p-2 pl-4 rounded-3xl border border-gray-100 shadow-sm">
-                      <div className="flex -space-x-3">
-                         {[1,2,3].map(i => (
-                           <div key={i} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 border-white bg-gray-200"></div>
-                         ))}
-                      </div>
-                      <span className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">+500 Residentes</span>
-                   </div>
-                </div>
-              </div>
-
-              <div className="flex-1 relative w-full max-w-lg mt-8 lg:mt-0">
-                 <div className="absolute -inset-4 bg-gradient-to-tr from-[#1D9E75]/10 to-transparent rounded-[2rem] sm:rounded-[3rem] blur-2xl"></div>
-                 <div className="relative aspect-[4/3] rounded-[2rem] sm:rounded-[3rem] overflow-hidden shadow-2xl border-4 sm:border-8 border-white">
-                    <img 
-                       src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?q=80&w=2069&auto=format&fit=crop" 
-                       alt="Belorama Living" 
-                       className="w-full h-full object-cover"
-                    />
-                 </div>
               </div>
             </div>
           </div>
@@ -119,8 +92,8 @@ export default async function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 sm:mb-16">
               <div className="space-y-3 sm:space-y-4">
-                 <h2 className="text-3xl sm:text-4xl font-black text-[#072E1F] tracking-tighter">Habitaciones Disponibles</h2>
-                 <p className="text-sm sm:text-gray-400 font-medium">Encuentra el espacio que mejor se adapte a tu ritmo de vida.</p>
+                <h2 className="text-3xl sm:text-4xl font-black text-[#072E1F] tracking-tighter">Habitaciones Disponibles</h2>
+                <p className="text-sm sm:text-gray-400 font-medium">Encuentra el espacio que mejor se adapte a tu ritmo de vida.</p>
               </div>
               <div className="inline-flex w-fit items-center gap-2 text-[9px] sm:text-[10px] font-black text-[#1D9E75] uppercase tracking-widest bg-[#1D9E75]/5 px-4 py-2 rounded-xl">
                 <Building2 size={13} />
@@ -138,7 +111,11 @@ export default async function Home() {
                           'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
 
                   return (
-                    <div key={habitacion.id} className="group bg-white rounded-[2rem] sm:rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-100/50 overflow-hidden hover:scale-[1.02] transition-all duration-500">
+                    <Link
+                      key={habitacion.id}
+                      href={`/habitacion/${habitacion.id}`}
+                      className="group bg-white rounded-[2rem] sm:rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-100/50 overflow-hidden hover:scale-[1.02] transition-all duration-500 block cursor-pointer"
+                    >
                       <div className="relative aspect-[16/11] sm:aspect-[16/10]">
                         <img
                           src={mainImage}
@@ -149,37 +126,34 @@ export default async function Home() {
                           S/ {habitacion.publicacion?.id ? 'Precio Web' : 'S/850'}
                         </div>
                       </div>
-                      
+
                       <div className="p-6 sm:p-8">
                         <div className="flex items-center gap-2 text-[8px] sm:text-[9px] font-black text-[#1D9E75] uppercase tracking-[0.2em] mb-2 sm:mb-3">
-                           <MapPin size={10} />
-                           {habitacion.residencia.nombre}
-                        </div>
-                        
-                        <h3 className="text-xl sm:text-2xl font-black text-[#072E1F] mb-3 sm:mb-4 group-hover:text-[#1D9E75] transition-colors leading-none">
-                           Hab. {habitacion.numero}
-                        </h3>
-                        
-                        <div className="flex items-center gap-4 sm:gap-6 mb-6 sm:mb-8">
-                           <div className="flex items-center gap-1.5 text-gray-400">
-                              <Users size={14} className="sm:w-4 sm:h-4" />
-                              <span className="text-[10px] sm:text-xs font-bold">{habitacion.capacidad} Pers.</span>
-                           </div>
-                           <div className="flex items-center gap-1.5 text-gray-400">
-                              <BedDouble size={14} className="sm:w-4 sm:h-4" />
-                              <span className="text-[10px] sm:text-xs font-bold">Nivel {habitacion.piso}</span>
-                           </div>
+                          <MapPin size={10} />
+                          {habitacion.residencia.nombre}
                         </div>
 
-                        <Link
-                          href={`/habitacion/${habitacion.id}`}
-                          className="w-full bg-gray-50 group-hover:bg-[#072E1F] text-gray-400 group-hover:text-white py-3.5 sm:py-4 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
-                        >
-                          Disponibilidad
+                        <h3 className="text-xl sm:text-2xl font-black text-[#072E1F] mb-3 sm:mb-4 group-hover:text-[#1D9E75] transition-colors leading-none">
+                          Hab. {habitacion.numero}
+                        </h3>
+
+                        <div className="flex items-center gap-4 sm:gap-6 mb-6 sm:mb-8">
+                          <div className="flex items-center gap-1.5 text-gray-400">
+                            <Users size={14} className="sm:w-4 sm:h-4" />
+                            <span className="text-[10px] sm:text-xs font-bold">{habitacion.capacidad} Pers.</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-gray-400">
+                            <BedDouble size={14} className="sm:w-4 sm:h-4" />
+                            <span className="text-[10px] sm:text-xs font-bold">Nivel {habitacion.piso}</span>
+                          </div>
+                        </div>
+
+                        <div className="w-full bg-gray-50 group-hover:bg-[#072E1F] text-gray-400 group-hover:text-white py-3.5 sm:py-4 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all">
+                          Ver Habitacion
                           <ArrowRight size={14} />
-                        </Link>
+                        </div>
                       </div>
-                    </div>
+                    </Link>
                   )
                 })}
               </div>
@@ -202,43 +176,43 @@ export default async function Home() {
       <footer className="bg-[#072E1F] text-white pt-16 sm:pt-24 pb-8 sm:pb-12 rounded-t-[2.5rem] sm:rounded-t-[4rem]">
         <div className="max-w-7xl mx-auto px-6 sm:px-10">
           <div className="flex flex-col md:flex-row justify-between items-start gap-12 sm:gap-16 mb-16 sm:mb-20">
-             <div className="max-w-xs space-y-4 sm:space-y-6">
-                <div className="flex items-center gap-3">
-                   <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#1D9E75] rounded-xl flex items-center justify-center">
-                      <span className="font-black text-lg">B</span>
-                   </div>
-                   <span className="text-xl sm:text-2xl font-black tracking-tighter">Belorama</span>
+            <div className="max-w-xs space-y-4 sm:space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#1D9E75] rounded-xl flex items-center justify-center">
+                  <span className="font-black text-lg">B</span>
                 </div>
-                <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">
-                   Redefiniendo la gestión residencial para la nueva generación de coliving.
-                </p>
-             </div>
-             
-             <div className="grid grid-cols-2 gap-x-12 sm:gap-x-20 gap-y-10 w-full sm:w-auto">
-                <div className="space-y-3 sm:space-y-4">
-                   <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-[#1D9E75]">Explorar</h4>
-                   <ul className="text-xs sm:text-sm text-gray-400 space-y-2">
-                      <li>Habitaciones</li>
-                      <li>Residencias</li>
-                   </ul>
-                </div>
-                <div className="space-y-3 sm:space-y-4">
-                   <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-[#1D9E75]">Soporte</h4>
-                   <ul className="text-xs sm:text-sm text-gray-400 space-y-2">
-                      <li>Ayuda</li>
-                      <li>Contacto</li>
-                   </ul>
-                </div>
-             </div>
+                <span className="text-xl sm:text-2xl font-black tracking-tighter">Belorama</span>
+              </div>
+              <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">
+                Redefiniendo la gestión residencial para la nueva generación de coliving.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-12 sm:gap-x-20 gap-y-10 w-full sm:w-auto">
+              <div className="space-y-3 sm:space-y-4">
+                <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-[#1D9E75]">Explorar</h4>
+                <ul className="text-xs sm:text-sm text-gray-400 space-y-2">
+                  <li>Habitaciones</li>
+                  <li>Residencias</li>
+                </ul>
+              </div>
+              <div className="space-y-3 sm:space-y-4">
+                <h4 className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-[#1D9E75]">Soporte</h4>
+                <ul className="text-xs sm:text-sm text-gray-400 space-y-2">
+                  <li>Ayuda</li>
+                  <li>Contacto</li>
+                </ul>
+              </div>
+            </div>
           </div>
-          
+
           <div className="pt-8 sm:pt-10 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center gap-6">
             <p className="text-[8px] sm:text-[10px] font-bold text-white/30 uppercase tracking-[0.3em] text-center sm:text-left">
               &copy; {new Date().getFullYear()} Belorama &middot; Crafted with Excellence
             </p>
             <div className="hidden sm:flex items-center gap-6">
-                <ShieldCheck className="text-[#1D9E75]/50" size={18} />
-                <span className="text-[10px] font-black text-white/30 uppercase">Secure Platform</span>
+              <ShieldCheck className="text-[#1D9E75]/50" size={18} />
+              <span className="text-[10px] font-black text-white/30 uppercase">Secure Platform</span>
             </div>
           </div>
         </div>

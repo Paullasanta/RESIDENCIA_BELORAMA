@@ -31,7 +31,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     // Configuración universal de navegación agnóstica al rol
     const navItems = [
         { href: '/modules/dashboard',     label: 'Dashboard',         icon: <LayoutDashboard size={18} />, show: true },
-        { href: '/modules/residencias',   label: 'Residencias',       icon: <Building2 size={18} />,       show: hasPerm('MANAGE_RESIDENCIAS') || rol === 'RESIDENTE' },
+        { href: '/modules/residencias',   label: 'Residencias',       icon: <Building2 size={18} />,       show: hasPerm('MANAGE_RESIDENCIAS') && rol !== 'RESIDENTE' },
         { href: '/modules/residentes',    label: 'Residentes',        icon: <Users size={18} />,           show: hasPerm('MANAGE_RESIDENTES') },
         { href: '/modules/pagos',         label: 'Cobros y Pagos',    icon: <DollarSign size={18} />,      show: hasPerm('MANAGE_PAYMENTS') || rol === 'RESIDENTE' },
         { href: '/modules/lavanderia',    label: 'Lavandería',        icon: <WashingMachine size={18} />,  show: true },

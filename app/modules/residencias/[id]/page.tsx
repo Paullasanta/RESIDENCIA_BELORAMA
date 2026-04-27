@@ -105,12 +105,12 @@ export default async function ResidenciaDetallePage({ params }: { params: Promis
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-gray-50/50">
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50">Nº Habitación</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50">Piso</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50">Capacidad</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50">Estado</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50">Residentes</th>
-                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50">Acciones</th>
+                                <th className="px-4 sm:px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50">Hab.</th>
+                                <th className="hidden lg:table-cell px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50">Piso</th>
+                                <th className="hidden md:table-cell px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50">Capacidad</th>
+                                <th className="px-4 sm:px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50">Estado</th>
+                                <th className="px-4 sm:px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50">Residentes</th>
+                                <th className="px-4 sm:px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-50 text-right">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
@@ -123,38 +123,48 @@ export default async function ResidenciaDetallePage({ params }: { params: Promis
                             ) : (
                                 residencia.habitaciones.map((hab) => (
                                     <tr key={hab.id} className="group hover:bg-gray-50/50 transition-colors">
-                                        <td className="px-8 py-5">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-[#072E1F] text-white flex items-center justify-center font-black text-xs">
+                                        <td className="px-4 sm:px-8 py-5">
+                                            <div className="flex items-center gap-2 sm:gap-3">
+                                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#072E1F] text-white flex items-center justify-center font-black text-[10px] sm:text-xs">
                                                     {hab.numero}
                                                 </div>
-                                                <span className="font-bold text-gray-700">Habitación {hab.numero}</span>
+                                                <span className="font-bold text-gray-700 text-sm sm:text-base">#{hab.numero}</span>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-5 font-bold text-gray-500">Piso {hab.piso}</td>
-                                        <td className="px-8 py-5">
+                                        <td className="hidden lg:table-cell px-8 py-5 font-bold text-gray-500">Piso {hab.piso}</td>
+                                        <td className="hidden md:table-cell px-8 py-5">
                                             <div className="flex items-center gap-1.5 font-bold text-gray-600">
                                                 <Users size={14} className="text-gray-400" />
                                                 {hab.residentes.length} / {hab.capacidad}
                                             </div>
                                         </td>
-                                        <td className="px-8 py-5">
+                                        <td className="px-4 sm:px-8 py-5">
                                             <StatusBadge status={hab.estado} />
                                         </td>
-                                        <td className="px-8 py-5">
+                                        <td className="px-4 sm:px-8 py-5">
                                             {hab.residentes.length > 0 ? (
-                                                <div className="flex -space-x-2">
+                                                <div className="flex flex-wrap gap-1.5">
                                                     {hab.residentes.map((r, i) => (
-                                                        <div key={i} title={r.user.nombre} className="w-8 h-8 rounded-full border-2 border-white bg-[#1D9E75] text-white flex items-center justify-center text-[10px] font-black">
-                                                            {r.user.nombre.charAt(0)}
+                                                        <div 
+                                                            key={i} 
+                                                            className="inline-flex items-center gap-1.5 bg-[#1D9E75]/5 border border-[#1D9E75]/10 p-1 sm:px-2 sm:py-1 rounded-lg"
+                                                            title={r.user.nombre}
+                                                        >
+                                                            <div className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-[#1D9E75] text-white flex items-center justify-center text-[8px] sm:text-[9px] font-black shrink-0">
+                                                                {r.user.nombre.charAt(0)}
+                                                            </div>
+                                                            <span className="text-[10px] sm:text-[11px] font-bold text-[#072E1F] whitespace-nowrap">
+                                                                <span className="hidden sm:inline">{r.user.nombre}</span>
+                                                                <span className="sm:hidden">{r.user.nombre.split(' ')[0]}</span>
+                                                            </span>
                                                         </div>
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <span className="text-xs text-gray-400 italic">Sin asignar</span>
+                                                <span className="text-[10px] sm:text-xs text-gray-400 italic">Sin asignar</span>
                                             )}
                                         </td>
-                                        <td className="px-8 py-5">
+                                        <td className="px-4 sm:px-8 py-5 text-right">
                                             <ManageHabitacionModal habitacion={hab} />
                                         </td>
                                     </tr>

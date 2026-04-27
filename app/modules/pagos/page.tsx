@@ -5,6 +5,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { AsignarMontoForm } from '@/components/admin/AsignarMontoForm'
 import { RevisionVouchers } from '@/components/admin/RevisionVouchers'
+import { generarCobrosMensuales } from '@/app/actions/pagos'
 import { DollarSign, CheckCircle, Clock, AlertCircle, Eye, History, Bell, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import ResidentPagoCard from '@/components/shared/ResidentPagoCard'
@@ -15,6 +16,9 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     const isAdmin = rol === 'ADMIN' || permisos?.includes('MANAGE_PAYMENTS')
     const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
     const { filter } = await searchParams
+
+    // Generar cobros pendientes automáticamente
+    await generarCobrosMensuales()
 
     // Data fetching
     let pagosRaw: any[] = []
@@ -91,14 +95,27 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
         t1: 'Total Recaudado',
         v1: pagosRaw.filter(p => p.estado === 'PAGADO').reduce((s, p) => s + p.montoPagado, 0),
         t2: 'Por Cobrar',
-        v2: pagosRaw.reduce((s, p) => s + (p.monto - p.montoPagado), 0),
+        v2: pagosRaw.reduce((s, p) => {
+            const montoVencido = p.cuotas?.filter((c: any) => !c.pagado && new Date(c.fechaVencimiento) <= new Date()).reduce((acc: number, c: any) => acc + c.monto, 0) || 0
+            // Si el pago no tiene cuotas (antiguo) o el montoVencido es 0 pero el pago está pendiente, sumamos el saldo total
+            if ((!p.cuotas || p.cuotas.length === 0) && p.estado !== 'PAGADO') {
+                return s + (p.monto - p.montoPagado)
+            }
+            return s + montoVencido
+        }, 0),
         t3: 'Revisión Pendiente',
         v3: vouchersPendientes.length
     } : {
         t1: 'Total Pagado',
         v1: pagosRaw.reduce((s, p) => s + p.montoPagado, 0),
         t2: 'Saldo Pendiente',
-        v2: pagosRaw.reduce((s, p) => s + (p.monto - p.montoPagado), 0),
+        v2: pagosRaw.reduce((s, p) => {
+            const montoVencido = p.cuotas?.filter((c: any) => !c.pagado && new Date(c.fechaVencimiento) <= new Date()).reduce((acc: number, c: any) => acc + c.monto, 0) || 0
+            if ((!p.cuotas || p.cuotas.length === 0) && p.estado !== 'PAGADO') {
+                return s + (p.monto - p.montoPagado)
+            }
+            return s + montoVencido
+        }, 0),
         t3: 'Próximo Vencimiento',
         v3: pagosRaw.find(p => p.estado !== 'PAGADO')?.cuotas.find((c:any) => !c.pagado)?.fechaVencimiento || '—'
     }
@@ -267,13 +284,68 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
             )}
 
             {/* Resident View (Alternative) */}
-            {!isAdmin && (
-                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {pagosRaw.map(pago => (
-                        <ResidentPagoCard key={pago.id} pago={pago} />
-                    ))}
-                </div>
-            )}
+            {!isAdmin && (() => {
+                const unpaidPagos = pagosRaw.filter(p => p.estado !== 'PAGADO')
+                const hasDebts = unpaidPagos.some(p => {
+                    const montoVencido = p.cuotas?.filter((c: any) => !c.pagado && new Date(c.fechaVencimiento) <= new Date()).reduce((acc: number, c: any) => acc + c.monto, 0) || 0
+                    return montoVencido > 0 || (p.estado === 'PENDIENTE' && (!p.cuotas || p.cuotas.length === 0))
+                })
+
+                return (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {unpaidPagos.filter(p => {
+                            const montoVencido = p.cuotas?.filter((c: any) => !c.pagado && new Date(c.fechaVencimiento) <= new Date()).reduce((acc: number, c: any) => acc + c.monto, 0) || 0
+                            const esDeuda = montoVencido > 0 || (p.estado === 'PENDIENTE' && (!p.cuotas || p.cuotas.length === 0))
+                            
+                            // Si hay deudas, ocultar los que no son deuda (próximos)
+                            if (hasDebts && !esDeuda) return false
+                            return true
+                        }).map(pago => (
+                            <ResidentPagoCard key={pago.id} pago={pago} />
+                        ))}
+                        {/* Sección de Historial Detallado */}
+                        {(pagosRaw.some(p => p.cuotas?.some((c: any) => c.pagado)) || pagosRaw.some(p => p.estado === 'PAGADO')) && (
+                            <div className="col-span-full pt-12">
+                                <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-8 flex items-center gap-4">
+                                    <span className="h-px bg-gray-100 flex-1"></span>
+                                    Historial de Pagos Realizados
+                                    <span className="h-px bg-gray-100 flex-1"></span>
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {pagosRaw.flatMap(p => 
+                                        (p.cuotas && p.cuotas.length > 0) 
+                                            ? p.cuotas.filter((c: any) => c.pagado).map((c: any) => ({ ...p, cuotaInfo: c }))
+                                            : (p.estado === 'PAGADO' ? [{ ...p, cuotaInfo: null }] : [])
+                                    ).sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+                                    .map((item, idx) => (
+                                        <div key={`${item.id}-${idx}`} className="bg-white/50 border border-gray-100 rounded-3xl p-6 flex items-center justify-between group hover:bg-white transition-all shadow-sm">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-2xl bg-green-50 flex items-center justify-center text-green-600">
+                                                    <CheckCircle size={20} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">
+                                                        {item.concepto} {item.cuotaInfo ? `(Cuota)` : ''}
+                                                    </p>
+                                                    <p className="text-lg font-black text-gray-900 leading-none">
+                                                        S/ {(item.cuotaInfo ? item.cuotaInfo.monto : item.monto).toLocaleString('es-MX')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[9px] font-bold text-gray-400 uppercase">Completado</p>
+                                                <p className="text-[10px] font-black text-gray-600">
+                                                    {new Date(item.cuotaInfo?.updatedAt || item.updatedAt || item.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )
+            })()}
         </div>
     )
 }

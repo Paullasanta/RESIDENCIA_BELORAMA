@@ -17,7 +17,13 @@ export async function GET(
     where: { id: Number(id) },
     include: {
       role: true,
-      residencia: true
+      residencia: true,
+      residente: {
+        include: {
+          habitacion: true,
+          pagos: true
+        }
+      }
     }
   })
 

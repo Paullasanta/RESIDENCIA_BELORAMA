@@ -66,17 +66,42 @@ export default function PerfilPage() {
                         </div>
 
                         <div className="mt-8 space-y-1">
-                            <h2 className="text-xl font-black text-[#072E1F] tracking-tight">{userData.nombre} {userData.apellidos}</h2>
+                            <h2 className="text-xl font-black text-[#072E1F] tracking-tight">{userData.nombre} {userData.apellidoPaterno}</h2>
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{userData.role?.name || 'Residente'}</p>
                         </div>
 
-                        <div className="mt-8 w-full pt-8 border-t border-gray-50 flex items-center justify-center gap-6">
+                        <div className="mt-8 w-full pt-8 border-t border-gray-50 grid grid-cols-2 gap-4">
                             <div className="text-center">
                                 <p className="text-lg font-black text-[#072E1F]">DNI</p>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase">{userData.dni || 'S/N'}</p>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{userData.dni || 'S/N'}</p>
                             </div>
+                            {userData.residente?.habitacion && (
+                                <div className="text-center border-l border-gray-50">
+                                    <p className="text-lg font-black text-[#1D9E75]">Hab. {userData.residente.habitacion.numero}</p>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Piso {userData.residente.habitacion.piso}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
+
+                    {userData.residente?.pagos && userData.residente.pagos.length > 0 && (
+                        <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl shadow-gray-200/20">
+                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">Resumen de Pagos</h3>
+                            <div className="space-y-4">
+                                {userData.residente.pagos.slice(0, 3).map((pago: any) => (
+                                    <div key={pago.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                                        <div className="text-[11px] font-bold text-gray-600 uppercase tracking-tight">{pago.concepto}</div>
+                                        <div className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
+                                            pago.estado === 'PAGADO' ? 'bg-green-100 text-green-600' : 
+                                            pago.estado === 'PENDIENTE' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'
+                                        }`}>
+                                            {pago.estado}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="bg-[#072E1F] rounded-[3rem] p-8 text-white shadow-xl shadow-gray-900/10">
                         <div className="flex items-center gap-4 mb-6">
@@ -111,9 +136,15 @@ export default function PerfilPage() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
-                                    <User size={12} /> Apellidos
+                                    <User size={12} /> Apellido Paterno
                                 </label>
-                                <input name="apellidos" defaultValue={userData.apellidos} className="w-full px-6 py-4 rounded-2xl border border-gray-50 bg-gray-50/20 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" />
+                                <input name="apellidoPaterno" defaultValue={userData.apellidoPaterno} className="w-full px-6 py-4 rounded-2xl border border-gray-50 bg-gray-50/20 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
+                                    <User size={12} /> Apellido Materno
+                                </label>
+                                <input name="apellidoMaterno" defaultValue={userData.apellidoMaterno} className="w-full px-6 py-4 rounded-2xl border border-gray-50 bg-gray-50/20 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
@@ -145,17 +176,56 @@ export default function PerfilPage() {
                             <h3 className="text-lg font-black text-[#072E1F] tracking-tight">Contacto de Emergencia</h3>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Nombre Completo</label>
-                                <input name="emergenciaNombre" defaultValue={userData.emergenciaNombre} placeholder="Ej. Madre, Padre, Hermano..." className="w-full px-6 py-4 rounded-2xl border border-gray-50 bg-gray-50/20 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" />
+                                <input name="emergenciaNombre" defaultValue={userData.emergenciaNombre} placeholder="Nombre del contacto" className="w-full px-6 py-4 rounded-2xl border border-gray-50 bg-gray-50/20 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Teléfono Directo</label>
-                                <input name="emergenciaTelefono" defaultValue={userData.emergenciaTelefono} className="w-full px-6 py-4 rounded-2xl border border-gray-50 bg-gray-50/20 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" />
+                                <input name="emergenciaTelefono" defaultValue={userData.emergenciaTelefono} placeholder="999 000 111" className="w-full px-6 py-4 rounded-2xl border border-gray-50 bg-gray-50/20 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Parentesco</label>
+                                <input name="emergenciaParentesco" defaultValue={userData.emergenciaParentesco} placeholder="Madre, Padre, etc." className="w-full px-6 py-4 rounded-2xl border border-gray-50 bg-gray-50/20 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" />
                             </div>
                         </div>
                     </div>
+
+                    {/* Salud y Nutrición - Solo para Residentes */}
+                    {userData.residente && (
+                        <div className="bg-white rounded-[3rem] p-10 border border-gray-100 shadow-xl shadow-gray-200/30">
+                            <div className="flex items-center gap-4 mb-10">
+                                <div className="w-12 h-12 bg-[#EF9F27]/10 rounded-2xl flex items-center justify-center text-[#EF9F27]">
+                                    <HeartPulse size={24} />
+                                </div>
+                                <h3 className="text-lg font-black text-[#072E1F] tracking-tight">Salud y Nutrición</h3>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Alergias</label>
+                                    <input 
+                                        name="alergias" 
+                                        defaultValue={userData.residente?.alergias} 
+                                        placeholder="Ej. Penicilina, Maní..." 
+                                        autoComplete="off"
+                                        className="w-full px-6 py-4 rounded-2xl border border-gray-50 bg-gray-50/20 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" 
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Restricciones Alimentarias</label>
+                                    <input 
+                                        name="restriccionesAlimentarias" 
+                                        defaultValue={userData.residente?.restriccionesAlimentarias} 
+                                        placeholder="Ej. Vegano, Sin lactosa..." 
+                                        autoComplete="off"
+                                        className="w-full px-6 py-4 rounded-2xl border border-gray-50 bg-gray-50/20 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" 
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Cambio de Contraseña */}
                     <div className="bg-white rounded-[3rem] p-10 border border-gray-100 shadow-xl shadow-gray-200/30">
@@ -169,7 +239,7 @@ export default function PerfilPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Nueva Contraseña</label>
-                                <input name="password" type="password" placeholder="••••••••" className="w-full px-6 py-4 rounded-2xl border border-gray-50 bg-gray-50/20 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" />
+                                <input name="password" type="password" placeholder="••••••••" autoComplete="new-password" className="w-full px-6 py-4 rounded-2xl border border-gray-50 bg-gray-50/20 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" />
                             </div>
                             <div className="space-y-2 flex items-end">
                                 <button

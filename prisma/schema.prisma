@@ -72,7 +72,8 @@ model User {
   id          Int         @id @default(autoincrement())
   dni         String?     @unique
   nombre      String
-  apellidos   String?
+  apellidoPaterno String?
+  apellidoMaterno String?
   email       String      @unique
   password    String
   telefono    String?
@@ -80,6 +81,7 @@ model User {
   fechaNacimiento DateTime?
   emergenciaNombre String?
   emergenciaTelefono String?
+  emergenciaParentesco String?
   roleId      Int?
   role        Role?       @relation(fields: [roleId], references: [id])
   residenciaId Int?
@@ -158,6 +160,10 @@ model Residente {
   habitacion        Habitacion?       @relation(fields: [habitacionId], references: [id])
   activo            Boolean           @default(true)
   fechaIngreso      DateTime          @default(now())
+  fechaFinal        DateTime?
+  diaPago           Int               @default(1)
+  montoMensual      Float             @default(0)
+  montoGarantia     Float             @default(0)
   turnos            TurnoLavanderia[]
   pagos             Pago[]
   productos         ProductoMarketplace[]
