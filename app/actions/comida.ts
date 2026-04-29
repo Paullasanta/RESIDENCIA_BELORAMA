@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { TipoMenu } from '@prisma/client'
+import { createNotification } from './notificaciones'
 
 export async function createMenu(data: any) {
   try {
@@ -80,6 +81,25 @@ export async function publishDailyMenu(data: any) {
     }
 
     await Promise.all(createPromises);
+
+    // Notificar a los residentes de las residencias seleccionadas
+    const residents = await prisma.user.findMany({
+        where: {
+            rol: 'RESIDENTE',
+            residenciaId: { in: residenciaIds }
+        },
+        select: { id: true }
+    })
+
+    for (const resident of residents) {
+        await createNotification(
+            resident.id,
+            'Nuevo Menú Publicado',
+            `Ya puedes consultar y confirmar tu asistencia para el ${new Date(fecha).toLocaleDateString()}`,
+            'INFO',
+            '/modules/comida'
+        )
+    }
 
     revalidatePath('/modules/comida')
     return { success: true }

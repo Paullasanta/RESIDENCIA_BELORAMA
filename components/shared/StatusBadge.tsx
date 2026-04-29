@@ -1,6 +1,7 @@
 type StatusVariant =
   | 'LIBRE' | 'OCUPADO' | 'SOLICITADO'
   | 'PENDIENTE' | 'PARCIAL' | 'PAGADO'
+  | 'EN_REVISION' | 'VENCIDO' | 'CRITICO'
   | 'APROBADO' | 'RECHAZADO'
   | 'ACTIVA' | 'INACTIVA'
   | 'RESERVADO' | 'POR_LIBERARSE'
@@ -13,6 +14,8 @@ const variantMap: Record<StatusVariant, { label: string; classes: string }> = {
   EN_REVISION: { label: 'Revisión',   classes: 'bg-blue-100 text-blue-800' },
   PARCIAL:    { label: 'Parcial',    classes: 'bg-orange-100 text-orange-800' },
   PAGADO:     { label: 'Pagado',     classes: 'bg-green-100 text-green-800' },
+  VENCIDO:    { label: 'Vencido',    classes: 'bg-red-100 text-red-800' },
+  CRITICO:    { label: 'Crítico',    classes: 'bg-red-600 text-white font-black animate-pulse shadow-md shadow-red-500/20' },
   APROBADO:   { label: 'Aprobado',   classes: 'bg-green-100 text-green-800' },
   RECHAZADO:  { label: 'Rechazado',  classes: 'bg-red-100 text-red-800' },
   ACTIVA:     { label: 'Activa',     classes: 'bg-green-100 text-green-800' },

@@ -6,6 +6,7 @@ import { WashingMachine, Clock } from 'lucide-react'
 import { ShiftActions } from '@/components/admin/ShiftActions'
 import { AddLavadoraButton } from '@/components/admin/AddLavadoraButton'
 import { GenerateShiftsModal } from '@/components/admin/GenerateShiftsModal'
+import { ResidenciaSelector } from '@/components/admin/ResidenciaSelector'
 
 const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'] as const
 const DIA_LABEL: Record<string, string> = {
@@ -13,14 +14,19 @@ const DIA_LABEL: Record<string, string> = {
     JUEVES: 'Jueves', VIERNES: 'Viernes', SABADO: 'Sábado', DOMINGO: 'Domingo',
 }
 
-export default async function LavanderiaPage() {
+export default async function LavanderiaPage({ searchParams }: { searchParams: Promise<any> }) {
     const session = await auth()
     const { rol, permisos, residenciaId: sessionResId } = session!.user
     const canManage = rol === 'ADMIN' || permisos?.includes('MANAGE_LAVANDERIA')
+    
+    // Obtener parámetro de búsqueda para filtro de admin
+    const searchParamsObj = await (searchParams as any)
+    const filterResidenciaId = searchParamsObj?.residenciaId ? parseInt(searchParamsObj.residenciaId) : null
+
     const isGlobalAdmin = rol === 'ADMIN' && !sessionResId
 
-    // Aislamiento: Si no es Admin Global, filtrar por el residenciaId de su sesión o perfil
-    let residenciaId: number | null = sessionResId || null
+    // Aislamiento: Prioridad de residencia
+    let residenciaId: number | null = filterResidenciaId || sessionResId || null
     
     if (rol === 'RESIDENTE') {
         const profile = await prisma.residente.findFirst({
@@ -31,7 +37,7 @@ export default async function LavanderiaPage() {
     }
 
     const turnos = await prisma.turnoLavanderia.findMany({
-        where: isGlobalAdmin ? {} : { residenciaId: residenciaId || -1 },
+        where: residenciaId ? { residenciaId } : (isGlobalAdmin ? {} : { residenciaId: -1 }),
         include: {
             lavadora: true,
             residente: { include: { user: true } },
@@ -40,12 +46,13 @@ export default async function LavanderiaPage() {
     })
 
     const lavadoras = await prisma.lavadora.findMany({
-        where: isGlobalAdmin ? {} : { residenciaId: residenciaId || -1 },
+        where: residenciaId ? { residenciaId } : (isGlobalAdmin ? {} : { residenciaId: -1 }),
+        include: { residencia: { select: { nombre: true } } },
         orderBy: { nombre: 'asc' }
     })
     
     const residentes = canManage ? await prisma.residente.findMany({
-        where: isGlobalAdmin ? {} : { user: { residenciaId: residenciaId || -1 } },
+        where: residenciaId ? { user: { residenciaId } } : (isGlobalAdmin ? {} : { user: { residenciaId: -1 } }),
         include: { user: true },
         orderBy: { user: { nombre: 'asc' } }
     }) : []
@@ -68,9 +75,17 @@ export default async function LavanderiaPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <PageHeader
                     title="Gestión de Lavandería"
-                    description={residenciaId ? "Panel de turnos para tu residencia." : "Monitoriza y asigna turnos de uso en todas las residencias."}
+                    description={residenciaId ? `Panel de turnos para sede.` : "Monitoriza y asigna turnos de uso en todas las residencias."}
                 />
-                {canManage && <AddLavadoraButton residencias={residenciasConfig} />}
+                <div className="flex items-center gap-4">
+                    {isGlobalAdmin && (
+                        <ResidenciaSelector 
+                            residencias={residenciasConfig} 
+                            currentId={filterResidenciaId} 
+                        />
+                    )}
+                    {canManage && <AddLavadoraButton residencias={residenciasConfig} />}
+                </div>
             </div>
 
             {lavadoras.length === 0 ? (
@@ -89,7 +104,12 @@ export default async function LavanderiaPage() {
                                         <WashingMachine size={24} />
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-black text-white">{lavadora.nombre}</h3>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-xl font-black text-white">{lavadora.nombre}</h3>
+                                            <span className="text-[10px] bg-white/20 text-white/80 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                                {(lavadora as any).residencia.nombre}
+                                            </span>
+                                        </div>
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className={`w-2 h-2 rounded-full ${lavadora.activa ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></span>
                                             <p className="text-white/60 text-xs font-bold uppercase tracking-widest">

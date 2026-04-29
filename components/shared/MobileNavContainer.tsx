@@ -18,21 +18,12 @@ export function MobileNavContainer({ navItems, userName, theme }: MobileNavConta
 
     return (
         <div className="md:hidden">
-            <header className="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 ${theme.logo} rounded-xl flex items-center justify-center font-black text-sm`}>
-                        {theme.title.charAt(0)}
-                    </div>
-                    <h1 className="font-black text-gray-900">{theme.title}</h1>
-                </div>
-                
-                <button 
-                    onClick={() => setIsMenuOpen(true)}
-                    className="p-2 bg-white border border-gray-100 rounded-xl shadow-sm text-[#072E1F] hover:bg-gray-50 transition-colors"
-                >
-                    <Menu size={20} />
-                </button>
-            </header>
+            <button 
+                onClick={() => setIsMenuOpen(true)}
+                className="p-3 bg-white border border-gray-100 rounded-2xl shadow-sm text-[#072E1F] hover:bg-gray-50 transition-all text-gray-400 hover:text-[#1D9E75]"
+            >
+                <Menu size={20} />
+            </button>
 
             <MobileMenu 
                 isOpen={isMenuOpen} 

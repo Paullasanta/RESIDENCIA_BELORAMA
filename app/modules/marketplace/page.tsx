@@ -12,12 +12,9 @@ export default async function MarketplacePage() {
     const session = await auth()
     const { rol, permisos, residenciaId } = session!.user
     const canModerate = permisos?.includes('MARKETPLACE_APPROVE') || rol === 'ADMIN'
-    const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
 
     const productos = await prisma.productoMarketplace.findMany({
-        where: isGlobalAdmin ? {} : {
-            residente: { user: { residenciaId: residenciaId || -1 } }
-        },
+        where: {},
         include: {
             residente: { include: { user: true } },
         },

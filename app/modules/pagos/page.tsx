@@ -3,9 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { AsignarMontoForm } from '@/components/admin/AsignarMontoForm'
 import { RevisionVouchers } from '@/components/admin/RevisionVouchers'
-import { generarCobrosMensuales } from '@/app/actions/pagos'
 import { DollarSign, CheckCircle, Clock, AlertCircle, Eye, History, Bell, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import ResidentPagoCard from '@/components/shared/ResidentPagoCard'
@@ -17,12 +15,8 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
     const { filter } = await searchParams
 
-    // Generar cobros pendientes automáticamente
-    await generarCobrosMensuales()
-
     // Data fetching
     let pagosRaw: any[] = []
-    let residentesActivos: any[] = []
     let vouchersPendientes: any[] = []
     
     if (isAdmin) {
@@ -38,15 +32,6 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                 cuotas: true,
             },
             orderBy: { createdAt: 'desc' },
-        })
-
-        residentesActivos = await prisma.residente.findMany({
-            where: { 
-                activo: true,
-                ...(isGlobalAdmin ? {} : { user: { residenciaId: residenciaId || -1 } })
-            },
-            include: { user: true, habitacion: true },
-            orderBy: { user: { nombre: 'asc' } }
         })
 
         vouchersPendientes = pagosRaw.filter(p => p.estado === 'EN_REVISION')
@@ -95,29 +80,16 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
         t1: 'Total Recaudado',
         v1: pagosRaw.filter(p => p.estado === 'PAGADO').reduce((s, p) => s + p.montoPagado, 0),
         t2: 'Por Cobrar',
-        v2: pagosRaw.reduce((s, p) => {
-            const montoVencido = p.cuotas?.filter((c: any) => !c.pagado && new Date(c.fechaVencimiento) <= new Date()).reduce((acc: number, c: any) => acc + c.monto, 0) || 0
-            // Si el pago no tiene cuotas (antiguo) o el montoVencido es 0 pero el pago está pendiente, sumamos el saldo total
-            if ((!p.cuotas || p.cuotas.length === 0) && p.estado !== 'PAGADO') {
-                return s + (p.monto - p.montoPagado)
-            }
-            return s + montoVencido
-        }, 0),
+        v2: pagosRaw.filter(p => ['PENDIENTE', 'VENCIDO', 'CRITICO'].includes(p.estado)).reduce((s, p) => s + (p.monto - (p.montoPagado || 0)), 0),
         t3: 'Revisión Pendiente',
         v3: vouchersPendientes.length
     } : {
         t1: 'Total Pagado',
         v1: pagosRaw.reduce((s, p) => s + p.montoPagado, 0),
         t2: 'Saldo Pendiente',
-        v2: pagosRaw.reduce((s, p) => {
-            const montoVencido = p.cuotas?.filter((c: any) => !c.pagado && new Date(c.fechaVencimiento) <= new Date()).reduce((acc: number, c: any) => acc + c.monto, 0) || 0
-            if ((!p.cuotas || p.cuotas.length === 0) && p.estado !== 'PAGADO') {
-                return s + (p.monto - p.montoPagado)
-            }
-            return s + montoVencido
-        }, 0),
+        v2: pagosRaw.filter(p => ['PENDIENTE', 'VENCIDO', 'CRITICO'].includes(p.estado)).reduce((s, p) => s + (p.monto - (p.montoPagado || 0)), 0),
         t3: 'Próximo Vencimiento',
-        v3: pagosRaw.find(p => p.estado !== 'PAGADO')?.cuotas.find((c:any) => !c.pagado)?.fechaVencimiento || '—'
+        v3: pagosRaw.filter(p => ['PENDIENTE'].includes(p.estado)).sort((a,b) => new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime())[0]?.fechaVencimiento || '—'
     }
 
     const todayString = new Date().toLocaleDateString('es-MX', { 
@@ -128,10 +100,10 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     })
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700" suppressHydrationWarning>
             {/* Top Header Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
-                <div className="space-y-1">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2" suppressHydrationWarning>
+                <div className="space-y-1" suppressHydrationWarning>
                     <div className="flex items-center gap-3">
                         <h1 className="text-4xl font-black text-[#072E1F] tracking-tighter">Pagos</h1>
                         <span className="px-3 py-1 bg-[#1D9E75]/10 text-[#1D9E75] rounded-lg text-[10px] font-black uppercase tracking-widest border border-[#1D9E75]/10">
@@ -141,7 +113,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                     <p className="text-gray-400 font-bold text-sm">Estado de pagos — {new Date().toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}</p>
                 </div>
                 
-                <div className="flex items-center gap-4 bg-white px-5 py-3 rounded-2xl border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-4 bg-white px-5 py-3 rounded-2xl border border-gray-100 shadow-sm" suppressHydrationWarning>
                     <Calendar size={18} className="text-[#1D9E75]" />
                     <span className="text-xs font-black text-gray-700 uppercase tracking-widest">{todayString}</span>
                 </div>
@@ -173,7 +145,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                     </div>
                     <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">{stats.t3}</p>
-                        <p className={`text-3xl font-black tracking-tighter ${stats.v3 > 0 ? 'text-red-600' : 'text-[#072E1F]'}`}>
+                        <p className={`text-3xl font-black tracking-tighter ${stats.v3 > 0 ? 'text-red-600' : 'text-[#072E1F]'}`} suppressHydrationWarning>
                             {stats.v3 === '—' ? stats.v3 : typeof stats.v3 === 'number' ? stats.v3 : new Date(stats.v3).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
                         </p>
                     </div>
@@ -257,7 +229,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                                                             href={`/modules/pagos/${entry.pagos[0]?.id}`}
                                                             className="px-6 py-2 bg-[#1D9E75]/5 text-[#1D9E75] rounded-xl text-[10px] font-black uppercase tracking-widest border border-[#1D9E75]/10 hover:bg-[#1D9E75] hover:text-white transition-all"
                                                         >
-                                                            Ver
+                                                            Ver Pagos
                                                         </Link>
                                                     )}
                                                 </div>
@@ -271,40 +243,29 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                 </div>
             )}
 
-            {/* Bottom Grid: Form & Review Section (Admin Only) */}
+            {/* Bottom Grid: Review Section (Admin Only) */}
             {isAdmin && (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    <div className="lg:col-span-4">
-                        <AsignarMontoForm residentes={residentesActivos} />
-                    </div>
-                    <div className="lg:col-span-8">
-                        <RevisionVouchers vouchers={vouchersPendientes} />
-                    </div>
+                <div className="grid grid-cols-1 gap-8">
+                    <RevisionVouchers vouchers={vouchersPendientes} />
                 </div>
             )}
 
             {/* Resident View (Alternative) */}
             {!isAdmin && (() => {
-                const unpaidPagos = pagosRaw.filter(p => p.estado !== 'PAGADO')
-                const hasDebts = unpaidPagos.some(p => {
-                    const montoVencido = p.cuotas?.filter((c: any) => !c.pagado && new Date(c.fechaVencimiento) <= new Date()).reduce((acc: number, c: any) => acc + c.monto, 0) || 0
-                    return montoVencido > 0 || (p.estado === 'PENDIENTE' && (!p.cuotas || p.cuotas.length === 0))
-                })
+                const unpaidPagos = pagosRaw.filter(p => ['PENDIENTE', 'VENCIDO', 'CRITICO'].includes(p.estado))
+                const hasDebts = unpaidPagos.some(p => ['VENCIDO', 'CRITICO'].includes(p.estado))
 
                 return (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {unpaidPagos.filter(p => {
-                            const montoVencido = p.cuotas?.filter((c: any) => !c.pagado && new Date(c.fechaVencimiento) <= new Date()).reduce((acc: number, c: any) => acc + c.monto, 0) || 0
-                            const esDeuda = montoVencido > 0 || (p.estado === 'PENDIENTE' && (!p.cuotas || p.cuotas.length === 0))
-                            
-                            // Si hay deudas, ocultar los que no son deuda (próximos)
+                            const esDeuda = ['VENCIDO', 'CRITICO'].includes(p.estado)
                             if (hasDebts && !esDeuda) return false
                             return true
                         }).map(pago => (
                             <ResidentPagoCard key={pago.id} pago={pago} />
                         ))}
                         {/* Sección de Historial Detallado */}
-                        {(pagosRaw.some(p => p.cuotas?.some((c: any) => c.pagado)) || pagosRaw.some(p => p.estado === 'PAGADO')) && (
+                        {(pagosRaw.some(p => p.estado === 'PAGADO')) && (
                             <div className="col-span-full pt-12">
                                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-8 flex items-center gap-4">
                                     <span className="h-px bg-gray-100 flex-1"></span>
@@ -312,11 +273,7 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                                     <span className="h-px bg-gray-100 flex-1"></span>
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {pagosRaw.flatMap(p => 
-                                        (p.cuotas && p.cuotas.length > 0) 
-                                            ? p.cuotas.filter((c: any) => c.pagado).map((c: any) => ({ ...p, cuotaInfo: c }))
-                                            : (p.estado === 'PAGADO' ? [{ ...p, cuotaInfo: null }] : [])
-                                    ).sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+                                    {pagosRaw.filter(p => p.estado === 'PAGADO').sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
                                     .map((item, idx) => (
                                         <div key={`${item.id}-${idx}`} className="bg-white/50 border border-gray-100 rounded-3xl p-6 flex items-center justify-between group hover:bg-white transition-all shadow-sm">
                                             <div className="flex items-center gap-4">
@@ -325,17 +282,17 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                                                 </div>
                                                 <div>
                                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">
-                                                        {item.concepto} {item.cuotaInfo ? `(Cuota)` : ''}
+                                                        {item.concepto}
                                                     </p>
                                                     <p className="text-lg font-black text-gray-900 leading-none">
-                                                        S/ {(item.cuotaInfo ? item.cuotaInfo.monto : item.monto).toLocaleString('es-MX')}
+                                                        S/ {item.monto.toLocaleString('es-MX')}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-[9px] font-bold text-gray-400 uppercase">Completado</p>
                                                 <p className="text-[10px] font-black text-gray-600">
-                                                    {new Date(item.cuotaInfo?.updatedAt || item.updatedAt || item.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
+                                                    {item.fechaPago ? new Date(item.fechaPago).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) : new Date(item.updatedAt || item.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
                                                 </p>
                                             </div>
                                         </div>

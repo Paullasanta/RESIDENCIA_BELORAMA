@@ -2,6 +2,8 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { checkAuth, checkResidenciaAccess } from '@/lib/auth-utils'
+import { createNotification } from './notificaciones'
 
 export async function createPago(data: any) {
   try {
@@ -42,42 +44,35 @@ export async function createPago(data: any) {
 
 export async function approveVoucher(pagoId: number) {
   try {
+    const user = await checkAuth('MANAGE_PAYMENTS')
+
     const pago = await prisma.pago.findUnique({
       where: { id: pagoId },
-      include: { cuotas: true }
+      include: { residente: { include: { user: true } } }
     })
 
     if (!pago) throw new Error('Pago no encontrado')
 
-    await prisma.$transaction(async (tx) => {
-      // Encontrar la cuota pendiente más antigua o las cuotas vencidas
-      const cuotasPendientes = pago.cuotas
-        .filter(c => !c.pagado)
-        .sort((a, b) => a.fechaVencimiento.getTime() - b.fechaVencimiento.getTime())
+    // Validar que el admin pertenece a la misma residencia que el pago
+    checkResidenciaAccess(user, pago.residente.user.residenciaId)
 
-      if (cuotasPendientes.length === 0) return
-
-      // Por ahora, aprobamos la primera cuota pendiente (la más antigua)
-      // Esto asume que el voucher es por una cuota.
-      const cuotaAPagar = cuotasPendientes[0]
-
-      await tx.cuota.update({
-        where: { id: cuotaAPagar.id },
-        data: { pagado: true }
-      })
-
-      const nuevoMontoPagado = pago.montoPagado + cuotaAPagar.monto
-      const todosPagados = cuotasPendientes.length === 1
-
-      await tx.pago.update({
-        where: { id: pagoId },
-        data: {
-          montoPagado: nuevoMontoPagado,
-          estado: todosPagados ? 'PAGADO' : 'PARCIAL',
-          comprobante: null // Limpiamos para el próximo pago si es parcial
-        }
-      })
+    await prisma.pago.update({
+      where: { id: pagoId },
+      data: {
+        montoPagado: pago.monto,
+        estado: 'PAGADO',
+        fechaPago: new Date(),
+      }
     })
+
+    // Enviar notificación al residente
+    await createNotification(
+      pago.residente.userId,
+      '¡Pago Aprobado!',
+      `Tu pago por concepto de ${pago.concepto} ha sido validado correctamente.`,
+      'PAGO',
+      '/modules/pagos'
+    )
 
     revalidatePath('/modules/pagos')
     return { success: true }
@@ -89,13 +84,38 @@ export async function approveVoucher(pagoId: number) {
 
 export async function rejectVoucher(pagoId: number) {
   try {
+    const user = await checkAuth('MANAGE_PAYMENTS')
+
+    const pago = await prisma.pago.findUnique({
+      where: { id: pagoId },
+      include: { residente: { include: { user: true } } }
+    })
+
+    if (!pago) throw new Error('Pago no encontrado')
+
+    // Validar acceso
+    checkResidenciaAccess(user, pago.residente.user.residenciaId)
+
+    // Si la fecha de vencimiento ya pasó, debe ser VENCIDO, si no PENDIENTE
+    const isVencido = pago.fechaVencimiento && pago.fechaVencimiento < new Date()
+
     await prisma.pago.update({
       where: { id: pagoId },
       data: {
-        estado: 'RECHAZADO',
-        comprobante: null // Opcional: limpiar comprobante si es inválido
+        estado: isVencido ? 'VENCIDO' : 'PENDIENTE',
+        comprobante: null,
+        metodoPago: null
       }
     })
+
+    // Enviar notificación al residente
+    await createNotification(
+      pago.residente.userId,
+      'Pago Rechazado',
+      `Tu comprobante de pago para ${pago.concepto} fue rechazado. Por favor, sube uno válido.`,
+      'PAGO',
+      '/modules/pagos'
+    )
 
     revalidatePath('/modules/pagos')
     return { success: true }
@@ -169,14 +189,37 @@ export async function enviarComprobantePago(data: { pagoId: number, comprobante:
   try {
     const { pagoId, comprobante, metodoPago } = data
 
-    await prisma.pago.update({
+    const pago = await prisma.pago.update({
       where: { id: pagoId },
       data: {
         comprobante,
         metodoPago,
         estado: 'EN_REVISION'
-      }
+      },
+      include: { residente: { include: { user: true } } }
     })
+
+    // Notificar a los admins locales y globales
+    const admins = await prisma.user.findMany({
+        where: {
+            OR: [
+                { residenciaId: pago.residente.user.residenciaId },
+                { residenciaId: null }
+            ],
+            role: { name: 'ADMIN' }
+        },
+        select: { id: true }
+    })
+
+    for (const admin of admins) {
+        await createNotification(
+            admin.id,
+            'Nuevo Comprobante de Pago',
+            `${pago.residente.user.nombre} ha subido un comprobante para ${pago.concepto}.`,
+            'PAGO',
+            '/modules/pagos'
+        )
+    }
 
     revalidatePath('/modules/pagos')
     revalidatePath(`/modules/pagos/${pagoId}`)
@@ -187,100 +230,3 @@ export async function enviarComprobantePago(data: { pagoId: number, comprobante:
   }
 }
 
-export async function generarCobrosMensuales() {
-  try {
-    const residentes = await prisma.residente.findMany({
-      where: { activo: true },
-      include: { pagos: true }
-    })
-
-    const today = new Date()
-    let generados = 0
-
-    for (const res of residentes) {
-      if (res.montoMensual <= 0) continue
-
-      const fechaInicio = new Date(res.fechaIngreso)
-      const fechaLimite = res.fechaFinal ? new Date(res.fechaFinal) : null
-      
-      // Calcular cuántos meses de mensualidad le corresponden en total
-      let mesesTotales = 999 // Por defecto, sin límite
-      if (fechaLimite) {
-          // Diferencia básica de meses
-          mesesTotales = (fechaLimite.getFullYear() - fechaInicio.getFullYear()) * 12 + (fechaLimite.getMonth() - fechaInicio.getMonth())
-          
-          // Si el día de salida es posterior al día de entrada, significa que ha iniciado un nuevo mes
-          // Ej: Entrada 26 Abr, Salida 27 May -> Son 2 meses (Abril-Mayo y el inicio de Mayo-Junio)
-          if (fechaLimite.getDate() > fechaInicio.getDate()) {
-              mesesTotales++
-          }
-      }
-
-      let iterDate = new Date(fechaInicio.getFullYear(), fechaInicio.getMonth(), 1)
-      const currentYear = today.getFullYear()
-      const currentMonth = today.getMonth()
-      const endDate = new Date(currentYear, currentMonth + 1, 1)
-
-      let mesesGeneradosParaEsteResidente = 0
-
-      while (iterDate <= endDate) {
-        // console.log(`Generando para ${res.id}: ${iterDate.toISOString()} (Mes ${mesesGeneradosParaEsteResidente} de ${mesesTotales})`)
-        // Si ya llegamos al número de meses contratados, parar
-        if (mesesGeneradosParaEsteResidente >= mesesTotales) break
-
-        const periodoStr = iterDate.toISOString().slice(0, 7) // YYYY-MM
-        
-        // Verificar si ya existe un pago de alquiler para este periodo
-        const existe = res.pagos.some(p => 
-          p.periodo === periodoStr && 
-          (p.concepto.includes('Alquiler') || p.concepto.includes('Mensualidad'))
-        )
-
-        if (!existe) {
-          // Crear el cobro para este mes
-          const nombreMes = iterDate.toLocaleDateString('es-MX', { month: 'long' })
-          const concepto = `Mensualidad ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${iterDate.getFullYear()}`
-          
-          // Calcular fecha de vencimiento basada en el diaPago del residente
-          const fechaVencimiento = new Date(iterDate.getFullYear(), iterDate.getMonth(), res.diaPago)
-          // Ajustar si el día excede el fin de mes
-          if (fechaVencimiento.getMonth() !== iterDate.getMonth()) {
-            fechaVencimiento.setDate(0) // Último día del mes anterior (que es el mes correcto)
-          }
-
-          await prisma.pago.create({
-            data: {
-              residenteId: res.id,
-              concepto,
-              monto: res.montoMensual,
-              periodo: periodoStr,
-              estado: 'PENDIENTE',
-              cuotas: {
-                create: {
-                  monto: res.montoMensual,
-                  pagado: false,
-                  fechaVencimiento: fechaVencimiento
-                }
-              }
-            }
-          })
-          generados++
-        }
-
-        mesesGeneradosParaEsteResidente++
-        iterDate.setMonth(iterDate.getMonth() + 1)
-      }
-    }
-
-    /* 
-    if (generados > 0) {
-      revalidatePath('/modules/pagos')
-    }
-    */
-
-    return { success: true, generados }
-  } catch (error) {
-    console.error('Error generating monthly payments:', error)
-    return { success: false, error: 'Error al generar cobros mensuales' }
-  }
-}

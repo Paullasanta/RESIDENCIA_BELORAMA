@@ -35,6 +35,8 @@ enum EstadoPago {
   PAGADO
   EN_REVISION
   RECHAZADO
+  VENCIDO
+  CRITICO
 }
 
 enum EstadoProducto {
@@ -90,6 +92,7 @@ model User {
   egresos     Egreso[]
   avisos      Aviso[]
   reacciones  Reaccion[]
+  notificaciones Notificacion[]
   createdAt   DateTime    @default(now())
 }
 
@@ -164,6 +167,7 @@ model Residente {
   diaPago           Int               @default(1)
   montoMensual      Float             @default(0)
   montoGarantia     Float             @default(0)
+  contratos         Contrato[]
   turnos            TurnoLavanderia[]
   pagos             Pago[]
   productos         ProductoMarketplace[]
@@ -197,18 +201,37 @@ model TurnoLavanderia {
 }
 
 model Pago {
-  id           Int        @id @default(autoincrement())
-  residenteId  Int
-  residente    Residente  @relation(fields: [residenteId], references: [id])
-  concepto     String     @default("Pago")
-  monto        Float
-  montoPagado  Float      @default(0)
-  comprobante  String?
-  metodoPago   String?
-  periodo      String?
-  estado       EstadoPago @default(PENDIENTE)
-  cuotas       Cuota[]
-  createdAt    DateTime   @default(now())
+  id                 Int        @id @default(autoincrement())
+  contratoId         Int?
+  contrato           Contrato?  @relation(fields: [contratoId], references: [id])
+  residenteId        Int
+  residente          Residente  @relation(fields: [residenteId], references: [id])
+  concepto           String     @default("Pago")
+  mesCorrespondiente String?
+  fechaVencimiento   DateTime?
+  monto              Float
+  montoPagado        Float      @default(0)
+  comprobante        String?
+  metodoPago         String?
+  periodo            String?
+  estado             EstadoPago @default(PENDIENTE)
+  fechaPago          DateTime?
+  cuotas             Cuota[]
+  createdAt          DateTime   @default(now())
+}
+
+model Contrato {
+  id              Int       @id @default(autoincrement())
+  residenteId     Int
+  residente       Residente @relation(fields: [residenteId], references: [id])
+  fechaInicio     DateTime
+  fechaFin        DateTime
+  montoMensual    Float
+  diaPago         Int       @default(1)
+  archivoContrato String?
+  activo          Boolean   @default(true)
+  pagos           Pago[]
+  createdAt       DateTime  @default(now())
 }
 
 model Cuota {
@@ -334,3 +357,15 @@ model Configuracion {
   clave String @unique
   valor String
 }
+
+model Notificacion {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  titulo    String
+  mensaje   String
+  tipo      String   @default("INFO") // INFO, PAGO, AVISO, TICKET
+  leida     Boolean  @default(false)
+  link      String?  // URL opcional para navegar al hacer clic
+  createdAt DateTime @default(now())
+}

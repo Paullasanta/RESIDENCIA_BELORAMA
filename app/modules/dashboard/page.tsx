@@ -15,7 +15,7 @@ export default async function DashboardPage() {
         const whereResidenteResidencia = isGlobalAdmin ? {} : { user: { residenciaId: residenciaId || -1 } }
         const wherePagoResidencia = isGlobalAdmin ? {} : { residente: { user: { residenciaId: residenciaId || -1 } } }
 
-        const [totalResidentes, pagosMes, turnosActivos, publicacionesActivas, ultimosPagos] = await Promise.all([
+        const [totalResidentes, pagosMes, turnosActivos, publicacionesActivas, ultimosPagos, pagosCriticos] = await Promise.all([
             prisma.residente.count({ 
                 where: { 
                     activo: true,
@@ -49,6 +49,14 @@ export default async function DashboardPage() {
                 orderBy: { createdAt: 'desc' },
                 include: { residente: { include: { user: { select: { nombre: true, email: true } } } } }
             }),
+            prisma.pago.findMany({
+                where: {
+                    estado: 'CRITICO',
+                    ...wherePagoResidencia
+                },
+                take: 5,
+                include: { residente: { include: { user: true } } }
+            })
         ])
 
         const ingresosMes = pagosMes._sum.montoPagado ?? 0
@@ -67,37 +75,68 @@ export default async function DashboardPage() {
                     <StatCard label="Publicaciones" value={publicacionesActivas} color="dark" icon={<Megaphone size={22} />} />
                 </div>
 
-                <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-                    <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between">
-                        <div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Actividad Reciente */}
+                    <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+                        <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
                             <h2 className="text-xl font-black text-[#072E1F]">Actividad Reciente</h2>
-                            <p className="text-sm text-gray-500">Últimos cobros registrados en el sistema.</p>
+                            <Link href="/modules/pagos" className="text-sm font-black text-[#1D9E75] hover:underline">Ver todo</Link>
                         </div>
-                        <Link href="/modules/pagos" className="text-sm font-black text-[#1D9E75] hover:underline">Ver todo</Link>
+                        {ultimosPagos.length === 0 ? (
+                            <div className="py-20 text-center text-gray-400 font-medium">No hay actividad reciente.</div>
+                        ) : (
+                            <div className="divide-y divide-gray-50">
+                                {ultimosPagos.map((pago: any) => (
+                                    <div key={pago.id} className="flex items-center justify-between px-8 py-5 hover:bg-gray-50/50 transition-colors">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-[#072E1F]">
+                                                {pago.residente.user.nombre.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-gray-900 text-sm">{pago.residente.user.nombre}</p>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(pago.createdAt).toLocaleDateString()}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-black text-gray-900">${pago.monto.toLocaleString()}</p>
+                                            <StatusBadge status={pago.estado as any} />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                    {ultimosPagos.length === 0 ? (
-                        <div className="py-20 text-center text-gray-400 font-medium">No hay actividad reciente.</div>
-                    ) : (
-                        <div className="divide-y divide-gray-50">
-                            {ultimosPagos.map((pago: any) => (
-                                <div key={pago.id} className="flex items-center justify-between px-8 py-5 hover:bg-gray-50/50 transition-colors">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-[#072E1F]">
-                                            {pago.residente.user.nombre.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <p className="font-bold text-gray-900">{pago.residente.user.nombre}</p>
-                                            <p className="text-xs text-gray-400 font-medium">{new Date(pago.createdAt).toLocaleDateString('es-MX')}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-6">
-                                        <span className="font-black text-gray-900">${pago.monto.toLocaleString('es-MX')}</span>
-                                        <StatusBadge status={pago.estado as any} />
-                                    </div>
-                                </div>
-                            ))}
+
+                    {/* Pagos Críticos (Deuda Urgente) */}
+                    <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-200/50 border border-red-100 overflow-hidden">
+                        <div className="px-8 py-6 border-b border-red-50 flex items-center justify-between bg-red-50/30">
+                            <h2 className="text-xl font-black text-red-700">Deudas Críticas</h2>
+                            <span className="bg-red-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase">{pagosCriticos.length} Alertas</span>
                         </div>
-                    )}
+                        {pagosCriticos.length === 0 ? (
+                            <div className="py-20 text-center text-gray-400 font-medium">Todo bajo control. No hay deudas críticas.</div>
+                        ) : (
+                            <div className="divide-y divide-gray-50">
+                                {pagosCriticos.map((pago: any) => (
+                                    <div key={pago.id} className="flex items-center justify-between px-8 py-5 hover:bg-red-50/20 transition-colors">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold">
+                                                !
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-gray-900 text-sm">{pago.residente.user.nombre}</p>
+                                                <p className="text-[10px] text-red-500 font-black uppercase">{pago.concepto}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-black text-red-600">${pago.monto.toLocaleString()}</p>
+                                            <Link href={`/modules/pagos/residente/${pago.residente.id}`} className="text-[10px] font-black text-red-700 hover:underline">GESTIONAR</Link>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         )
@@ -111,6 +150,13 @@ export default async function DashboardPage() {
             pagos: { take: 3, orderBy: { createdAt: 'desc' } },
             turnos: { where: { estado: 'OCUPADO' }, include: { lavadora: true }, take: 2 }
         }
+    })
+
+    const avisos = await prisma.aviso.findMany({
+        where: { residenciaId: profile?.habitacion?.residenciaId || residenciaId || -1 },
+        take: 2,
+        orderBy: { createdAt: 'desc' },
+        include: { autor: true }
     })
 
     return (
@@ -171,20 +217,64 @@ export default async function DashboardPage() {
                 </div>
             </div>
 
-            {/* Accesos Rápidos */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <Link href="/modules/marketplace" className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col items-center text-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                        <ShoppingBag size={24} />
+            {/* Sección Inferior: Avisos y Accesos Rápidos */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Últimos Avisos */}
+                <div className="lg:col-span-2 space-y-6">
+                    <h2 className="text-xl font-black text-[#072E1F]">Últimos Avisos</h2>
+                    {avisos.length === 0 ? (
+                        <div className="p-10 bg-gray-50 rounded-[2rem] text-center text-gray-400 font-medium border border-dashed border-gray-200">
+                            No hay avisos recientes en tu residencia.
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {avisos.map(aviso => (
+                                <div key={aviso.id} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-50 flex flex-col justify-between">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase ${
+                                                aviso.prioridad === 'ALTA' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
+                                            }`}>
+                                                {aviso.prioridad}
+                                            </span>
+                                            <span className="text-[9px] font-bold text-gray-400">{new Date(aviso.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                        <h3 className="font-black text-gray-900 mb-2 leading-tight">{aviso.titulo}</h3>
+                                        <p className="text-xs text-gray-500 line-clamp-2 mb-4">{aviso.contenido}</p>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-50">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-[#1D9E75]/10 text-[#1D9E75] flex items-center justify-center text-[10px] font-bold">
+                                                {aviso.autor.nombre.charAt(0)}
+                                            </div>
+                                            <span className="text-[10px] font-bold text-gray-600">{aviso.autor.nombre}</span>
+                                        </div>
+                                        <Link href="/modules/avisos" className="text-[10px] font-black text-[#1D9E75] hover:underline">LEER MÁS</Link>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Accesos Rápidos */}
+                <div className="space-y-6">
+                    <h2 className="text-xl font-black text-[#072E1F]">Accesos Rápidos</h2>
+                    <div className="grid grid-cols-2 gap-4">
+                        <Link href="/modules/marketplace" className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col items-center text-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                                <ShoppingBag size={20} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Marketplace</span>
+                        </Link>
+                        <Link href="/modules/comida" className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col items-center text-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                                <UtensilsCrossed size={20} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Menús</span>
+                        </Link>
                     </div>
-                    <span className="text-xs font-black uppercase tracking-widest text-gray-400">Marketplace</span>
-                </Link>
-                <Link href="/modules/comida" className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col items-center text-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center">
-                        <UtensilsCrossed size={24} />
-                    </div>
-                    <span className="text-xs font-black uppercase tracking-widest text-gray-400">Menús</span>
-                </Link>
+                </div>
             </div>
         </div>
     )

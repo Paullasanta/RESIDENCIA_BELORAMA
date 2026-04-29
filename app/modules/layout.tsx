@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 
 import { MobileNavContainer } from '@/components/shared/MobileNavContainer'
+import { NotificationBell } from '@/components/shared/NotificationBell'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
     const session = await auth()
@@ -84,15 +85,30 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto relative">
-                <MobileNavContainer 
-                    navItems={navItems}
-                    userName={nombre}
-                    theme={theme}
-                />
+            <main className="flex-1 overflow-y-auto relative flex flex-col">
+                {/* Top Bar Desktop */}
+                <header className="sticky top-0 z-20 bg-[#F8FAF8]/80 backdrop-blur-md px-4 md:px-8 lg:px-12 py-4 flex items-center justify-between md:justify-end gap-4">
+                    <div className="md:hidden">
+                        <MobileNavContainer 
+                            navItems={navItems}
+                            userName={nombre}
+                            theme={theme}
+                        />
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                        <NotificationBell />
+                        <div className="hidden md:flex flex-col items-end">
+                            <span className="text-[10px] font-black text-[#1D9E75] uppercase tracking-widest">{rol}</span>
+                            <span className="text-xs font-bold text-gray-900">{nombre}</span>
+                        </div>
+                    </div>
+                </header>
                 
-                <div className="max-w-7xl mx-auto">
-                    {children}
+                <div className="flex-1 p-4 md:p-8 lg:p-12 pt-0 md:pt-0 lg:pt-0">
+                    <div className="max-w-7xl mx-auto">
+                        {children}
+                    </div>
                 </div>
             </main>
         </div>

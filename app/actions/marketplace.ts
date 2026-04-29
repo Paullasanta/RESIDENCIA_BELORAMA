@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { auth } from '@/lib/auth'
+import { createNotification } from './notificaciones'
 
 export async function createProducto(data: any) {
   try {
@@ -29,10 +30,28 @@ export async function createProducto(data: any) {
         descripcion: data.descripcion,
         precio: Number(data.precio),
         fotos: data.fotos || [],
-        residenteId: residenteId || null, // Si es admin sin perfil residente, permitimos null
+        residenteId: residenteId || null,
         estado: rol === 'ADMIN' ? 'APROBADO' : 'PENDIENTE'
       }
     })
+
+    // Si es un residente, notificar a los admins para que lo aprueben
+    if (rol !== 'ADMIN') {
+        const admins = await prisma.user.findMany({
+            where: { role: { name: 'ADMIN' } },
+            select: { id: true }
+        })
+
+        for (const admin of admins) {
+            await createNotification(
+                admin.id,
+                'Nuevo Producto en Marketplace',
+                `${session.user.nombre} ha publicado: ${data.titulo}. Pendiente de revisión.`,
+                'AVISO',
+                '/modules/marketplace'
+            )
+        }
+    }
 
     revalidatePath('/modules/marketplace')
     return { success: true, data: producto }
@@ -47,10 +66,24 @@ export async function moderarProducto(id: number, estado: 'APROBADO' | 'RECHAZAD
     const session = await auth()
     if (!session || session.user.rol !== 'ADMIN') throw new Error('No autorizado')
 
-    await prisma.productoMarketplace.update({
+    const producto = await prisma.productoMarketplace.update({
       where: { id },
-      data: { estado }
+      data: { estado },
+      include: { residente: { include: { user: true } } }
     })
+
+    // Notificar al vendedor
+    if (producto.residente) {
+        await createNotification(
+            producto.residente.userId,
+            estado === 'APROBADO' ? '¡Producto Aprobado!' : 'Producto Rechazado',
+            estado === 'APROBADO' 
+                ? `Tu publicación "${producto.titulo}" ya es visible en el Marketplace.`
+                : `Tu publicación "${producto.titulo}" no ha sido aprobada. Revisa las normas.`,
+            'AVISO',
+            '/modules/marketplace'
+        )
+    }
     
     revalidatePath('/modules/marketplace')
     return { success: true }

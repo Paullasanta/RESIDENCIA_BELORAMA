@@ -134,28 +134,53 @@ export async function createResidente(data: any) {
         })
       }
 
-      // 5. Generar Cobros Iniciales
+      // 5. Generar Contrato y Pagos Mensuales
       if (montoMensual > 0) {
-        await tx.pago.create({
+        const fechaInicio = (data.fechaIngreso && data.fechaIngreso !== "") ? new Date(data.fechaIngreso) : new Date();
+        const fechaFin = (data.fechaFinal && data.fechaFinal !== "") ? new Date(data.fechaFinal) : new Date(new Date().setFullYear(new Date().getFullYear() + 1));
+        
+        const contrato = await tx.contrato.create({
           data: {
             residenteId: residente.id,
-            concepto: 'Alquiler Inicial',
-            monto: montoMensual,
-            montoPagado: 0,
-            comprobante: pagoConfirmado ? comprobanteUrl : null,
-            periodo: (data.fechaIngreso && data.fechaIngreso !== "") 
-              ? new Date(data.fechaIngreso).toISOString().slice(0, 7) 
-              : new Date().toISOString().slice(0, 7),
-            estado: pagoConfirmado ? 'EN_REVISION' : 'PENDIENTE',
-            cuotas: {
-              create: {
-                monto: montoMensual,
-                pagado: false,
-                fechaVencimiento: new Date()
-              }
-            }
+            fechaInicio: fechaInicio,
+            fechaFin: fechaFin,
+            montoMensual: montoMensual,
+            diaPago: diaPagoFinal,
+            archivoContrato: null
           }
-        })
+        });
+
+        let fechaActual = new Date(fechaInicio);
+        const pagosToCreate: any[] = [];
+
+        while (fechaActual <= fechaFin) {
+          let fechaVencimiento = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), diaPagoFinal);
+          if (fechaVencimiento.getMonth() !== fechaActual.getMonth()) {
+            fechaVencimiento.setDate(0); 
+          }
+
+          const mesString = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}`;
+          const nombreMes = fechaActual.toLocaleDateString('es-MX', { month: 'long' });
+          const concepto = `Mensualidad ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${fechaActual.getFullYear()}`;
+          const isFirstPayment: boolean = pagosToCreate.length === 0;
+
+          pagosToCreate.push({
+            contratoId: contrato.id,
+            residenteId: residente.id,
+            concepto: concepto,
+            mesCorrespondiente: mesString,
+            fechaVencimiento: fechaVencimiento,
+            monto: montoMensual,
+            estado: (isFirstPayment && pagoConfirmado) ? 'EN_REVISION' : 'PENDIENTE',
+            comprobante: (isFirstPayment && pagoConfirmado) ? comprobanteUrl : null
+          });
+
+          fechaActual.setMonth(fechaActual.getMonth() + 1);
+        }
+
+        if (pagosToCreate.length > 0) {
+          await tx.pago.createMany({ data: pagosToCreate });
+        }
       }
 
       if (montoGarantia > 0) {
@@ -163,28 +188,24 @@ export async function createResidente(data: any) {
         const montoRestante = Math.max(0, montoGarantia - montoPrimerPago)
         const montoOtrasCuotas = cuotasGarantia > 1 ? (montoRestante / (cuotasGarantia - 1)) : 0
 
-        await tx.pago.create({
-          data: {
+        const garantiasToCreate = Array.from({ length: cuotasGarantia }).map((_, i) => {
+          const fecha = new Date()
+          fecha.setMonth(fecha.getMonth() + i)
+          const montoCuota = i === 0 ? montoPrimerPago : montoOtrasCuotas
+          const isFirstPayment = i === 0;
+
+          return {
             residenteId: residente.id,
-            concepto: 'Garantía',
-            monto: montoGarantia,
+            concepto: `Garantía (Cuota ${i + 1}/${cuotasGarantia})`,
+            monto: montoCuota,
             montoPagado: 0,
-            comprobante: pagoConfirmado ? comprobanteUrl : null,
-            estado: pagoConfirmado ? 'EN_REVISION' : 'PENDIENTE',
-            cuotas: {
-              create: Array.from({ length: cuotasGarantia }).map((_, i) => {
-                const fecha = new Date()
-                fecha.setMonth(fecha.getMonth() + i)
-                const montoCuota = i === 0 ? montoPrimerPago : montoOtrasCuotas
-                return {
-                  monto: montoCuota,
-                  pagado: false, // Se marca como pagado cuando el admin aprueba el EN_REVISION
-                  fechaVencimiento: fecha
-                }
-              })
-            }
+            fechaVencimiento: fecha,
+            estado: ((isFirstPayment && pagoConfirmado) ? 'EN_REVISION' : 'PENDIENTE') as any,
+            comprobante: (isFirstPayment && pagoConfirmado) ? comprobanteUrl : null
           }
-        })
+        });
+
+        await tx.pago.createMany({ data: garantiasToCreate });
       }
 
       return residente
@@ -300,7 +321,7 @@ export async function updateResidente(id: number, data: any) {
         await tx.pago.updateMany({
           where: { 
             residenteId: id, 
-            concepto: { contains: 'Alquiler' },
+            concepto: { contains: 'Mensualidad' },
             estado: { in: ['PENDIENTE', 'RECHAZADO'] }
           },
           data: { monto: montoMensual }

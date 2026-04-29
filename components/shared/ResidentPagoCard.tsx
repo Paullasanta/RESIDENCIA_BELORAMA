@@ -12,29 +12,11 @@ interface ResidentPagoCardProps {
 
 export default function ResidentPagoCard({ pago }: ResidentPagoCardProps) {
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const progPct = pago.monto > 0 ? Math.round((pago.montoPagado / pago.monto) * 100) : 0
-    const canUpload = (pago.estado === 'PENDIENTE' || pago.estado === 'RECHAZADO' || pago.estado === 'PARCIAL') && !pago.comprobante
+    const progPct = pago.estado === 'PAGADO' ? 100 : 0
+    const canUpload = (pago.estado === 'PENDIENTE' || pago.estado === 'RECHAZADO' || pago.estado === 'VENCIDO' || pago.estado === 'CRITICO') && !pago.comprobante
     
-    // 1. Calcular lo que está vencido hoy (deuda exigible)
-    const montoVencido = pago.cuotas?.filter((c: any) => 
-        !c.pagado && new Date(c.fechaVencimiento) <= new Date()
-    ).reduce((acc: number, c: any) => acc + c.monto, 0) || 0
-
-    // 2. Encontrar la próxima cuota pendiente (vencida o futura)
-    const cuotasPendientes = pago.cuotas?.filter((c: any) => !c.pagado)
-        .sort((a: any, b: any) => new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime()) || []
-    
-    const proximaCuota = cuotasPendientes[0]
-    
-    // 3. Determinar qué mostrar
-    const montoMostrar = pago.estado === 'PAGADO' 
-        ? pago.monto 
-        : (montoVencido > 0 
-            ? montoVencido 
-            : (proximaCuota ? proximaCuota.monto : (pago.monto - pago.montoPagado)))
-
-    const esPagoFuturo = montoVencido === 0 && proximaCuota && new Date(proximaCuota.fechaVencimiento) > new Date()
-    const fechaVencimiento = proximaCuota ? new Date(proximaCuota.fechaVencimiento) : new Date(pago.createdAt)
+    const esPagoFuturo = pago.estado === 'PENDIENTE' && new Date(pago.fechaVencimiento) > new Date()
+    const fechaVencimiento = new Date(pago.fechaVencimiento || pago.createdAt)
 
     return (
         <div className={`bg-white rounded-[2.5rem] shadow-xl shadow-gray-100 border border-gray-100 overflow-hidden flex flex-col group hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 ${pago.estado === 'PAGADO' ? 'grayscale opacity-80' : ''}`}>
@@ -45,13 +27,8 @@ export default function ResidentPagoCard({ pago }: ResidentPagoCardProps) {
                             {pago.concepto} {esPagoFuturo ? '(Próximo)' : ''}
                         </p>
                         <p className="text-4xl font-black text-gray-900 tracking-tighter">
-                            S/ {montoMostrar.toLocaleString('es-MX')}
+                            S/ {pago.monto.toLocaleString('es-MX')}
                         </p>
-                        {pago.cuotas?.length > 0 && montoMostrar < (pago.monto - pago.montoPagado) && (
-                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter mt-1">
-                                {esPagoFuturo ? 'Próxima cuota' : 'Deuda actual'} (de S/ {pago.monto.toLocaleString('es-MX')} total)
-                            </p>
-                        )}
                     </div>
                     <StatusBadge status={pago.estado as any} />
                 </div>
@@ -84,9 +61,6 @@ export default function ResidentPagoCard({ pago }: ResidentPagoCardProps) {
                             Reportar Pago <UploadCloud size={14} />
                         </button>
                     )}
-                    <Link href={`/modules/pagos/${pago.id}`} className="flex items-center gap-2 text-[10px] font-black text-[#1D9E75] hover:text-[#072E1F] uppercase tracking-widest transition-all">
-                        Ver Cuotas <Eye size={14} />
-                    </Link>
                  </div>
             </div>
 

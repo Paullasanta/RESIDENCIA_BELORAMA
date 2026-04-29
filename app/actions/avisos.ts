@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { auth } from '@/lib/auth'
+import { createNotification } from './notificaciones'
 
 export async function createAviso(data: any) {
   try {
@@ -25,6 +26,27 @@ export async function createAviso(data: any) {
         autorId: user.id
       }
     })
+
+    // Notificar a todos los residentes de la residencia (o a todos si es global)
+    const targetResidenciaId = data.residenciaId ? Number(data.residenciaId) : null
+    
+    const residents = await prisma.user.findMany({
+        where: {
+            rol: 'RESIDENTE',
+            ...(targetResidenciaId ? { residenciaId: targetResidenciaId } : {})
+        },
+        select: { id: true }
+    })
+
+    for (const resident of residents) {
+        await createNotification(
+            resident.id,
+            'Nuevo Aviso Publicado',
+            `Se ha publicado: ${data.titulo}`,
+            'AVISO',
+            '/modules/avisos'
+        )
+    }
 
     revalidatePath('/modules/avisos')
     return { success: true, data: aviso }

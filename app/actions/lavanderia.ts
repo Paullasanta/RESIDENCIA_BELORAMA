@@ -3,16 +3,40 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { EstadoTurno } from '@prisma/client'
+import { checkAuth, checkResidenciaAccess } from '@/lib/auth-utils'
 
 export async function asignarTurnoLavanderia(turnoId: number, residenteId: number) {
   try {
-    await prisma.turnoLavanderia.update({
+    const user = await checkAuth() // Cualquier usuario logueado puede asignar un turno si es para sí mismo, o admin si es para otro.
+    
+    const turno = await prisma.turnoLavanderia.findUnique({
+        where: { id: turnoId }
+    })
+    
+    if (!turno) throw new Error('Turno no encontrado')
+    
+    // Si no es admin, solo puede asignarse turnos de su propia residencia
+    checkResidenciaAccess(user, turno.residenciaId)
+
+    const updatedTurno = await prisma.turnoLavanderia.update({
       where: { id: turnoId },
       data: {
         residenteId,
         estado: EstadoTurno.OCUPADO
-      }
+      },
+      include: { residente: true }
     })
+
+    // Si un admin asignó el turno, notificar al residente
+    if (updatedTurno.residente) {
+        await createNotification(
+            updatedTurno.residente.userId,
+            'Turno de Lavandería Asignado',
+            `Se te ha asignado un turno el ${updatedTurno.dia} a las ${updatedTurno.horaInicio}`,
+            'INFO',
+            '/modules/lavanderia'
+        )
+    }
     
     revalidatePath('/admin/lavanderia')
     revalidatePath('/residente/lavanderia')
@@ -68,6 +92,9 @@ export async function createLavadora(residenciaId: number, nombre: string) {
 
 export async function generateBulkShifts(lavadoraId: number, residenciaId: number, data: { dias: string[], horaInicio: string, horaFin: string, intervaloMin: number }) {
     try {
+        const user = await checkAuth('MANAGE_LAVANDERIA')
+        checkResidenciaAccess(user, residenciaId)
+
         const { dias, horaInicio, horaFin, intervaloMin } = data
 
         const parseTime = (time: string) => {
