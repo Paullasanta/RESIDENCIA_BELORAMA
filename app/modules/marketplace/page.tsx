@@ -46,7 +46,7 @@ export default async function MarketplacePage() {
                 aprobados={aprobados as any}
                 misProductos={misProductos as any}
                 canModerate={canModerate}
-                sessionUserEmail={session.user.email!}
+                sessionUserEmail={session!.user.email!}
             />
         </div>
     )

@@ -12,6 +12,18 @@ export function GenerateShiftsModal({ lavadora }: { lavadora: any }) {
     const [error, setError] = useState('')
     const router = useRouter()
 
+    const formatIntervalo = (mins: number) => {
+        if (mins === 30) return "30 Minutos (Media hora)"
+        if (mins === 60) return "1 Hora (60 min)"
+        if (mins === 90) return "1 Hora y Media (90 min)"
+        const horas = Math.floor(mins / 60)
+        const resto = mins % 60
+        if (resto === 0) return `${horas} Horas (${mins} min)`
+        return `${horas} Horas y ${resto} min (${mins} min)`
+    }
+
+    const [intervalo, setIntervalo] = useState(30)
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setLoading(true)
@@ -85,12 +97,29 @@ export function GenerateShiftsModal({ lavadora }: { lavadora: any }) {
 
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Duración por Turno</label>
-                                <select name="intervaloMin" required className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold appearance-none">
-                                    <option value="60">1 Hora (60 min)</option>
-                                    <option value="90">1 Hora y Media (90 min)</option>
-                                    <option value="120">2 Horas (120 min)</option>
-                                    <option value="30">30 Minutos (Media hora)</option>
-                                </select>
+                                <div className="flex items-center w-full rounded-2xl border border-gray-100 bg-gray-50 overflow-hidden focus-within:border-[#1D9E75] focus-within:bg-white transition-colors">
+                                    <div className="flex-1 px-5 py-3 font-bold text-gray-700">
+                                        {formatIntervalo(intervalo)}
+                                    </div>
+                                    <div className="flex items-center border-l border-gray-100">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setIntervalo(prev => Math.max(30, prev - 30))}
+                                            className="px-4 py-3 hover:bg-gray-200 text-gray-400 font-bold transition-colors disabled:opacity-50"
+                                            disabled={intervalo <= 30}
+                                        >
+                                            -
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setIntervalo(prev => prev + 30)}
+                                            className="px-4 py-3 hover:bg-[#1D9E75]/10 text-[#1D9E75] font-black transition-colors"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                    <input type="hidden" name="intervaloMin" value={intervalo} />
+                                </div>
                             </div>
 
                             <div className="space-y-2">

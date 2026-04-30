@@ -32,7 +32,7 @@ export async function createAviso(data: any) {
     
     const residents = await prisma.user.findMany({
         where: {
-            rol: 'RESIDENTE',
+            role: { name: 'RESIDENTE' },
             ...(targetResidenciaId ? { residenciaId: targetResidenciaId } : {})
         },
         select: { id: true }

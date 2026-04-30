@@ -24,7 +24,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
   const [fechaIngreso, setFechaIngreso] = useState(
     initialData?.fechaIngreso 
       ? new Date(initialData.fechaIngreso).toISOString().split('T')[0] 
-      : new Date().toISOString().split('T')[0]
+      : (() => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().split('T')[0] })()
   )
   const [fechaFinal, setFechaFinal] = useState(
     initialData?.fechaFinal 
@@ -83,8 +83,8 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
 
   // Estados para confirmación de pago
   const [pagoConfirmado, setPagoConfirmado] = useState(false)
-  const [montoMensualInput, setMontoMensualInput] = useState(initialData?.pagos?.find((p: any) => p.concepto === 'Alquiler Inicial')?.monto || 0)
-  const [montoGarantiaInput, setMontoGarantiaInput] = useState(initialData?.pagos?.find((p: any) => p.concepto === 'Garantía')?.monto || 0)
+  const [montoMensualInput, setMontoMensualInput] = useState(initialData?.montoMensual || 0)
+  const [montoGarantiaInput, setMontoGarantiaInput] = useState(initialData?.montoGarantia || 0)
   const [cuotasGarantiaInput, setCuotasGarantiaInput] = useState(1)
   const [montoGarantiaPrimerPago, setMontoGarantiaPrimerPago] = useState(0)
 
@@ -391,8 +391,9 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
                 required
                 value={montoMensualInput || ''}
                 onChange={(e) => setMontoMensualInput(e.target.value === '' ? 0 : Number(e.target.value))}
-                className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
+                className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 placeholder="0.00"
+                onWheel={(e) => (e.target as HTMLElement).blur()}
             />
             </div>
         </div>
@@ -408,8 +409,9 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
                 required
                 value={montoGarantiaInput || ''}
                 onChange={(e) => setMontoGarantiaInput(e.target.value === '' ? 0 : Number(e.target.value))}
-                className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
+                className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 placeholder="0.00"
+                onWheel={(e) => (e.target as HTMLElement).blur()}
             />
             </div>
         </div>
@@ -495,7 +497,8 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
                                         type="number"
                                         value={montoMensualInput}
                                         onChange={(e) => setMontoMensualInput(Number(e.target.value))}
-                                        className="w-full pl-7 pr-3 py-2 bg-white border border-gray-100 rounded-xl text-xs font-black text-[#072E1F] outline-none focus:border-[#1D9E75]"
+                                        className="w-full pl-7 pr-3 py-2 bg-white border border-gray-100 rounded-xl text-xs font-black text-[#072E1F] outline-none focus:border-[#1D9E75] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        onWheel={(e) => (e.target as HTMLElement).blur()}
                                     />
                                 </div>
                             </div>
@@ -509,8 +512,9 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
                                         type="number"
                                         value={montoGarantiaPrimerPago || ''}
                                         onChange={(e) => setMontoGarantiaPrimerPago(e.target.value === '' ? 0 : Number(e.target.value))}
-                                        className="w-full pl-7 pr-3 py-2 bg-white border border-gray-100 rounded-xl text-xs font-black text-[#1D9E75] outline-none focus:border-[#1D9E75]"
+                                        className="w-full pl-7 pr-3 py-2 bg-white border border-gray-100 rounded-xl text-xs font-black text-[#1D9E75] outline-none focus:border-[#1D9E75] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                         placeholder="0.00"
+                                        onWheel={(e) => (e.target as HTMLElement).blur()}
                                     />
                                 </div>
                             </div>

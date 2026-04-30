@@ -15,6 +15,15 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
     const { filter } = await searchParams
 
+    // Auto-marcar pagos vencidos
+    await prisma.pago.updateMany({
+        where: {
+            estado: 'PENDIENTE',
+            fechaVencimiento: { lt: new Date() }
+        },
+        data: { estado: 'VENCIDO' }
+    })
+
     // Data fetching
     let pagosRaw: any[] = []
     let vouchersPendientes: any[] = []
@@ -29,7 +38,6 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                         habitacion: { include: { residencia: true } }
                     } 
                 },
-                cuotas: true,
             },
             orderBy: { createdAt: 'desc' },
         })
@@ -40,7 +48,6 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
             where: { user: { email: session!.user.email as string } },
             include: {
                 pagos: {
-                    include: { cuotas: { orderBy: { fechaVencimiento: 'asc' } } },
                     orderBy: { createdAt: 'desc' },
                 },
             },
@@ -252,16 +259,26 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
 
             {/* Resident View (Alternative) */}
             {!isAdmin && (() => {
-                const unpaidPagos = pagosRaw.filter(p => ['PENDIENTE', 'VENCIDO', 'CRITICO'].includes(p.estado))
-                const hasDebts = unpaidPagos.some(p => ['VENCIDO', 'CRITICO'].includes(p.estado))
+                const sortedUnpaid = pagosRaw
+                    .filter(p => ['PENDIENTE', 'VENCIDO', 'CRITICO', 'EN_REVISION'].includes(p.estado))
+                    .sort((a,b) => new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime())
+
+                let firstPendienteFound = false
+                const visiblePagos = sortedUnpaid.filter(p => {
+                    if (['VENCIDO', 'CRITICO', 'EN_REVISION'].includes(p.estado)) return true
+                    if (p.estado === 'PENDIENTE') {
+                        if (!firstPendienteFound) {
+                            firstPendienteFound = true
+                            return true
+                        }
+                        return false
+                    }
+                    return false
+                })
 
                 return (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {unpaidPagos.filter(p => {
-                            const esDeuda = ['VENCIDO', 'CRITICO'].includes(p.estado)
-                            if (hasDebts && !esDeuda) return false
-                            return true
-                        }).map(pago => (
+                        {visiblePagos.map(pago => (
                             <ResidentPagoCard key={pago.id} pago={pago} />
                         ))}
                         {/* Sección de Historial Detallado */}

@@ -1,4 +1,4 @@
-import { prisma } from './lib/prisma.ts'
+import { prisma } from './lib/prisma'
 
 async function debugNotifs() {
     const total = await prisma.notificacion.count()

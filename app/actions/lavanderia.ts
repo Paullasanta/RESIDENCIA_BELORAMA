@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { EstadoTurno } from '@prisma/client'
 import { checkAuth, checkResidenciaAccess } from '@/lib/auth-utils'
+import { createNotification } from './notificaciones'
 
 export async function asignarTurnoLavanderia(turnoId: number, residenteId: number) {
   try {
@@ -17,6 +18,16 @@ export async function asignarTurnoLavanderia(turnoId: number, residenteId: numbe
     
     // Si no es admin, solo puede asignarse turnos de su propia residencia
     checkResidenciaAccess(user, turno.residenciaId)
+
+    // Validar que el residente pertenezca a esta residencia
+    const targetResidente = await prisma.residente.findUnique({
+      where: { id: residenteId },
+      select: { user: { select: { residenciaId: true } } }
+    })
+
+    if (!targetResidente || targetResidente.user.residenciaId !== turno.residenciaId) {
+      throw new Error('El residente no pertenece a esta residencia')
+    }
 
     const updatedTurno = await prisma.turnoLavanderia.update({
       where: { id: turnoId },

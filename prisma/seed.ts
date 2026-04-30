@@ -11,7 +11,7 @@ async function main() {
     await prisma.menu.deleteMany()
     await prisma.turnoLavanderia.deleteMany()
     await prisma.lavadora.deleteMany()
-    await prisma.cuota.deleteMany()
+
     await prisma.pago.deleteMany()
     await prisma.productoMarketplace.deleteMany()
     await prisma.publicacionHabitacion.deleteMany()

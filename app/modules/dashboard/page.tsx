@@ -11,6 +11,15 @@ export default async function DashboardPage() {
     const { rol, nombre, email, residenciaId } = session!.user
     const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
 
+    // Auto-marcar pagos vencidos
+    await prisma.pago.updateMany({
+        where: {
+            estado: 'PENDIENTE',
+            fechaVencimiento: { lt: new Date() }
+        },
+        data: { estado: 'VENCIDO' }
+    })
+
     if (rol === 'ADMIN') {
         const whereResidenteResidencia = isGlobalAdmin ? {} : { user: { residenciaId: residenciaId || -1 } }
         const wherePagoResidencia = isGlobalAdmin ? {} : { residente: { user: { residenciaId: residenciaId || -1 } } }
@@ -233,7 +242,7 @@ export default async function DashboardPage() {
                                     <div>
                                         <div className="flex items-center gap-2 mb-4">
                                             <span className={`px-2 py-1 rounded-md text-[8px] font-black uppercase ${
-                                                aviso.prioridad === 'ALTA' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
+                                                aviso.prioridad === 'URGENTE' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
                                             }`}>
                                                 {aviso.prioridad}
                                             </span>

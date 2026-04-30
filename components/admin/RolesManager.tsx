@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Shield, Plus, Info, Check, X, Loader2, Key } from 'lucide-react'
+import { Shield, Plus, Info, Check, X, Loader2, Key, Save } from 'lucide-react'
 import { upsertRole, toggleRolePermission } from '@/app/actions/roles'
 
 interface RoleData {

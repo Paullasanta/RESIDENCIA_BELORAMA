@@ -1,7 +1,6 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { generarCobrosMensuales } from './pagos'
 import { revalidatePath } from 'next/cache'
 
 export async function getResidenciasConHabitaciones() {
@@ -134,26 +133,14 @@ export async function createResidente(data: any) {
         })
       }
 
-      // 5. Generar Contrato y Pagos Mensuales
+      // 5. Generar Pagos Mensuales
       if (montoMensual > 0) {
         const fechaInicio = (data.fechaIngreso && data.fechaIngreso !== "") ? new Date(data.fechaIngreso) : new Date();
         const fechaFin = (data.fechaFinal && data.fechaFinal !== "") ? new Date(data.fechaFinal) : new Date(new Date().setFullYear(new Date().getFullYear() + 1));
-        
-        const contrato = await tx.contrato.create({
-          data: {
-            residenteId: residente.id,
-            fechaInicio: fechaInicio,
-            fechaFin: fechaFin,
-            montoMensual: montoMensual,
-            diaPago: diaPagoFinal,
-            archivoContrato: null
-          }
-        });
-
         let fechaActual = new Date(fechaInicio);
         const pagosToCreate: any[] = [];
 
-        while (fechaActual <= fechaFin) {
+        do {
           let fechaVencimiento = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), diaPagoFinal);
           if (fechaVencimiento.getMonth() !== fechaActual.getMonth()) {
             fechaVencimiento.setDate(0); 
@@ -165,7 +152,6 @@ export async function createResidente(data: any) {
           const isFirstPayment: boolean = pagosToCreate.length === 0;
 
           pagosToCreate.push({
-            contratoId: contrato.id,
             residenteId: residente.id,
             concepto: concepto,
             mesCorrespondiente: mesString,
@@ -176,7 +162,7 @@ export async function createResidente(data: any) {
           });
 
           fechaActual.setMonth(fechaActual.getMonth() + 1);
-        }
+        } while (fechaActual < fechaFin);
 
         if (pagosToCreate.length > 0) {
           await tx.pago.createMany({ data: pagosToCreate });
@@ -306,37 +292,93 @@ export async function updateResidente(id: number, data: any) {
           fechaIngreso: (data.fechaIngreso && data.fechaIngreso !== "") ? new Date(data.fechaIngreso) : undefined,
           fechaFinal: (data.fechaFinal && data.fechaFinal !== "") ? new Date(data.fechaFinal) : null,
           diaPago: data.diaPago ? Number(data.diaPago) : undefined,
-          montoMensual: data.montoMensual ? Number(data.montoMensual) : undefined,
-          montoGarantia: data.montoGarantia ? Number(data.montoGarantia) : undefined,
+          montoMensual: data.montoMensual !== undefined && data.montoMensual !== "" ? Number(data.montoMensual) : undefined,
+          montoGarantia: data.montoGarantia !== undefined && data.montoGarantia !== "" ? Number(data.montoGarantia) : undefined,
           alergias: data.alergias,
           restriccionesAlimentarias: data.restriccionesAlimentarias
         }
       })
 
       // 4. Actualizar Montos Financieros (Solo si no están pagados completamente)
-      const montoMensual = data.montoMensual ? Number(data.montoMensual) : null
-      const montoGarantia = data.montoGarantia ? Number(data.montoGarantia) : null
+      const parsedMontoMensual = data.montoMensual !== undefined && data.montoMensual !== "" ? Number(data.montoMensual) : null
+      const parsedMontoGarantia = data.montoGarantia !== undefined && data.montoGarantia !== "" ? Number(data.montoGarantia) : null
 
-      if (montoMensual !== null) {
+      if (parsedMontoMensual !== null) {
         await tx.pago.updateMany({
           where: { 
             residenteId: id, 
             concepto: { contains: 'Mensualidad' },
             estado: { in: ['PENDIENTE', 'RECHAZADO'] }
           },
-          data: { monto: montoMensual }
+          data: { monto: parsedMontoMensual }
         })
       }
 
-      if (montoGarantia !== null) {
+      if (parsedMontoGarantia !== null) {
         await tx.pago.updateMany({
           where: { 
             residenteId: id, 
-            concepto: 'Garantía',
+            concepto: { contains: 'Garantía' },
             estado: { in: ['PENDIENTE', 'EN_REVISION', 'RECHAZADO'] }
           },
-          data: { monto: montoGarantia }
+          data: { monto: parsedMontoGarantia }
         })
+      }
+
+      // 5. Sincronizar meses si cambiaron las fechas
+      const newFechaIngreso = residente.fechaIngreso;
+      const newFechaFinal = residente.fechaFinal;
+      const newDiaPago = residente.diaPago;
+      const newMontoMensual = residente.montoMensual;
+
+      if (newFechaFinal && newMontoMensual > 0) {
+        let fechaActual = new Date(newFechaIngreso);
+        const expectedMeses = [];
+        
+        do {
+          const mesString = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}`;
+          let fechaVencimiento = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), newDiaPago);
+          if (fechaVencimiento.getMonth() !== fechaActual.getMonth()) {
+            fechaVencimiento.setDate(0); 
+          }
+          const nombreMes = fechaActual.toLocaleDateString('es-MX', { month: 'long' });
+          const concepto = `Mensualidad ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${fechaActual.getFullYear()}`;
+          
+          expectedMeses.push({ mesCorrespondiente: mesString, fechaVencimiento, concepto });
+          fechaActual.setMonth(fechaActual.getMonth() + 1);
+        } while (fechaActual < newFechaFinal);
+
+        const existingPagos = await tx.pago.findMany({
+          where: { residenteId: id, concepto: { contains: 'Mensualidad' } }
+        });
+        const existingMeses = existingPagos.map(p => p.mesCorrespondiente);
+        
+        const pagosToCreate = expectedMeses
+          .filter(exp => !existingMeses.includes(exp.mesCorrespondiente))
+          .map(exp => ({
+            residenteId: id,
+            concepto: exp.concepto,
+            mesCorrespondiente: exp.mesCorrespondiente,
+            fechaVencimiento: exp.fechaVencimiento,
+            monto: newMontoMensual,
+            estado: 'PENDIENTE' as any,
+          }));
+          
+        if (pagosToCreate.length > 0) {
+          await tx.pago.createMany({ data: pagosToCreate });
+        }
+        
+        const expectedMesesStrings = expectedMeses.map(e => e.mesCorrespondiente);
+        const pagosToDelete = existingPagos.filter(p => 
+          p.mesCorrespondiente && !expectedMesesStrings.includes(p.mesCorrespondiente) && 
+          ['PENDIENTE', 'EN_REVISION'].includes(p.estado)
+        );
+        
+        if (pagosToDelete.length > 0) {
+          await tx.pago.deleteMany({
+            where: { id: { in: pagosToDelete.map(p => p.id) } }
+          });
+        }
       }
 
       return residente
@@ -372,7 +414,6 @@ export async function deleteResidente(id: number) {
       // Pagos y sus cuotas
       const pagos = await tx.pago.findMany({ where: { residenteId: id } })
       const pagoIds = pagos.map(p => p.id)
-      await tx.cuota.deleteMany({ where: { pagoId: { in: pagoIds } } })
       await tx.pago.deleteMany({ where: { residenteId: id } })
 
       // Turnos de lavandería (los liberamos en lugar de borrarlos)

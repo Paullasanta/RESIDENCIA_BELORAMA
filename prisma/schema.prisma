@@ -167,7 +167,6 @@ model Residente {
   diaPago           Int               @default(1)
   montoMensual      Float             @default(0)
   montoGarantia     Float             @default(0)
-  contratos         Contrato[]
   turnos            TurnoLavanderia[]
   pagos             Pago[]
   productos         ProductoMarketplace[]
@@ -202,8 +201,6 @@ model TurnoLavanderia {
 
 model Pago {
   id                 Int        @id @default(autoincrement())
-  contratoId         Int?
-  contrato           Contrato?  @relation(fields: [contratoId], references: [id])
   residenteId        Int
   residente          Residente  @relation(fields: [residenteId], references: [id])
   concepto           String     @default("Pago")
@@ -216,32 +213,9 @@ model Pago {
   periodo            String?
   estado             EstadoPago @default(PENDIENTE)
   fechaPago          DateTime?
-  cuotas             Cuota[]
   createdAt          DateTime   @default(now())
 }
 
-model Contrato {
-  id              Int       @id @default(autoincrement())
-  residenteId     Int
-  residente       Residente @relation(fields: [residenteId], references: [id])
-  fechaInicio     DateTime
-  fechaFin        DateTime
-  montoMensual    Float
-  diaPago         Int       @default(1)
-  archivoContrato String?
-  activo          Boolean   @default(true)
-  pagos           Pago[]
-  createdAt       DateTime  @default(now())
-}
-
-model Cuota {
-  id               Int      @id @default(autoincrement())
-  pagoId           Int
-  pago             Pago     @relation(fields: [pagoId], references: [id])
-  monto            Float
-  pagado           Boolean  @default(false)
-  fechaVencimiento DateTime
-}
 
 model Menu {
   id          Int              @id @default(autoincrement())

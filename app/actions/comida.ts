@@ -85,7 +85,7 @@ export async function publishDailyMenu(data: any) {
     // Notificar a los residentes de las residencias seleccionadas
     const residents = await prisma.user.findMany({
         where: {
-            rol: 'RESIDENTE',
+            role: { name: 'RESIDENTE' },
             residenciaId: { in: residenciaIds }
         },
         select: { id: true }

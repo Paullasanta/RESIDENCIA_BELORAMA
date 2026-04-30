@@ -1,8 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { PayCuotaButton } from '@/components/shared/PayCuotaButton'
-import { PayAllButton } from '@/components/shared/PayAllButton'
+import { TogglePagoButton, PayPagoButton } from '@/components/shared/TogglePagoButton'
 import { notFound } from 'next/navigation'
 import { Calendar, User, CreditCard, ArrowLeft, FileText, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
@@ -16,8 +15,7 @@ export default async function DetallePagoPage({ params }: { params: Promise<{ id
   const pago = await prisma.pago.findUnique({
     where: { id },
     include: {
-      residente: { include: { user: true } },
-      cuotas: { orderBy: { fechaVencimiento: 'asc' } }
+      residente: { include: { user: true } }
     }
   })
 
@@ -36,7 +34,7 @@ export default async function DetallePagoPage({ params }: { params: Promise<{ id
             <ArrowLeft size={16} />
             VOLVER A PAGOS
           </Link>
-          {saldoPendiente > 0 && <PayAllButton pagoId={pago.id} isDisabled={allPaid} />}
+          {saldoPendiente > 0 && <PayPagoButton pagoId={pago.id} isPaid={allPaid} />}
       </div>
 
       <PageHeader
@@ -106,35 +104,16 @@ export default async function DetallePagoPage({ params }: { params: Promise<{ id
             </div>
         </div>
 
-        {/* Listado de Cuotas */}
+        {/* Estado del Pago (Toggle) */}
         <div className="lg:col-span-2">
-            <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-                <div className="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
-                    <h2 className="text-xl font-black text-[#072E1F]">Cronograma de Cuotas</h2>
-                    <span className="text-[10px] font-black text-gray-400 uppercase bg-white px-3 py-1.5 rounded-full shadow-sm border border-gray-100">
-                        {pago.cuotas.length} {pago.cuotas.length === 1 ? 'PAGO' : 'CUOTAS'}
-                    </span>
-                </div>
-
-                <div className="divide-y divide-gray-50">
-                    {pago.cuotas.map((cuota, index) => (
-                        <div key={cuota.id} className="p-8 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
-                            <div className="flex items-center gap-6">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black ${cuota.pagado ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                                    {index + 1}
-                                </div>
-                                <div>
-                                    <p className="text-lg font-black text-gray-900">${cuota.monto.toLocaleString('es-MX')}</p>
-                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-tighter">
-                                        Vence el {new Date(cuota.fechaVencimiento).toLocaleDateString()}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <PayCuotaButton id={cuota.id} pagado={cuota.pagado} />
-                        </div>
-                    ))}
-                </div>
+            <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden h-full flex flex-col items-center justify-center p-12">
+                <h2 className="text-xl font-black text-[#072E1F] mb-4">Gestión del Pago</h2>
+                <p className="text-gray-500 mb-8 text-center max-w-sm">
+                    {pago.estado === 'PAGADO' 
+                        ? 'Este pago ya ha sido saldado. Puedes marcarlo como pendiente si hubo algún error.' 
+                        : 'Este pago se encuentra pendiente. Una vez recibido el abono, puedes marcarlo como pagado.'}
+                </p>
+                <TogglePagoButton id={pago.id} pagado={pago.estado === 'PAGADO'} />
             </div>
         </div>
       </div>

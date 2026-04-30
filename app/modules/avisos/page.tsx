@@ -78,7 +78,7 @@ export default async function AvisosPage() {
                 <AvisoFeed 
                     avisos={avisos} 
                     isAdmin={isAdmin} 
-                    currentUserEmail={session.user.email!} 
+                    currentUserEmail={session!.user.email!} 
                 />
             )}
         </div>
