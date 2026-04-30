@@ -85,7 +85,9 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
   const [pagoConfirmado, setPagoConfirmado] = useState(false)
   const [montoMensualInput, setMontoMensualInput] = useState(initialData?.montoMensual || 0)
   const [montoGarantiaInput, setMontoGarantiaInput] = useState(initialData?.montoGarantia || 0)
-  const [cuotasGarantiaInput, setCuotasGarantiaInput] = useState(1)
+  const [cuotasGarantiaInput, setCuotasGarantiaInput] = useState(
+    initialData?.pagos?.filter((p: any) => p.concepto.includes('Garantía')).length || 1
+  )
   const [montoGarantiaPrimerPago, setMontoGarantiaPrimerPago] = useState(0)
 
   // Sincronizar monto inicial de garantía cuando cambian el total o las cuotas
@@ -416,6 +418,20 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
             </div>
         </div>
 
+        <div className="space-y-2">
+            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Dividir Garantía en</label>
+            <select
+              name="cuotasGarantia"
+              value={cuotasGarantiaInput}
+              onChange={(e) => setCuotasGarantiaInput(Number(e.target.value))}
+              className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 appearance-none cursor-pointer"
+            >
+              {[1, 2, 3, 4, 5, 6].map(n => (
+                <option key={n} value={n}>{n} {n === 1 ? 'parte' : 'partes'}</option>
+              ))}
+            </select>
+        </div>
+
         {initialData && (
           <div className="col-span-full pt-4">
             <div className="bg-gray-50 rounded-3xl p-6 border border-gray-100">
@@ -447,21 +463,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
 
         {!initialData && (
           <>
-            <div className="space-y-2">
-              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Dividir Garantía en</label>
-              <select
-                name="cuotasGarantia"
-                value={cuotasGarantiaInput}
-                onChange={(e) => setCuotasGarantiaInput(Number(e.target.value))}
-                className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 appearance-none cursor-pointer"
-              >
-                {[1, 2, 3, 4, 5, 6].map(n => (
-                  <option key={n} value={n}>{n} {n === 1 ? 'parte' : 'partes'}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Nueva Sección: Confirmación de Pago */}
+            {/* Sección: Confirmación de Pago */}
             <div className="col-span-full pt-8 mt-4 border-t border-gray-50">
               <div className="bg-[#1D9E75]/5 p-8 rounded-3xl border border-[#1D9E75]/10 space-y-6">
                 <div className="flex items-center justify-between">

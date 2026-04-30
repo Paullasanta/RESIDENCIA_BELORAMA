@@ -4,7 +4,7 @@ type StatusVariant =
   | 'EN_REVISION' | 'VENCIDO' | 'CRITICO'
   | 'APROBADO' | 'RECHAZADO'
   | 'ACTIVA' | 'INACTIVA'
-  | 'RESERVADO' | 'POR_LIBERARSE'
+  | 'RESERVADO' | 'POR_LIBERARSE' | 'POR_VENCER'
 
 const variantMap: Record<StatusVariant, { label: string; classes: string }> = {
   LIBRE:      { label: 'Libre',      classes: 'bg-green-100 text-green-800' },
@@ -22,6 +22,7 @@ const variantMap: Record<StatusVariant, { label: string; classes: string }> = {
   INACTIVA:   { label: 'Inactiva',   classes: 'bg-gray-100 text-gray-600' },
   RESERVADO:  { label: 'Reservado',  classes: 'bg-orange-100 text-orange-800' },
   POR_LIBERARSE: { label: 'Por Liberar', classes: 'bg-purple-100 text-purple-800' },
+  POR_VENCER: { label: 'Por Vencer', classes: 'bg-orange-100 text-orange-600 border border-orange-200' },
 }
 
 export function StatusBadge({ status }: { status: StatusVariant }) {

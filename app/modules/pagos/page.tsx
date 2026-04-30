@@ -15,11 +15,14 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
     const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
     const { filter } = await searchParams
 
-    // Auto-marcar pagos vencidos
+    // Auto-marcar pagos vencidos (solo si la fecha de vencimiento ya pasó completamente)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
     await prisma.pago.updateMany({
         where: {
             estado: 'PENDIENTE',
-            fechaVencimiento: { lt: new Date() }
+            fechaVencimiento: { lt: today }
         },
         data: { estado: 'VENCIDO' }
     })
@@ -200,7 +203,17 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                                 ) : residentesList.map((entry: any) => {
                                     const pendiente = entry.totalMonto - entry.totalPagado
                                     const isHealthy = pendiente === 0
-                                    
+                                    const p = entry.pagos[0]
+                                    const fechaVencimiento = new Date(p.fechaVencimiento || p.createdAt)
+                                    const fechaVencimientoSinHora = new Date(fechaVencimiento)
+                                    fechaVencimientoSinHora.setHours(0, 0, 0, 0)
+                                    const esPagoFuturo = p.estado === 'PENDIENTE' && fechaVencimientoSinHora > today
+                                    const esHoy = fechaVencimientoSinHora.getTime() === today.getTime()
+                                    const diffTime = fechaVencimientoSinHora.getTime() - today.getTime()
+                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+                                    const esPorVencer = p.estado === 'PENDIENTE' && diffDays > 0 && diffDays <= 3
+                                    const statusVisual = esPorVencer ? 'POR_VENCER' : (isHealthy ? 'PAGADO' : p.estado)
+
                                     return (
                                         <tr key={entry.residente.id} className="hover:bg-gray-50/50 transition-colors group">
                                             <td className="px-10 py-6">
@@ -218,12 +231,18 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                                                 S/ {entry.totalPagado.toLocaleString('es-MX')}
                                             </td>
                                             <td className="px-6 py-6 text-center uppercase">
-                                                <StatusBadge status={isHealthy ? 'PAGADO' : 'PENDIENTE'} />
+                                                <StatusBadge status={statusVisual as any} />
                                             </td>
                                             <td className="px-6 py-6 text-center">
-                                                <span className="text-[11px] font-bold text-gray-400 lowercase">
-                                                    {entry.ultimoPago ? new Date(entry.ultimoPago).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—'}
-                                                </span>
+                                                <div className="text-[10px] font-black uppercase tracking-widest">
+                                                    {esHoy ? (
+                                                        <span className="text-[#EF9F27]">Vence hoy</span>
+                                                    ) : (
+                                                        <span className="text-gray-400">
+                                                            {esPagoFuturo ? 'Vence el' : 'Vencido el'} {fechaVencimiento.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-10 py-6 text-right">
                                                 <div className="flex justify-end gap-2">
@@ -260,15 +279,19 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
             {/* Resident View (Alternative) */}
             {!isAdmin && (() => {
                 const sortedUnpaid = pagosRaw
-                    .filter(p => ['PENDIENTE', 'VENCIDO', 'CRITICO', 'EN_REVISION'].includes(p.estado))
+                    .filter(p => ['PENDIENTE', 'VENCIDO', 'CRITICO', 'EN_REVISION', 'RECHAZADO'].includes(p.estado))
                     .sort((a,b) => new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime())
 
-                let firstPendienteFound = false
+                const pendingConceptsSeen = new Set<string>()
                 const visiblePagos = sortedUnpaid.filter(p => {
-                    if (['VENCIDO', 'CRITICO', 'EN_REVISION'].includes(p.estado)) return true
+                    // Siempre mostrar vencidos, críticos, en revisión o rechazados
+                    if (['VENCIDO', 'CRITICO', 'EN_REVISION', 'RECHAZADO'].includes(p.estado)) return true
+                    
                     if (p.estado === 'PENDIENTE') {
-                        if (!firstPendienteFound) {
-                            firstPendienteFound = true
+                        // Agrupar por concepto base (ej: "Garantía", "Mensualidad") para mostrar al menos uno de cada tipo
+                        const conceptType = p.concepto.split(' ')[0]
+                        if (!pendingConceptsSeen.has(conceptType)) {
+                            pendingConceptsSeen.add(conceptType)
                             return true
                         }
                         return false

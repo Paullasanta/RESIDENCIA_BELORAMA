@@ -15,22 +15,36 @@ export default function ResidentPagoCard({ pago }: ResidentPagoCardProps) {
     const progPct = pago.estado === 'PAGADO' ? 100 : 0
     const canUpload = (pago.estado === 'PENDIENTE' || pago.estado === 'RECHAZADO' || pago.estado === 'VENCIDO' || pago.estado === 'CRITICO') && !pago.comprobante
     
-    const esPagoFuturo = pago.estado === 'PENDIENTE' && new Date(pago.fechaVencimiento) > new Date()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const fechaVencimiento = new Date(pago.fechaVencimiento || pago.createdAt)
+    const fechaVencimientoSinHora = new Date(fechaVencimiento)
+    fechaVencimientoSinHora.setHours(0, 0, 0, 0)
+
+    const esPagoFuturo = pago.estado === 'PENDIENTE' && fechaVencimientoSinHora > today
+    const esHoy = fechaVencimientoSinHora.getTime() === today.getTime()
+    
+    // Nueva lógica: Por vencer (Si faltan 3 días o menos para el vencimiento, pero no es hoy)
+    const diffTime = fechaVencimientoSinHora.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    const esPorVencer = pago.estado === 'PENDIENTE' && diffDays > 0 && diffDays <= 3
+
+    // Estado visual para el Badge
+    const statusVisual = esPorVencer ? 'POR_VENCER' : pago.estado
 
     return (
         <div className={`bg-white rounded-[2.5rem] shadow-xl shadow-gray-100 border border-gray-100 overflow-hidden flex flex-col group hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 ${pago.estado === 'PAGADO' ? 'grayscale opacity-80' : ''}`}>
             <div className="p-10 pb-6">
                 <div className="flex items-start justify-between mb-8">
                     <div className="space-y-1">
-                        <p className={`text-[10px] font-black uppercase tracking-widest ${esPagoFuturo ? 'text-blue-500' : 'text-[#EF9F27]'}`}>
-                            {pago.concepto} {esPagoFuturo ? '(Próximo)' : ''}
+                        <p className={`text-[10px] font-black uppercase tracking-widest ${esPagoFuturo ? 'text-blue-500' : (esHoy || esPorVencer) ? 'text-orange-500' : 'text-[#EF9F27]'}`}>
+                            {pago.concepto} {esPagoFuturo ? '(Próximo)' : esHoy ? '(Hoy)' : esPorVencer ? '(Por Vencer)' : ''}
                         </p>
                         <p className="text-4xl font-black text-gray-900 tracking-tighter">
                             S/ {pago.monto.toLocaleString('es-MX')}
                         </p>
                     </div>
-                    <StatusBadge status={pago.estado as any} />
+                    <StatusBadge status={statusVisual as any} />
                 </div>
                 
                 <div className="space-y-4">
@@ -48,8 +62,14 @@ export default function ResidentPagoCard({ pago }: ResidentPagoCardProps) {
             </div>
 
             <div className="mt-auto px-10 py-6 bg-gray-50/30 border-t border-gray-50 flex flex-wrap items-center justify-between gap-4 group-hover:bg-white transition-colors">
-                 <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                     {esPagoFuturo ? 'Vence el' : 'Vencido el'} {fechaVencimiento.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}
+                 <div className="text-[10px] font-black uppercase tracking-widest">
+                     {esHoy ? (
+                         <span className="text-[#EF9F27]">Vence hoy</span>
+                     ) : (
+                         <span className="text-gray-400">
+                             {esPagoFuturo ? 'Vence el' : 'Vencido el'} {fechaVencimiento.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}
+                         </span>
+                     )}
                  </div>
                  
                  <div className="flex items-center gap-4">

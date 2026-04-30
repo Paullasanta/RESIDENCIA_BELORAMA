@@ -174,8 +174,9 @@ export async function createResidente(data: any) {
         const montoRestante = Math.max(0, montoGarantia - montoPrimerPago)
         const montoOtrasCuotas = cuotasGarantia > 1 ? (montoRestante / (cuotasGarantia - 1)) : 0
 
+        const fechaBase = (data.fechaIngreso && data.fechaIngreso !== "") ? new Date(data.fechaIngreso) : new Date();
         const garantiasToCreate = Array.from({ length: cuotasGarantia }).map((_, i) => {
-          const fecha = new Date()
+          const fecha = new Date(fechaBase)
           fecha.setMonth(fecha.getMonth() + i)
           const montoCuota = i === 0 ? montoPrimerPago : montoOtrasCuotas
           const isFirstPayment = i === 0;
@@ -315,14 +316,65 @@ export async function updateResidente(id: number, data: any) {
       }
 
       if (parsedMontoGarantia !== null) {
-        await tx.pago.updateMany({
-          where: { 
-            residenteId: id, 
-            concepto: { contains: 'Garantía' },
-            estado: { in: ['PENDIENTE', 'EN_REVISION', 'RECHAZADO'] }
-          },
-          data: { monto: parsedMontoGarantia }
+        // Obtener cuotas de garantía actuales
+        const existingGarantias = await tx.pago.findMany({
+          where: { residenteId: id, concepto: { contains: 'Garantía', mode: 'insensitive' } },
+          orderBy: { fechaVencimiento: 'asc' }
         })
+
+        const newTotalCuotas = data.cuotasGarantia ? Number(data.cuotasGarantia) : existingGarantias.length
+        
+        // Si el número de cuotas cambió o se quiere redistribuir
+        if (newTotalCuotas !== existingGarantias.length || parsedMontoGarantia !== residente.montoGarantia) {
+          const pagadas = existingGarantias.filter(p => p.estado === 'PAGADO')
+          const noPagadas = existingGarantias.filter(p => p.estado !== 'PAGADO')
+          
+          const montoPagado = pagadas.reduce((sum, p) => sum + p.monto, 0)
+          const montoRestante = Math.max(0, parsedMontoGarantia - montoPagado)
+          const numCuotasRestantes = Math.max(0, newTotalCuotas - pagadas.length)
+
+          // Eliminar las no pagadas para regenerarlas
+          if (noPagadas.length > 0) {
+            await tx.pago.deleteMany({
+              where: { id: { in: noPagadas.map(p => p.id) } }
+            })
+          }
+
+          if (numCuotasRestantes > 0) {
+            const montoPorCuota = Number((montoRestante / numCuotasRestantes).toFixed(2))
+            const pagosToCreate = []
+            
+            for (let i = 0; i < numCuotasRestantes; i++) {
+              const installmentNum = pagadas.length + i + 1
+              const fechaVenc = new Date(residente.fechaIngreso)
+              fechaVenc.setMonth(fechaVenc.getMonth() + (installmentNum - 1))
+              fechaVenc.setDate(residente.diaPago)
+              if (fechaVenc.getDate() !== residente.diaPago) fechaVenc.setDate(0)
+
+              pagosToCreate.push({
+                residenteId: id,
+                concepto: `Garantía (Cuota ${installmentNum}/${newTotalCuotas})`,
+                monto: montoPorCuota,
+                fechaVencimiento: fechaVenc,
+                estado: 'PENDIENTE' as any
+              })
+            }
+            if (pagosToCreate.length > 0) {
+              await tx.pago.createMany({ data: pagosToCreate })
+            }
+          }
+        } else {
+          // Si el número de cuotas es el mismo, solo actualizar montos de las no pagadas
+          const montoPorCuota = existingGarantias.length > 0 ? (parsedMontoGarantia / existingGarantias.length) : parsedMontoGarantia
+          await tx.pago.updateMany({
+            where: { 
+              residenteId: id, 
+              concepto: { contains: 'Garantía', mode: 'insensitive' },
+              estado: { in: ['PENDIENTE', 'EN_REVISION', 'RECHAZADO', 'VENCIDO'] }
+            },
+            data: { monto: montoPorCuota }
+          })
+        }
       }
 
       // 5. Sincronizar meses si cambiaron las fechas
@@ -367,24 +419,86 @@ export async function updateResidente(id: number, data: any) {
         if (pagosToCreate.length > 0) {
           await tx.pago.createMany({ data: pagosToCreate });
         }
-        
-        const expectedMesesStrings = expectedMeses.map(e => e.mesCorrespondiente);
-        const pagosToDelete = existingPagos.filter(p => 
-          p.mesCorrespondiente && !expectedMesesStrings.includes(p.mesCorrespondiente) && 
-          ['PENDIENTE', 'EN_REVISION'].includes(p.estado)
-        );
-        
-        if (pagosToDelete.length > 0) {
-          await tx.pago.deleteMany({
-            where: { id: { in: pagosToDelete.map(p => p.id) } }
-          });
+
+      }
+
+      // --- Sincronización Global de Pagos (Fuera del bloque de fechaFinal para que afecte a todos) ---
+      const now = new Date()
+      now.setHours(0, 0, 0, 0)
+
+      // 6. Mensualidades (Búsqueda más amplia para evitar fallos por concepto o acentos)
+      const allMensualidades = await tx.pago.findMany({
+        where: {
+          residenteId: id,
+          OR: [
+            { concepto: { contains: 'Mensua', mode: 'insensitive' } },
+            { concepto: { contains: 'Mes', mode: 'insensitive' } },
+            { concepto: { contains: 'Alquiler', mode: 'insensitive' } }
+          ],
+          estado: { in: ['PENDIENTE', 'RECHAZADO', 'VENCIDO'] }
+        }
+      })
+
+      for (const p of allMensualidades) {
+        let year, month;
+        if (p.mesCorrespondiente) {
+          const parts = p.mesCorrespondiente.split('-');
+          year = parseInt(parts[0]);
+          month = parseInt(parts[1]) - 1;
+        } else {
+          year = p.fechaVencimiento.getFullYear();
+          month = p.fechaVencimiento.getMonth();
+        }
+
+        let newFecha = new Date(year, month, newDiaPago);
+        if (newFecha.getMonth() !== month) newFecha.setDate(0);
+
+        const newStatus = newFecha < now ? 'VENCIDO' : 'PENDIENTE';
+
+        await tx.pago.update({
+          where: { id: p.id },
+          data: {
+            fechaVencimiento: newFecha,
+            estado: (p.estado === 'PENDIENTE' || p.estado === 'VENCIDO') ? newStatus : p.estado
+          }
+        })
+      }
+
+      // 7. Garantías
+      const allGarantias = await tx.pago.findMany({
+        where: {
+          residenteId: id,
+          concepto: { contains: 'Garantía', mode: 'insensitive' },
+          estado: { in: ['PENDIENTE', 'EN_REVISION', 'RECHAZADO', 'VENCIDO'] }
+        }
+      })
+
+      for (const g of allGarantias) {
+        const match = g.concepto.match(/Cuota (\d+)\/(\d+)/)
+        if (match) {
+          const i = parseInt(match[1]) - 1
+          const newFecha = new Date(newFechaIngreso)
+          newFecha.setMonth(newFecha.getMonth() + i)
+          newFecha.setDate(newDiaPago)
+          if (newFecha.getDate() !== newDiaPago) newFecha.setDate(0)
+
+          const gStatus = newFecha < now ? 'VENCIDO' : 'PENDIENTE'
+          
+          await tx.pago.update({
+            where: { id: g.id },
+            data: {
+              fechaVencimiento: newFecha,
+              estado: (g.estado === 'PENDIENTE' || g.estado === 'VENCIDO') ? gStatus : g.estado
+            }
+          })
         }
       }
 
+      revalidatePath('/modules/pagos')
+      revalidatePath('/modules/residentes')
       return residente
     })
 
-    revalidatePath('/modules/residentes')
     return { success: true, data: result }
   } catch (error: any) {
     return { success: false, error: error.message || 'Error al actualizar residente' }
@@ -427,6 +541,9 @@ export async function deleteResidente(id: number) {
 
       // Tickets de mantenimiento
       await tx.ticketMantenimiento.deleteMany({ where: { residenteId: id } })
+      
+      // Notificaciones del usuario
+      await tx.notificacion.deleteMany({ where: { userId: res.userId } })
 
       // Productos en marketplace
       await tx.productoMarketplace.deleteMany({ where: { residenteId: id } })
@@ -434,12 +551,16 @@ export async function deleteResidente(id: number) {
       // Reacciones del usuario
       await tx.reaccion.deleteMany({ where: { userId: res.userId } })
 
+      // Egresos y Avisos (en caso de que el usuario haya tenido otro rol previamente)
+      await tx.egreso.deleteMany({ where: { adminId: res.userId } })
+      await tx.aviso.deleteMany({ where: { autorId: res.userId } })
+
       // 3. Finalmente eliminar el residente y el usuario
       await tx.residente.delete({ where: { id } })
       await tx.user.delete({ where: { id: res.userId } })
     })
 
-    revalidatePath('/admin/residentes')
+    revalidatePath('/modules/residentes')
     return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message }
