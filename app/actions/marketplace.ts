@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { auth } from '@/lib/auth'
-import { createNotification } from './notificaciones'
+import { createNotification, notifyAdmins } from './notificaciones'
 
 export async function createProducto(data: any) {
   try {
@@ -37,20 +37,18 @@ export async function createProducto(data: any) {
 
     // Si es un residente, notificar a los admins para que lo aprueben
     if (rol !== 'ADMIN') {
-        const admins = await prisma.user.findMany({
-            where: { role: { name: 'ADMIN' } },
-            select: { id: true }
+        // Obtenemos la residencia del usuario para notificar a los admins correspondientes
+        const userWithRes = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { residenciaId: true }
         })
 
-        for (const admin of admins) {
-            await createNotification(
-                admin.id,
-                'Nuevo Producto en Marketplace',
-                `${session.user.nombre} ha publicado: ${data.titulo}. Pendiente de revisión.`,
-                'AVISO',
-                '/modules/marketplace'
-            )
-        }
+        await notifyAdmins(
+            userWithRes?.residenciaId || null,
+            'Nuevo Producto en Marketplace',
+            `${session.user.nombre} ha publicado: ${data.titulo}. Pendiente de revisión.`,
+            '/modules/marketplace'
+        )
     }
 
     revalidatePath('/modules/marketplace')

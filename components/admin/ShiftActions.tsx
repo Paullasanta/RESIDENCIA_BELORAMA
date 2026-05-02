@@ -1,67 +1,235 @@
 'use client'
 
 import { useState } from 'react'
-import { asignarTurnoLavanderia, liberarTurnoLavanderia } from '@/app/actions/lavanderia'
-import { Loader2, UserPlus, UserMinus } from 'lucide-react'
+import { asignarTurnoLavanderia, liberarTurnoLavanderia, aprobarTurnoSolicitado, solicitarTurnoLavanderia, updateTurnoTime } from '@/app/actions/lavanderia'
+import { Loader2, UserPlus, UserMinus, CheckCircle, Clock, Edit2, X } from 'lucide-react'
 
-export function ShiftActions({ turno, residentes, canManage }: { turno: any, residentes: any[], canManage: boolean }) {
-    if (!canManage) return null;
+export function ShiftActions({ 
+    turno, 
+    residentes, 
+    canManage,
+    currentUserResidenteId,
+    currentUserId,
+    userTurnCount,
+    userRole
+}: { 
+    turno: any, 
+    residentes: any[], 
+    canManage: boolean,
+    currentUserResidenteId?: number | null,
+    currentUserId?: number | null,
+    userTurnCount?: number,
+    userRole?: string
+}) {
     const [loading, setLoading] = useState(false)
     const [showAssign, setShowAssign] = useState(false)
+    const [showEdit, setShowEdit] = useState(false)
+    
+    // Form state for editing
+    const [editData, setEditData] = useState({
+        dia: turno.dia,
+        horaInicio: turno.horaInicio,
+        horaFin: turno.horaFin
+    })
 
-    const handleLiberar = async () => {
+    const esMio = turno.residenteId === currentUserResidenteId && turno.estado === 'OCUPADO'
+    const esMiSolicitud = turno.residenteId === currentUserResidenteId && turno.estado === 'SOLICITADO'
+
+    const handleAction = async (action: () => Promise<any>) => {
         setLoading(true)
-        await liberarTurnoLavanderia(turno.id)
+        const res = await action()
         setLoading(false)
+        if (res.success) {
+            setShowAssign(false)
+            setShowEdit(false)
+        } else {
+            alert(res.error || 'Error en la operación')
+        }
     }
 
-    const handleAsignar = async (residenteId: number) => {
-        setLoading(true)
-        await asignarTurnoLavanderia(turno.id, residenteId)
-        setLoading(false)
-        setShowAssign(false)
+    const handleLiberar = () => handleAction(() => liberarTurnoLavanderia(turno.id))
+    
+    const handleAsignarPropio = () => {
+        if (!currentUserId) return alert('No se encontró perfil de usuario')
+        handleAction(() => asignarTurnoLavanderia(turno.id, currentUserId, true))
+    }
+    
+    const handleSolicitarPropio = () => {
+        if (!currentUserId) return alert('No se encontró perfil de usuario')
+        handleAction(() => solicitarTurnoLavanderia(turno.id, currentUserId, true))
+    }
+    
+    const handleAprobar = () => handleAction(() => aprobarTurnoSolicitado(turno.id))
+    
+    const handleUpdate = (e: React.FormEvent) => {
+        e.preventDefault()
+        handleAction(() => updateTurnoTime(turno.id, editData))
     }
 
-    return (
-        <div className="relative">
-            <button
-                onClick={() => setShowAssign(!showAssign)}
-                disabled={loading}
-                className={`w-full flex items-center justify-center gap-1 py-1.5 rounded-lg transition-colors text-[10px] font-bold ${
-                    turno.estado === 'OCUPADO' 
-                        ? 'bg-white/10 text-white hover:bg-white/20' 
-                        : 'bg-green-100 text-green-700 hover:bg-green-200'
-                }`}
-            >
-                {loading ? <Loader2 size={12} className="animate-spin" /> : (
-                    turno.estado === 'OCUPADO' ? (
-                        <><UserPlus size={12} /> Cambiar</>
-                    ) : (
-                        <><UserPlus size={12} /> Asignar</>
-                    )
+    // Si es Admin, tiene vista completa de gestión
+    if (canManage) {
+        return (
+            <div className="relative">
+                {/* Backdrop to close menus on click outside */}
+                {(showAssign || showEdit) && (
+                    <div 
+                        className="fixed inset-0 z-40 bg-black/5 backdrop-blur-[1px]" 
+                        onClick={() => {
+                            setShowAssign(false)
+                            setShowEdit(false)
+                        }}
+                    />
                 )}
-            </button>
 
-            {showAssign && (
-                <div className="absolute bottom-full left-0 right-0 z-50 mb-1 bg-white border border-gray-100 rounded-xl shadow-2xl p-1.5 max-h-48 overflow-y-auto">
-                    {turno.estado === 'OCUPADO' && (
+                <div className="flex gap-1 relative z-10">
+                    <button
+                        onClick={() => setShowAssign(!showAssign)}
+                        disabled={loading}
+                        className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg transition-colors text-[10px] font-bold ${
+                            turno.estado === 'OCUPADO' 
+                                ? 'bg-white/10 text-white hover:bg-white/20' 
+                                : turno.estado === 'SOLICITADO'
+                                    ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+                                    : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        }`}
+                    >
+                        {loading ? <Loader2 size={12} className="animate-spin" /> : (
+                            turno.estado === 'OCUPADO' ? <><UserPlus size={12} /> Gestionar</> :
+                            turno.estado === 'SOLICITADO' ? <><CheckCircle size={12} /> Revisar</> :
+                            <><UserPlus size={12} /> Asignar</>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setShowEdit(!showEdit)}
+                        className="p-1.5 bg-white/10 text-white hover:bg-white/20 rounded-lg transition-colors border border-white/10"
+                        title="Editar horario"
+                    >
+                        <Edit2 size={12} />
+                    </button>
+                </div>
+
+                {showAssign && (
+                    <div className="absolute bottom-full left-0 right-0 z-50 mb-1 bg-white border border-gray-100 rounded-xl shadow-2xl p-1.5 max-h-56 overflow-y-auto min-w-[140px]">
+                        <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-gray-50">
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Asignación</p>
+                            <button onClick={() => setShowAssign(false)} className="text-gray-400 hover:text-gray-600">
+                                <X size={10} />
+                            </button>
+                        </div>
+                        
+                        {turno.estado === 'SOLICITADO' && (
+                            <button
+                                onClick={handleAprobar}
+                                className="w-full text-left p-2 hover:bg-green-50 text-green-600 rounded-lg text-[10px] font-black truncate border-b border-gray-50 flex items-center gap-2 mb-1 transition-colors"
+                            >
+                                <CheckCircle size={12} /> Aprobar Solicitud
+                            </button>
+                        )}
+                        {(turno.estado === 'OCUPADO' || turno.estado === 'SOLICITADO') && (
+                            <button
+                                onClick={handleLiberar}
+                                className="w-full text-left p-2 hover:bg-red-50 text-red-600 rounded-lg text-[10px] font-black truncate border-b border-gray-50 flex items-center gap-2 mb-1 transition-colors"
+                            >
+                                <UserMinus size={12} /> {turno.estado === 'SOLICITADO' ? 'Rechazar / Liberar' : 'Liberar (Vaciar)'}
+                            </button>
+                        )}
+                        <p className="text-[9px] font-bold text-gray-400 px-2 py-1 uppercase tracking-wider">Asignar a:</p>
+                        {residentes.map(r => (
+                            <button
+                                key={r.id}
+                                onClick={() => handleAction(() => asignarTurnoLavanderia(turno.id, r.id))}
+                                className={`w-full text-left p-2 hover:bg-gray-50 rounded-lg text-[10px] truncate transition-colors ${turno.residenteId === r.id ? 'bg-[#1D9E75]/10 text-[#1D9E75] font-black' : 'font-medium text-gray-700'}`}
+                            >
+                                {r.user.nombre}
+                            </button>
+                        ))}
                         <button
-                            onClick={handleLiberar}
-                            className="w-full text-left p-2 hover:bg-red-50 text-red-600 rounded-lg text-[10px] font-black truncate border-b border-gray-50 flex items-center gap-2 mb-1 transition-colors"
+                            onClick={() => setShowAssign(false)}
+                            className="w-full text-center p-2 text-[9px] font-bold text-gray-400 hover:text-gray-600 mt-1 uppercase tracking-widest border-t border-gray-50"
                         >
-                            <UserMinus size={12} /> Liberar (Dejar vacío)
+                            Cerrar
                         </button>
-                    )}
-                    {residentes.map(r => (
-                        <button
-                            key={r.id}
-                            onClick={() => handleAsignar(r.id)}
-                            className={`w-full text-left p-2 hover:bg-gray-50 rounded-lg text-[10px] truncate transition-colors ${turno.residenteId === r.id ? 'bg-[#1D9E75]/10 text-[#1D9E75] font-black' : 'font-medium text-gray-700'}`}
-                        >
-                            {r.user.nombre}
-                        </button>
-                    ))}
-                    {residentes.length === 0 && <p className="text-[10px] text-gray-400 italic p-2 text-center">No hay residentes</p>}
+                    </div>
+                )}
+
+                {showEdit && (
+                    <div className="absolute bottom-full left-0 right-0 z-50 mb-1 bg-white border border-gray-200 rounded-xl shadow-2xl p-3 w-48">
+                        <form onSubmit={handleUpdate} className="space-y-2">
+                            <div className="flex items-center justify-between mb-1">
+                                <p className="text-[10px] font-black text-gray-900 uppercase">Editar Turno</p>
+                                <button type="button" onClick={() => setShowEdit(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X size={10} />
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                    <label className="text-[8px] font-bold text-gray-400 uppercase">Inicio</label>
+                                    <input 
+                                        type="time" 
+                                        className="w-full text-[10px] p-1 border rounded"
+                                        value={editData.horaInicio}
+                                        onChange={e => setEditData({...editData, horaInicio: e.target.value})}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[8px] font-bold text-gray-400 uppercase">Fin</label>
+                                    <input 
+                                        type="time" 
+                                        className="w-full text-[10px] p-1 border rounded"
+                                        value={editData.horaFin}
+                                        onChange={e => setEditData({...editData, horaFin: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowEdit(false)}
+                                    className="flex-1 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold hover:bg-gray-200 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    type="submit"
+                                    disabled={loading}
+                                    className="flex-1 py-1.5 bg-[#072E1F] text-white rounded-lg text-[10px] font-bold hover:bg-[#154a34] transition-colors"
+                                >
+                                    {loading ? '...' : 'Guardar'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    // Vista para Residentes / Cocineros
+    return (
+        <div className="flex gap-1">
+            {turno.estado === 'LIBRE' && (
+                <button
+                    onClick={handleAsignarPropio}
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-1 py-1.5 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-colors text-[10px] font-black border border-white/30 backdrop-blur-sm"
+                >
+                    {loading ? <Loader2 size={12} className="animate-spin" /> : <><Clock size={12} /> Solicitar Turno</>}
+                </button>
+            )}
+
+            {esMio && (
+                <button
+                    onClick={handleLiberar}
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-1 py-1.5 bg-red-500/20 hover:bg-red-500/40 text-white rounded-lg transition-colors text-[10px] font-black border border-red-500/30 backdrop-blur-sm"
+                >
+                    {loading ? <Loader2 size={12} className="animate-spin" /> : <><UserMinus size={12} /> Liberar</>}
+                </button>
+            )}
+
+            {esMiSolicitud && (
+                <div className="w-full flex items-center justify-center gap-1 py-1.5 bg-yellow-500/20 text-yellow-700 rounded-lg text-[9px] font-black border border-yellow-500/30">
+                    <Clock size={10} /> Pendiente
                 </div>
             )}
         </div>

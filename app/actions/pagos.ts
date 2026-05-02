@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { checkAuth, checkResidenciaAccess } from '@/lib/auth-utils'
-import { createNotification } from './notificaciones'
+import { createNotification, notifyAdmins } from './notificaciones'
 
 export async function createPago(data: any) {
   try {
@@ -179,26 +179,12 @@ export async function enviarComprobantePago(data: { pagoId: number, comprobante:
     })
 
     // Notificar a los admins locales y globales
-    const admins = await prisma.user.findMany({
-        where: {
-            OR: [
-                { residenciaId: pago.residente.user.residenciaId },
-                { residenciaId: null }
-            ],
-            role: { name: 'ADMIN' }
-        },
-        select: { id: true }
-    })
-
-    for (const admin of admins) {
-        await createNotification(
-            admin.id,
-            'Nuevo Comprobante de Pago',
-            `${pago.residente.user.nombre} ha subido un comprobante para ${pago.concepto}.`,
-            'PAGO',
-            '/modules/pagos'
-        )
-    }
+    await notifyAdmins(
+        pago.residente.user.residenciaId,
+        'Nuevo Comprobante de Pago',
+        `${pago.residente.user.nombre} ha subido un comprobante para ${pago.concepto}.`,
+        '/modules/pagos'
+    )
 
     revalidatePath('/modules/pagos')
     revalidatePath(`/modules/pagos/${pagoId}`)

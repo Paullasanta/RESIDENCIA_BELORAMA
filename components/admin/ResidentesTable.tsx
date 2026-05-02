@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Users, Edit2, Download, FileText } from 'lucide-react'
+import { Search, Users, Edit2, FileText } from 'lucide-react'
 import Link from 'next/link'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { DeleteResidenteButton } from '@/components/shared/DeleteResidenteButton'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { ExportExcelButton } from '@/components/shared/ExportExcelButton'
 
 interface ResidentesTableProps {
     residentes: any[]
@@ -39,20 +40,18 @@ export function ResidentesTable({ residentes }: ResidentesTableProps) {
             minute: '2-digit'
         })
 
-        // Header
         doc.setFontSize(22)
-        doc.setTextColor(29, 158, 117) // #1D9E75
+        doc.setTextColor(29, 158, 117)
         doc.text('BELORAMA', 14, 20)
         
         doc.setFontSize(16)
-        doc.setTextColor(7, 46, 31) // #072E1F
+        doc.setTextColor(7, 46, 31)
         doc.text('Reporte de Residentes', 14, 30)
         
         doc.setFontSize(10)
         doc.setTextColor(150, 150, 150)
         doc.text(`Generado el: ${dateString}`, 14, 38)
 
-        // Table Data Preparation
         const tableRows = filteredResidentes.map((r) => [
             `${r.user.nombre} ${r.user.apellidoPaterno || ''} ${r.user.apellidoMaterno || ''}`,
             r.user.email,
@@ -68,13 +67,13 @@ export function ResidentesTable({ residentes }: ResidentesTableProps) {
             head: [['Nombre', 'Email', 'Habitación', 'Residencia', 'Último Pago', 'Estado', 'Ingreso']],
             body: tableRows,
             headStyles: { 
-                fillColor: [29, 158, 117], // #1D9E75
+                fillColor: [29, 158, 117],
                 textColor: [255, 255, 255],
                 fontSize: 10,
                 fontStyle: 'bold'
             },
             alternateRowStyles: {
-                fillColor: [248, 250, 248] // #F8FAF8
+                fillColor: [248, 250, 248]
             },
             styles: {
                 fontSize: 9,
@@ -86,10 +85,41 @@ export function ResidentesTable({ residentes }: ResidentesTableProps) {
         window.open(doc.output('bloburl'), '_blank')
     }
 
+    const residentesExcelData = filteredResidentes.map((r) => ({
+        'Nombre Completo': `${r.user.nombre} ${r.user.apellidoPaterno || ''} ${r.user.apellidoMaterno || ''}`,
+        'Email': r.user.email,
+        'Teléfono': r.user.telefono || '—',
+        'DNI': r.user.dni || '—',
+        'Residencia': r.habitacion?.residencia?.nombre || '—',
+        'Habitación': r.habitacion ? `#${r.habitacion.numero}` : '—',
+        'Piso': r.habitacion?.piso || '—',
+        'Monto Mensual': r.montoMensual || 0,
+        'Monto Garantía': r.montoGarantia || 0,
+        'Día de Pago': r.diaPago || 1,
+        'Estado Último Pago': r.pagos[0]?.estado || 'SIN PAGOS',
+        'Fecha Ingreso': new Date(r.fechaIngreso).toLocaleDateString('es-MX'),
+        'Estado': r.activo ? 'ACTIVO' : 'INACTIVO'
+    }))
+
+    const residentesColumns = [
+        { header: 'Nombre Completo', key: 'Nombre Completo', width: 35 },
+        { header: 'Email', key: 'Email', width: 30 },
+        { header: 'Teléfono', key: 'Teléfono', width: 15 },
+        { header: 'DNI', key: 'DNI', width: 12 },
+        { header: 'Residencia', key: 'Residencia', width: 25 },
+        { header: 'Habitación', key: 'Habitación', width: 12 },
+        { header: 'Piso', key: 'Piso', width: 8 },
+        { header: 'Monto Mensual', key: 'Monto Mensual', width: 15 },
+        { header: 'Monto Garantía', key: 'Monto Garantía', width: 15 },
+        { header: 'Día de Pago', key: 'Día de Pago', width: 12 },
+        { header: 'Estado Último Pago', key: 'Estado Último Pago', width: 20 },
+        { header: 'Fecha Ingreso', key: 'Fecha Ingreso', width: 15 },
+        { header: 'Estado', key: 'Estado', width: 12 }
+    ]
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                {/* Buscador Autocompletable */}
                 <div className="relative group w-full lg:max-w-md">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#1D9E75] transition-colors">
                         <Search size={18} />
@@ -112,13 +142,13 @@ export function ResidentesTable({ residentes }: ResidentesTableProps) {
                         <FileText size={14} />
                         PDF
                     </button>
-                    <button 
-                        onClick={() => alert('Excel próximamente')}
-                        className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-100 rounded-xl text-[10px] font-black text-gray-400 hover:text-[#1D9E75] hover:border-[#1D9E75] transition-all shadow-sm whitespace-nowrap"
-                    >
-                        <Download size={14} />
-                        EXCEL
-                    </button>
+                    
+                    <ExportExcelButton 
+                        data={residentesExcelData}
+                        filename="Reporte_Residentes"
+                        sheetName="Residentes"
+                        columns={residentesColumns}
+                    />
                 </div>
             </div>
 

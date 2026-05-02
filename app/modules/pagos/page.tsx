@@ -7,6 +7,7 @@ import { RevisionVouchers } from '@/components/admin/RevisionVouchers'
 import { DollarSign, CheckCircle, Clock, AlertCircle, Eye, History, Bell, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import ResidentPagoCard from '@/components/shared/ResidentPagoCard'
+import { PagosExportActions } from '@/components/admin/PagosExportActions'
 
 export default async function PagosPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
     const session = await auth()
@@ -123,9 +124,12 @@ export default async function PagosPage({ searchParams }: { searchParams: Promis
                     <p className="text-gray-400 font-bold text-sm">Estado de pagos — {new Date().toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}</p>
                 </div>
                 
-                <div className="flex items-center gap-4 bg-white px-5 py-3 rounded-2xl border border-gray-100 shadow-sm" suppressHydrationWarning>
-                    <Calendar size={18} className="text-[#1D9E75]" />
-                    <span className="text-xs font-black text-gray-700 uppercase tracking-widest">{todayString}</span>
+                <div className="flex items-center gap-3">
+                    {isAdmin && <PagosExportActions residentesPagos={residentesList} />}
+                    <div className="flex items-center gap-4 bg-white px-5 py-3 rounded-2xl border border-gray-100 shadow-sm" suppressHydrationWarning>
+                        <Calendar size={18} className="text-[#1D9E75]" />
+                        <span className="text-xs font-black text-gray-700 uppercase tracking-widest">{todayString}</span>
+                    </div>
                 </div>
             </div>
 

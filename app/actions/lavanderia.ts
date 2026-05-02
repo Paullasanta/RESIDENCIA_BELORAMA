@@ -4,11 +4,22 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { EstadoTurno } from '@prisma/client'
 import { checkAuth, checkResidenciaAccess } from '@/lib/auth-utils'
-import { createNotification } from './notificaciones'
+import { createNotification, notifyAdmins } from './notificaciones'
 
-export async function asignarTurnoLavanderia(turnoId: number, residenteId: number) {
+export async function asignarTurnoLavanderia(turnoId: number, id: number, useUserId: boolean = false) {
   try {
-    const user = await checkAuth() // Cualquier usuario logueado puede asignar un turno si es para sí mismo, o admin si es para otro.
+    const user = await checkAuth()
+    
+    let residenteId = id;
+    if (useUserId) {
+        const profile = await prisma.residente.findUnique({ where: { userId: id } })
+        if (!profile) {
+            const newProfile = await prisma.residente.create({ data: { userId: id } })
+            residenteId = newProfile.id
+        } else {
+            residenteId = profile.id
+        }
+    }
     
     const turno = await prisma.turnoLavanderia.findUnique({
         where: { id: turnoId }
@@ -19,14 +30,9 @@ export async function asignarTurnoLavanderia(turnoId: number, residenteId: numbe
     // Si no es admin, solo puede asignarse turnos de su propia residencia
     checkResidenciaAccess(user, turno.residenciaId)
 
-    // Validar que el residente pertenezca a esta residencia
-    const targetResidente = await prisma.residente.findUnique({
-      where: { id: residenteId },
-      select: { user: { select: { residenciaId: true } } }
-    })
-
-    if (!targetResidente || targetResidente.user.residenciaId !== turno.residenciaId) {
-      throw new Error('El residente no pertenece a esta residencia')
+    // Si el usuario no es admin, todos los turnos pasan por solicitud previa
+    if (user.rol !== 'ADMIN') {
+        return solicitarTurnoLavanderia(turnoId, residenteId)
     }
 
     const updatedTurno = await prisma.turnoLavanderia.update({
@@ -38,8 +44,8 @@ export async function asignarTurnoLavanderia(turnoId: number, residenteId: numbe
       include: { residente: true }
     })
 
-    // Si un admin asignó el turno, notificar al residente
-    if (updatedTurno.residente) {
+    // Si un admin asignó el turno y no es para sí mismo, notificar al residente
+    if (updatedTurno.residente && updatedTurno.residente.userId !== user.id) {
         await createNotification(
             updatedTurno.residente.userId,
             'Turno de Lavandería Asignado',
@@ -49,12 +55,123 @@ export async function asignarTurnoLavanderia(turnoId: number, residenteId: numbe
         )
     }
     
-    revalidatePath('/admin/lavanderia')
-    revalidatePath('/residente/lavanderia')
+    revalidatePath('/modules/lavanderia')
     return { success: true }
   } catch (error: any) {
-    return { success: false, error: 'Error al asignar el turno' }
+    return { success: false, error: error.message || 'Error al asignar el turno' }
   }
+}
+
+export async function solicitarTurnoLavanderia(turnoId: number, id: number, useUserId: boolean = false) {
+    try {
+        const user = await checkAuth()
+        
+        let residenteId = id;
+        if (useUserId) {
+            const profile = await prisma.residente.findUnique({ where: { userId: id } })
+            if (!profile) {
+                const newProfile = await prisma.residente.create({ data: { userId: id } })
+                residenteId = newProfile.id
+            } else {
+                residenteId = profile.id
+            }
+        }
+        
+        const turno = await prisma.turnoLavanderia.findUnique({
+            where: { id: turnoId }
+        })
+        
+        if (!turno) throw new Error('Turno no encontrado')
+        checkResidenciaAccess(user, turno.residenciaId)
+
+        await prisma.turnoLavanderia.update({
+            where: { id: turnoId },
+            data: {
+                residenteId,
+                estado: EstadoTurno.SOLICITADO
+            }
+        })
+
+        // Notificar a los administradores de la sede y globales
+        await notifyAdmins(
+            turno.residenciaId,
+            'Nueva Solicitud de Lavandería',
+            `${user.nombre} ha solicitado el turno del ${turno.dia} (${turno.horaInicio})`,
+            '/modules/lavanderia'
+        )
+
+        revalidatePath('/modules/lavanderia')
+        return { success: true, message: 'Tu solicitud de turno ha sido enviada para aprobación' }
+    } catch (error: any) {
+        return { success: false, error: error.message || 'Error al solicitar el turno' }
+    }
+}
+
+export async function cambiarTurnoLavanderia(turnoActualId: number, turnoNuevoId: number, residenteId: number) {
+    try {
+        const user = await checkAuth()
+        
+        // Primero liberamos el actual
+        await prisma.turnoLavanderia.update({
+            where: { id: turnoActualId },
+            data: {
+                residenteId: null,
+                estado: EstadoTurno.LIBRE
+            }
+        })
+
+        // Luego asignamos el nuevo
+        return asignarTurnoLavanderia(turnoNuevoId, residenteId)
+    } catch (error: any) {
+        return { success: false, error: error.message || 'Error al cambiar el turno' }
+    }
+}
+
+export async function aprobarTurnoSolicitado(turnoId: number) {
+    try {
+        const user = await checkAuth('MANAGE_LAVANDERIA')
+        
+        const turno = await prisma.turnoLavanderia.update({
+            where: { id: turnoId },
+            data: { estado: EstadoTurno.OCUPADO },
+            include: { residente: true }
+        })
+
+        if (turno.residente) {
+            await createNotification(
+                turno.residente.userId,
+                'Turno Aprobado',
+                `Tu solicitud para el turno del ${turno.dia} ha sido aprobada.`,
+                'INFO',
+                '/modules/lavanderia'
+            )
+        }
+
+        revalidatePath('/modules/lavanderia')
+        return { success: true }
+    } catch (error: any) {
+        return { success: false, error: error.message || 'Error al aprobar el turno' }
+    }
+}
+
+export async function updateTurnoTime(turnoId: number, data: { dia: any, horaInicio: string, horaFin: string }) {
+    try {
+        await checkAuth('MANAGE_LAVANDERIA')
+        
+        await prisma.turnoLavanderia.update({
+            where: { id: turnoId },
+            data: {
+                dia: data.dia,
+                horaInicio: data.horaInicio,
+                horaFin: data.horaFin
+            }
+        })
+
+        revalidatePath('/modules/lavanderia')
+        return { success: true }
+    } catch (error: any) {
+        return { success: false, error: error.message || 'Error al actualizar el turno' }
+    }
 }
 
 export async function liberarTurnoLavanderia(turnoId: number) {
@@ -67,8 +184,7 @@ export async function liberarTurnoLavanderia(turnoId: number) {
       }
     })
     
-    revalidatePath('/admin/lavanderia')
-    revalidatePath('/residente/lavanderia')
+    revalidatePath('/modules/lavanderia')
     return { success: true }
   } catch (error: any) {
     return { success: false, error: 'Error al liberar el turno' }
@@ -81,7 +197,7 @@ export async function updateEstadoLavadora(id: number, activa: boolean) {
             where: { id },
             data: { activa }
         })
-        revalidatePath('/admin/lavanderia')
+        revalidatePath('/modules/lavanderia')
         return { success: true }
     } catch (e) {
         return { success: false, error: 'No se pudo actualizar la lavadora' }

@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { auth } from '@/lib/auth'
-import { createNotification } from './notificaciones'
+import { createNotification, notifyAdmins } from './notificaciones'
 
 export async function createTicket(data: {
     titulo: string
@@ -32,26 +32,12 @@ export async function createTicket(data: {
     })
 
     // Notificar a los administradores de esta residencia Y a los administradores globales
-    const admins = await prisma.user.findMany({
-        where: {
-            OR: [
-                { residenciaId: data.residenciaId },
-                { residenciaId: null } // Admins Globales
-            ],
-            role: { name: 'ADMIN' }
-        },
-        select: { id: true }
-    })
-
-    for (const admin of admins) {
-        await createNotification(
-            admin.id,
-            'Nuevo Ticket de Mantenimiento',
-            `El residente ${session.user.nombre} ha reportado: ${data.titulo}`,
-            'TICKET',
-            '/modules/mantenimiento'
-        )
-    }
+    await notifyAdmins(
+        data.residenciaId,
+        'Nuevo Ticket de Mantenimiento',
+        `El residente ${session.user.nombre} ha reportado: ${data.titulo}`,
+        '/modules/mantenimiento'
+    )
 
     revalidatePath('/modules/mantenimiento')
     return ticket

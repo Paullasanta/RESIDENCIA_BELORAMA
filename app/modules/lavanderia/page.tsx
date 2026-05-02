@@ -22,21 +22,44 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
     const searchParamsObj = await (searchParams as any)
     const filterResidenciaId = searchParamsObj?.residenciaId ? parseInt(searchParamsObj.residenciaId) : null
 
-    const isGlobalAdmin = rol === 'ADMIN' && !sessionResId
+    const isGlobal = rol === 'ADMIN' && !sessionResId
 
     // Aislamiento: Prioridad de residencia
     let residenciaId: number | null = filterResidenciaId || sessionResId || null
     
     if (rol === 'RESIDENTE') {
         const profile = await prisma.residente.findFirst({
-            where: { user: { email: session!.user.email as string } },
+            where: { userId: session!.user.id },
             select: { habitacion: { select: { residenciaId: true } } }
         })
         residenciaId = profile?.habitacion?.residenciaId ?? sessionResId ?? null
+    } else if (rol === 'COCINERO') {
+        // Asegurar que el cocinero tenga su residenciaId
+        if (!residenciaId) {
+            const userDb = await prisma.user.findUnique({
+                where: { id: session!.user.id },
+                select: { residenciaId: true }
+            })
+            residenciaId = userDb?.residenciaId ?? null
+        }
     }
 
+    // Obtener el perfil de residente del usuario actual si existe (para límites de turnos)
+    const userResidente = await prisma.residente.findFirst({
+        where: { userId: session!.user.id },
+        include: { 
+            turnos: { 
+                where: { estado: 'OCUPADO' },
+                select: { id: true }
+            }
+        }
+    })
+
+    const currentUserResidenteId = userResidente?.id || null
+    const userTurnCount = userResidente?.turnos.length || 0
+
     const turnos = await prisma.turnoLavanderia.findMany({
-        where: residenciaId ? { residenciaId } : (isGlobalAdmin ? {} : { residenciaId: -1 }),
+        where: residenciaId ? { residenciaId } : (isGlobal ? {} : { residenciaId: -1 }),
         include: {
             lavadora: true,
             residente: { include: { user: true } },
@@ -45,13 +68,13 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
     })
 
     const lavadoras = await prisma.lavadora.findMany({
-        where: residenciaId ? { residenciaId } : (isGlobalAdmin ? {} : { residenciaId: -1 }),
+        where: residenciaId ? { residenciaId } : (isGlobal ? {} : { residenciaId: -1 }),
         include: { residencia: { select: { nombre: true } } },
         orderBy: { nombre: 'asc' }
     })
     
     const residentes = canManage ? await prisma.residente.findMany({
-        where: residenciaId ? { user: { residenciaId } } : (isGlobalAdmin ? {} : { user: { residenciaId: -1 } }),
+        where: residenciaId ? { user: { residenciaId } } : (isGlobal ? {} : { user: { residenciaId: -1 } }),
         include: { user: true },
         orderBy: { user: { nombre: 'asc' } }
     }) : []
@@ -77,7 +100,7 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
                     description={residenciaId ? `Panel de turnos para sede.` : "Monitoriza y asigna turnos de uso en todas las residencias."}
                 />
                 <div className="flex items-center gap-4">
-                    {isGlobalAdmin && (
+                    {isGlobal && (
                         <ResidenciaSelector 
                             residencias={residenciasConfig} 
                             currentId={filterResidenciaId} 
@@ -103,6 +126,9 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
                             session={session}
                             residentes={residentes}
                             canManage={canManage}
+                            currentUserResidenteId={currentUserResidenteId}
+                            currentUserId={session!.user.id}
+                            userTurnCount={userTurnCount}
                         />
                     ))}
                 </div>

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Bell, Info, CreditCard, Megaphone, Wrench, Check } from 'lucide-react'
-import { getNotifications, markAsRead } from '@/app/actions/notificaciones'
+import { Bell, Info, CreditCard, Megaphone, Wrench, Check, X, Trash2 } from 'lucide-react'
+import { getNotifications, markAsRead, deleteNotification } from '@/app/actions/notificaciones'
 import Link from 'next/link'
 
 export function NotificationBell() {
@@ -25,6 +25,11 @@ export function NotificationBell() {
 
     const handleMarkAsRead = async (id: number) => {
         await markAsRead(id)
+        fetchNotifications()
+    }
+
+    const handleDelete = async (id: number) => {
+        await deleteNotification(id)
         fetchNotifications()
     }
 
@@ -77,15 +82,13 @@ export function NotificationBell() {
                                                 <p className={`text-xs font-black leading-tight ${!notif.leida ? 'text-gray-900' : 'text-gray-500'}`}>
                                                     {notif.titulo}
                                                 </p>
-                                                {!notif.leida && (
-                                                    <button 
-                                                        onClick={() => handleMarkAsRead(notif.id)}
-                                                        className="p-1 hover:bg-white rounded-md text-[#1D9E75] transition-colors"
-                                                        title="Marcar como leída"
-                                                    >
-                                                        <Check size={12} />
-                                                    </button>
-                                                )}
+                                                <button 
+                                                    onClick={() => handleDelete(notif.id)}
+                                                    className="p-1 hover:bg-red-50 rounded-md text-red-400 hover:text-red-600 transition-colors"
+                                                    title="Eliminar notificación"
+                                                >
+                                                    <X size={12} />
+                                                </button>
                                             </div>
                                             <p className="text-[11px] text-gray-500 leading-normal">{notif.mensaje}</p>
                                             <div className="flex items-center justify-between mt-2">
@@ -97,7 +100,7 @@ export function NotificationBell() {
                                                         href={notif.link} 
                                                         onClick={() => {
                                                             setIsOpen(false)
-                                                            handleMarkAsRead(notif.id)
+                                                            handleDelete(notif.id)
                                                         }}
                                                         className="text-[9px] font-black text-[#1D9E75] uppercase hover:underline"
                                                     >

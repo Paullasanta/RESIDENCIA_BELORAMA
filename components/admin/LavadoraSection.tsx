@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { WashingMachine, Clock, TableProperties, LayoutGrid } from 'lucide-react'
 import { GenerateShiftsModal } from './GenerateShiftsModal'
 import { ShiftActions } from './ShiftActions'
+import { LaundryExportActions } from './LaundryExportActions'
 
 const DIA_LABEL: Record<string, string> = {
     LUNES: 'Lunes', MARTES: 'Martes', MIERCOLES: 'Miércoles', 
@@ -15,13 +16,19 @@ export function LavadoraSection({
     days, 
     session, 
     residentes, 
-    canManage 
+    canManage,
+    currentUserResidenteId,
+    currentUserId,
+    userTurnCount
 }: { 
     lavadora: any, 
     days: any[], 
     session: any, 
     residentes: any[], 
-    canManage: boolean 
+    canManage: boolean,
+    currentUserResidenteId?: number | null,
+    currentUserId?: number | null,
+    userTurnCount?: number
 }) {
     const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
 
@@ -68,8 +75,11 @@ export function LavadoraSection({
                         )}
                     </button>
                     {canManage && (
-                        <div className="flex bg-white/10 p-1.5 border border-white/20 rounded-xl">
-                            <GenerateShiftsModal lavadora={lavadora} />
+                        <div className="flex gap-2">
+                            <LaundryExportActions lavadora={lavadora} days={days} />
+                            <div className="flex bg-white/10 p-1.5 border border-white/20 rounded-xl">
+                                <GenerateShiftsModal lavadora={lavadora} />
+                            </div>
                         </div>
                     )}
                 </div>
@@ -117,7 +127,9 @@ export function LavadoraSection({
                                             esMio ? 'bg-[#EF9F27] border-transparent shadow shadow-[#EF9F27]/20' :
                                             t.estado === 'LIBRE' 
                                                 ? 'bg-white border-gray-100 hover:border-[#1D9E75] hover:shadow hover:shadow-[#1D9E75]/5' 
-                                                : 'bg-[#072E1F] border-transparent shadow-sm'
+                                                : t.estado === 'SOLICITADO'
+                                                    ? 'bg-yellow-50 border-yellow-200'
+                                                    : 'bg-[#072E1F] border-transparent shadow-sm'
                                         }`}>
                                             <div className="flex items-start justify-between mb-0.5 gap-1">
                                                 <div className={`flex flex-col md:hidden ${t.estado === 'LIBRE' ? 'text-[#1D9E75]' : 'text-white/70'}`}>
@@ -146,7 +158,15 @@ export function LavadoraSection({
                                             </div>
 
                                             <div className="mt-auto relative z-10">
-                                                <ShiftActions turno={t} residentes={residentesFiltrados} canManage={canManage} />
+                                                <ShiftActions 
+                                                    turno={t} 
+                                                    residentes={residentesFiltrados} 
+                                                    canManage={canManage} 
+                                                    currentUserResidenteId={currentUserResidenteId}
+                                                    currentUserId={currentUserId}
+                                                    userTurnCount={userTurnCount}
+                                                    userRole={session?.user.rol}
+                                                />
                                             </div>
                                         </div>
                                     )
