@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createAviso } from '@/app/actions/avisos'
-import { Loader2, Save, X, Megaphone, MapPin, AlertTriangle, Image as ImageIcon, Plus, Trash2 } from 'lucide-react'
+import { Loader2, Save, X, Megaphone, MapPin, AlertTriangle, Image as ImageIcon, Plus, Trash2, Calendar } from 'lucide-react'
 
 interface AvisoFormProps {
   residencias: any[]
@@ -56,6 +56,8 @@ export function AvisoForm({ residencias }: AvisoFormProps) {
       contenido: formData.get('contenido'),
       prioridad: formData.get('prioridad'),
       residenciaId: formData.get('residenciaId') || null,
+      fechaInicio: formData.get('fechaInicio') || null,
+      fechaFin: formData.get('fechaFin') || null,
       fotos: fotos
     }
 
@@ -135,6 +137,29 @@ export function AvisoForm({ residencias }: AvisoFormProps) {
                 </div>
              ))}
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+            <div className="space-y-2">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                    <Calendar size={14} className="text-[#1D9E75]" /> Fecha Inicio (Opcional)
+                </label>
+                <input
+                    type="date"
+                    name="fechaInicio"
+                    className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
+                />
+            </div>
+            <div className="space-y-2">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                    <Calendar size={14} className="text-[#1D9E75]" /> Fecha Fin (Opcional)
+                </label>
+                <input
+                    type="date"
+                    name="fechaFin"
+                    className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
+                />
+            </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">

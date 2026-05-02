@@ -41,6 +41,8 @@ export function ProductGrid({ pendientes, aprobados, misProductos, canModerate, 
                 <ProductDetailModal 
                     producto={selectedProduct} 
                     onClose={() => setSelectedProduct(null)} 
+                    isOwner={selectedProduct.residente?.user.email === sessionUserEmail}
+                    isAdmin={canModerate}
                 />
             )}
 

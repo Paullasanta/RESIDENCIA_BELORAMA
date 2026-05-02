@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createTicket } from '@/app/actions/mantenimiento'
 import { Button } from '@/components/ui/button'
-import { Loader2, Save, AlertTriangle } from 'lucide-react'
+import { Loader2, Save, AlertTriangle, Calendar } from 'lucide-react'
 
 interface TicketFormProps {
     residencia: { id: number; nombre: string } | null
@@ -23,7 +23,9 @@ export function TicketForm({ residencia }: TicketFormProps) {
                 titulo: formData.get('titulo') as string,
                 descripcion: formData.get('descripcion') as string,
                 prioridad: formData.get('prioridad') as 'NORMAL' | 'URGENTE' | 'IMPORTANTE',
-                residenciaId: residencia?.id || 0
+                residenciaId: residencia?.id || 0,
+                fechaInicio: formData.get('fechaInicio') as string,
+                fechaFin: formData.get('fechaFin') as string
             }
 
             if (!data.residenciaId) {
@@ -85,6 +87,25 @@ export function TicketForm({ residencia }: TicketFormProps) {
                         className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#072E1F] focus:ring-4 focus:ring-[#072E1F]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300 resize-none"
                         placeholder="Describe el problema y su ubicación exacta..."
                     />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Fecha Inicio (Estimado)</label>
+                        <input
+                            type="date"
+                            name="fechaInicio"
+                            className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#072E1F] focus:ring-4 focus:ring-[#072E1F]/5 outline-none transition-all font-bold text-gray-700"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Fecha Fin (Estimado)</label>
+                        <input
+                            type="date"
+                            name="fechaFin"
+                            className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#072E1F] focus:ring-4 focus:ring-[#072E1F]/5 outline-none transition-all font-bold text-gray-700"
+                        />
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

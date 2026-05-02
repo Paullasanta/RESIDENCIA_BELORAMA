@@ -95,7 +95,6 @@ export async function eliminarProducto(id: number) {
     const session = await auth()
     if (!session) throw new Error('No autorizado')
 
-    // Aquí idealmente verificaríamos que el usuario es el dueño o admin
     await prisma.productoMarketplace.delete({
       where: { id }
     })
@@ -104,5 +103,35 @@ export async function eliminarProducto(id: number) {
     return { success: true }
   } catch (error: any) {
     return { success: false, error: 'Error al eliminar el producto' }
+  }
+}
+
+export async function marcarVendido(id: number) {
+  try {
+    const session = await auth()
+    if (!session) throw new Error('No autorizado')
+
+    // Verificar permisos: el dueño o un admin
+    const producto = await prisma.productoMarketplace.findUnique({
+        where: { id },
+        include: { residente: true }
+    })
+
+    if (!producto) throw new Error('Producto no encontrado')
+    
+    // Si no es admin y no es el dueño (userId del residente)
+    if (session.user.rol !== 'ADMIN' && producto.residente?.userId !== session.user.id) {
+        throw new Error('No tienes permiso para marcar este producto como vendido')
+    }
+
+    await prisma.productoMarketplace.update({
+      where: { id },
+      data: { estado: 'VENDIDO' as any }
+    })
+    
+    revalidatePath('/modules/marketplace')
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Error al marcar como vendido' }
   }
 }

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { asignarTurnoLavanderia, liberarTurnoLavanderia, aprobarTurnoSolicitado, solicitarTurnoLavanderia, updateTurnoTime } from '@/app/actions/lavanderia'
-import { Loader2, UserPlus, UserMinus, CheckCircle, Clock, Edit2, X } from 'lucide-react'
+import { asignarTurnoLavanderia, liberarTurnoLavanderia, aprobarTurnoSolicitado, solicitarTurnoLavanderia, updateTurnoTime, toggleRecurringShift } from '@/app/actions/lavanderia'
+import { Loader2, UserPlus, UserMinus, CheckCircle, Clock, Edit2, X, Star } from 'lucide-react'
 
 export function ShiftActions({ 
     turno, 
@@ -11,7 +11,8 @@ export function ShiftActions({
     currentUserResidenteId,
     currentUserId,
     userTurnCount,
-    userRole
+    userRole,
+    lavadoraActiva = true
 }: { 
     turno: any, 
     residentes: any[], 
@@ -19,11 +20,13 @@ export function ShiftActions({
     currentUserResidenteId?: number | null,
     currentUserId?: number | null,
     userTurnCount?: number,
-    userRole?: string
+    userRole?: string,
+    lavadoraActiva?: boolean
 }) {
     const [loading, setLoading] = useState(false)
     const [showAssign, setShowAssign] = useState(false)
     const [showEdit, setShowEdit] = useState(false)
+    const [updatingFixed, setUpdatingFixed] = useState(false)
     
     // Form state for editing
     const [editData, setEditData] = useState({
@@ -44,6 +47,15 @@ export function ShiftActions({
             setShowEdit(false)
         } else {
             alert(res.error || 'Error en la operación')
+        }
+    }
+
+    const handleToggleFixed = async () => {
+        setUpdatingFixed(true)
+        const res = await toggleRecurringShift(turno.id, !turno.esFijo)
+        setUpdatingFixed(false)
+        if (!res.success) {
+            alert(res.error || 'Error al actualizar permanencia')
         }
     }
 
@@ -94,7 +106,13 @@ export function ShiftActions({
                         }`}
                     >
                         {loading ? <Loader2 size={12} className="animate-spin" /> : (
-                            turno.estado === 'OCUPADO' ? <><UserPlus size={12} /> Gestionar</> :
+                            turno.estado === 'OCUPADO' ? (
+                                <span className="flex items-center gap-1">
+                                    <UserPlus size={12} /> 
+                                    Gestionar
+                                    {turno.esFijo && <Star size={10} className="fill-yellow-400 text-yellow-400 animate-pulse" />}
+                                </span>
+                            ) :
                             turno.estado === 'SOLICITADO' ? <><CheckCircle size={12} /> Revisar</> :
                             <><UserPlus size={12} /> Asignar</>
                         )}
@@ -109,13 +127,32 @@ export function ShiftActions({
                 </div>
 
                 {showAssign && (
-                    <div className="absolute bottom-full left-0 right-0 z-50 mb-1 bg-white border border-gray-100 rounded-xl shadow-2xl p-1.5 max-h-56 overflow-y-auto min-w-[140px]">
+                    <div className="absolute bottom-full left-0 right-0 z-50 mb-1 bg-white border border-gray-100 rounded-xl shadow-2xl p-1.5 max-h-64 overflow-y-auto min-w-[160px]">
                         <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-gray-50">
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Asignación</p>
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Gestión</p>
                             <button onClick={() => setShowAssign(false)} className="text-gray-400 hover:text-gray-600">
                                 <X size={10} />
                             </button>
                         </div>
+                        
+                        {turno.estado === 'OCUPADO' && turno.residenteId && (
+                            <div className="px-2 py-2 mb-2 bg-gray-50 rounded-lg border border-gray-100">
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={turno.esFijo}
+                                        onChange={handleToggleFixed}
+                                        disabled={updatingFixed}
+                                        className="w-3.5 h-3.5 rounded border-gray-300 text-yellow-500 focus:ring-yellow-500"
+                                    />
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-gray-700 group-hover:text-yellow-600 transition-colors uppercase tracking-tight">Turno Permanente</span>
+                                        <span className="text-[8px] text-gray-400 font-bold leading-tight">Se asignará solo cada semana</span>
+                                    </div>
+                                    {updatingFixed && <Loader2 size={10} className="animate-spin text-yellow-500 ml-auto" />}
+                                </label>
+                            </div>
+                        )}
                         
                         {turno.estado === 'SOLICITADO' && (
                             <button
@@ -204,6 +241,15 @@ export function ShiftActions({
         )
     }
 
+    // Si la lavadora no está activa y no es admin, bloqueamos interacción
+    if (!lavadoraActiva && !canManage) {
+        return (
+            <div className="w-full flex items-center justify-center gap-1 py-2 bg-gray-100 text-gray-400 rounded-lg text-[9px] font-black border border-gray-200">
+                <X size={12} /> NO DISPONIBLE
+            </div>
+        )
+    }
+
     // Vista para Residentes / Cocineros
     return (
         <div className="flex gap-1">
@@ -213,7 +259,13 @@ export function ShiftActions({
                     disabled={loading}
                     className="w-full flex items-center justify-center gap-1 py-1.5 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-colors text-[10px] font-black border border-white/30 backdrop-blur-sm"
                 >
-                    {loading ? <Loader2 size={12} className="animate-spin" /> : <><Clock size={12} /> Solicitar Turno</>}
+                    {loading ? (
+                        <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                        userTurnCount === 0 
+                            ? <><CheckCircle size={12} /> Tomar Turno</> 
+                            : <><Clock size={12} /> Solicitar Turno Adicional</>
+                    )}
                 </button>
             )}
 

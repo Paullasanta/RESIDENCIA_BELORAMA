@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { Wrench, Plus, Clock, CheckCircle2, AlertTriangle, MessageSquare } from 'lucide-react'
+import { Wrench, Plus, Clock, CheckCircle2, AlertTriangle, MessageSquare, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { TicketActions } from '@/components/mantenimiento/TicketActions'
@@ -83,6 +83,12 @@ export default async function MantenimientoPage() {
                                             <p className="text-[10px] text-gray-300 font-bold uppercase">{new Date(ticket.createdAt).toLocaleDateString()}</p>
                                         </div>
                                         <h3 className="text-lg font-black text-[#072E1F] truncate group-hover:text-[#1D9E75] transition-colors">{ticket.titulo}</h3>
+                                        {(ticket.fechaInicio || ticket.fechaFin) && (
+                                            <div className="flex items-center gap-2 mt-1 text-[9px] font-bold text-[#1D9E75] uppercase tracking-tighter bg-green-50/50 px-2 py-0.5 rounded w-fit border border-green-100/50">
+                                                <Calendar size={10} />
+                                                {ticket.fechaInicio ? new Date(ticket.fechaInicio).toLocaleDateString() : '?'} - {ticket.fechaFin ? new Date(ticket.fechaFin).toLocaleDateString() : '?'}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className={`p-2 rounded-xl bg-gray-50 ${STATS_CONFIG[ticket.estado as keyof typeof STATS_CONFIG]?.color}`}>
                                         {STATS_CONFIG[ticket.estado as keyof typeof STATS_CONFIG]?.icon}

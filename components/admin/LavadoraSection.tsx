@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { WashingMachine, Clock, TableProperties, LayoutGrid } from 'lucide-react'
 import { GenerateShiftsModal } from './GenerateShiftsModal'
 import { ShiftActions } from './ShiftActions'
-import { LaundryExportActions } from './LaundryExportActions'
+import { ClearShiftsButton } from './ClearShiftsButton'
 
 const DIA_LABEL: Record<string, string> = {
     LUNES: 'Lunes', MARTES: 'Martes', MIERCOLES: 'Miércoles', 
@@ -34,15 +34,15 @@ export function LavadoraSection({
 
     // Extract unique time slots for this washing machine
     const allTurnos = days.flatMap(d => d.turnos)
-    const uniqueTimes = Array.from(new Set(allTurnos.map(t => `${t.horaInicio}|${t.horaFin}`))).sort()
+    const uniqueTimes = Array.from(new Set(allTurnos.map(t => `${t.horaInicio.trim()}|${t.horaFin.trim()}`))).sort()
 
     // Filter residents by the residence of the washing machine
     const residentesFiltrados = residentes.filter(r => r.user.residenciaId === lavadora.residenciaId)
 
     return (
-        <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-200/50 border border-gray-100 overflow-visible">
             {/* Cabecera */}
-            <div className="px-8 py-6 bg-gradient-to-r from-[#072E1F] to-[#154a34] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="px-8 py-6 bg-gradient-to-r from-[#072E1F] to-[#154a34] flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-t-[2rem]">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white backdrop-blur-md">
                         <WashingMachine size={24} />
@@ -76,9 +76,23 @@ export function LavadoraSection({
                     </button>
                     {canManage && (
                         <div className="flex gap-2">
-                            <LaundryExportActions lavadora={lavadora} days={days} />
-                            <div className="flex bg-white/10 p-1.5 border border-white/20 rounded-xl">
-                                <GenerateShiftsModal lavadora={lavadora} />
+                            <ClearShiftsButton 
+                                lavadoraId={lavadora.id} 
+                                residenciaId={lavadora.residenciaId}
+                                hasAssignments={allTurnos.some(t => t.estado !== 'LIBRE')}
+                            />
+                            <div className="flex bg-white/10 p-1.5 border border-white/20 rounded-xl group relative">
+                                <GenerateShiftsModal 
+                                    lavadora={lavadora} 
+                                    hasAssignments={allTurnos.some(t => t.estado !== 'LIBRE')}
+                                />
+                                {allTurnos.some(t => t.estado !== 'LIBRE') && (
+                                    <div className="absolute top-full right-0 mt-3 w-56 p-3 bg-[#072E1F] text-white text-[10px] font-bold rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none shadow-2xl z-[100] text-center border border-white/20 translate-y-2 group-hover:translate-y-0">
+                                        <div className="absolute -top-1.5 right-6 w-3 h-3 bg-[#072E1F] rotate-45 border-t border-l border-white/20"></div>
+                                        <p className="text-orange-400 mb-1 tracking-widest uppercase">Función Bloqueada</p>
+                                        Hay turnos ocupados. Debes <span className="text-red-400">limpiar los turnos</span> antes de usar el generador masivo.
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -166,6 +180,7 @@ export function LavadoraSection({
                                                     currentUserId={currentUserId}
                                                     userTurnCount={userTurnCount}
                                                     userRole={session?.user.rol}
+                                                    lavadoraActiva={lavadora.activa}
                                                 />
                                             </div>
                                         </div>

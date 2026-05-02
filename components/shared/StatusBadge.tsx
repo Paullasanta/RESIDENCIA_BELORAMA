@@ -23,6 +23,7 @@ const variantMap: Record<StatusVariant, { label: string; classes: string }> = {
   RESERVADO:  { label: 'Reservado',  classes: 'bg-orange-100 text-orange-800' },
   POR_LIBERARSE: { label: 'Por Liberar', classes: 'bg-purple-100 text-purple-800' },
   POR_VENCER: { label: 'Por Vencer', classes: 'bg-orange-100 text-orange-600 border border-orange-200' },
+  VENDIDO:    { label: 'Vendido',    classes: 'bg-gray-500 text-white font-bold' },
 }
 
 export function StatusBadge({ status }: { status: StatusVariant }) {

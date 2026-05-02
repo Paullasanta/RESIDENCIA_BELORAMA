@@ -79,6 +79,16 @@ export function AvisoFeed({ avisos, isAdmin, currentUserEmail }: { avisos: any[]
                     {/* Texto del Comunicado */}
                     <div className="p-10 space-y-6">
                         <div>
+                            {(aviso.fechaInicio || aviso.fechaFin) && (
+                                <div className="flex items-center gap-3 mb-6 p-4 rounded-[1.5rem] bg-blue-50/30 border border-blue-100/50 w-fit">
+                                    <Calendar size={14} className="text-blue-500" />
+                                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
+                                        {aviso.fechaInicio ? new Date(aviso.fechaInicio).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) : 'Hoy'} 
+                                        {' ➔ '}
+                                        {aviso.fechaFin ? new Date(aviso.fechaFin).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) : 'Indefinido'}
+                                    </span>
+                                </div>
+                            )}
                             <h3 className="text-2xl font-black text-[#072E1F] mb-4 leading-tight">{aviso.titulo}</h3>
                             <p className="text-gray-500 font-medium leading-relaxed whitespace-pre-wrap">
                                 {aviso.contenido}

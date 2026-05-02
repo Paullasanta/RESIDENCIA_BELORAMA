@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { X, ChevronLeft, ChevronRight, Mail, DollarSign, User, Calendar, ExternalLink } from 'lucide-react'
+import { marcarVendido } from '@/app/actions/marketplace'
 
 interface ProductProps {
     id: number
@@ -10,6 +11,7 @@ interface ProductProps {
     precio: number
     fotos: string[]
     residente?: {
+        userId: number
         user: {
             nombre: string
             email: string
@@ -18,9 +20,32 @@ interface ProductProps {
     createdAt: Date | string
 }
 
-export function ProductDetailModal({ producto, onClose }: { producto: ProductProps, onClose: () => void }) {
+export function ProductDetailModal({ 
+    producto, 
+    onClose,
+    isOwner = false,
+    isAdmin = false
+}: { 
+    producto: ProductProps, 
+    onClose: () => void,
+    isOwner?: boolean,
+    isAdmin?: boolean
+}) {
     const [currentIndex, setCurrentIndex] = useState(0)
+    const [loading, setLoading] = useState(false)
     const hasMultipleImages = producto.fotos.length > 1
+    
+    const handleVendido = async () => {
+        if (!confirm('¿Seguro que quieres marcar este producto como vendido? Ya no será visible en el Marketplace.')) return
+        setLoading(true)
+        const res = await marcarVendido(producto.id)
+        setLoading(false)
+        if (res.success) {
+            onClose()
+        } else {
+            alert(res.error)
+        }
+    }
 
     const nextImage = (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -134,7 +159,17 @@ export function ProductDetailModal({ producto, onClose }: { producto: ProductPro
                         </div>
                     </div>
 
-                    <div className="mt-12">
+                    <div className="mt-12 space-y-4">
+                        {(isOwner || isAdmin) && (
+                            <button
+                                onClick={handleVendido}
+                                disabled={loading}
+                                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-orange-500 text-white font-black text-xs uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20"
+                            >
+                                {loading ? 'Procesando...' : 'Marcar como Vendido'}
+                            </button>
+                        )}
+                        
                         <a 
                             href={producto.residente ? `mailto:${producto.residente.user.email}?subject=Interés en: ${producto.titulo}` : '#'}
                             className={`w-full flex items-center justify-center gap-3 py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] transition-all shadow-2xl ${

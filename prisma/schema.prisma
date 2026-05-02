@@ -43,6 +43,7 @@ enum EstadoProducto {
   PENDIENTE
   APROBADO
   RECHAZADO
+  VENDIDO
 }
 
 enum EstadoHabitacion {
@@ -172,6 +173,7 @@ model Residente {
   productos         ProductoMarketplace[]
   asistencias       AsistenciaComida[]
   mantenimiento     TicketMantenimiento[]
+  turnosFijos       TurnoFijo[]
   alergias          String?
   restriccionesAlimentarias String?
 }
@@ -183,6 +185,7 @@ model Lavadora {
   nombre       String
   activa       Boolean           @default(true)
   turnos       TurnoLavanderia[]
+  turnosFijos  TurnoFijo[]
 }
 
 model TurnoLavanderia {
@@ -197,6 +200,20 @@ model TurnoLavanderia {
   residenteId  Int?
   residente    Residente?  @relation(fields: [residenteId], references: [id])
   estado       EstadoTurno @default(LIBRE)
+}
+
+model TurnoFijo {
+  id           Int        @id @default(autoincrement())
+  lavadoraId   Int
+  lavadora     Lavadora   @relation(fields: [lavadoraId], references: [id])
+  residenteId  Int
+  residente    Residente  @relation(fields: [residenteId], references: [id])
+  dia          DiaSemana
+  horaInicio   String
+  horaFin      String
+  createdAt    DateTime   @default(now())
+
+  @@unique([lavadoraId, dia, horaInicio])
 }
 
 model Pago {
@@ -297,6 +314,8 @@ model Aviso {
   autorId      Int
   autor        User        @relation(fields: [autorId], references: [id])
   reacciones   Reaccion[]
+  fechaInicio  DateTime?
+  fechaFin     DateTime?
   createdAt    DateTime    @default(now())
 }
 
@@ -323,6 +342,8 @@ model TicketMantenimiento {
   prioridad    Prioridad    @default(NORMAL)
   estado       EstadoTicket @default(PENDIENTE)
   fotos        String[]
+  fechaInicio  DateTime?
+  fechaFin     DateTime?
   createdAt    DateTime     @default(now())
 }
 

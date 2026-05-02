@@ -11,10 +11,21 @@ export function NotificationBell() {
     const [unreadCount, setUnreadCount] = useState(0)
 
     useEffect(() => {
-        fetchNotifications()
+        let isMounted = true;
+        const fetch = async () => {
+            const data = await getNotifications()
+            if (isMounted) {
+                setNotificaciones(data)
+                setUnreadCount(data.filter(n => !n.leida).length)
+            }
+        }
+        fetch()
         // Polling más frecuente para mayor interactividad
-        const interval = setInterval(fetchNotifications, 20000)
-        return () => clearInterval(interval)
+        const interval = setInterval(fetch, 20000)
+        return () => {
+            isMounted = false;
+            clearInterval(interval)
+        }
     }, [])
 
     const fetchNotifications = async () => {

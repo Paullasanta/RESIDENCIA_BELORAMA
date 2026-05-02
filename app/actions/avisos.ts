@@ -23,6 +23,8 @@ export async function createAviso(data: any) {
         prioridad: data.prioridad,
         fotos: data.fotos || [],
         residenciaId: data.residenciaId ? Number(data.residenciaId) : null,
+        fechaInicio: data.fechaInicio ? new Date(data.fechaInicio) : null,
+        fechaFin: data.fechaFin ? new Date(data.fechaFin) : null,
         autorId: user.id
       }
     })

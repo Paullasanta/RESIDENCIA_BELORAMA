@@ -22,7 +22,10 @@ export function SidebarHeader({ title, logoStyle, systemName, userName }: Sideba
                 onClick={() => setIsModalOpen(true)}
                 className="w-full flex items-center gap-4 mb-10 px-2 py-3 rounded-[2rem] hover:bg-white/5 transition-all text-left group border border-transparent hover:border-white/5"
             >
-                <div className={`w-12 h-12 shrink-0 ${logoStyle} rounded-2xl flex items-center justify-center font-black text-xl shadow-inner relative overflow-hidden group-hover:scale-105 transition-transform`}>
+                <div 
+                    className={`w-12 h-12 shrink-0 ${logoStyle} rounded-2xl flex items-center justify-center font-black text-xl shadow-inner relative overflow-hidden group-hover:scale-105 transition-transform`}
+                    suppressHydrationWarning
+                >
                     {getInitials(userName)}
                 </div>
                 <div className="flex flex-col min-w-0">

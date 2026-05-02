@@ -27,7 +27,9 @@ export async function createTicket(data: {
             ...data,
             residenteId: residente.id,
             estado: 'PENDIENTE',
-            fotos: data.fotos || []
+            fotos: data.fotos || [],
+            fechaInicio: (data as any).fechaInicio ? new Date((data as any).fechaInicio) : null,
+            fechaFin: (data as any).fechaFin ? new Date((data as any).fechaFin) : null,
         }
     })
 
@@ -43,21 +45,28 @@ export async function createTicket(data: {
     return ticket
 }
 
-export async function updateTicketStatus(id: number, estado: 'PENDIENTE' | 'EN_PROCESO' | 'RESUELTO' | 'CANCELADO') {
+export async function updateTicketStatus(id: number, data: { estado?: any, fechaInicio?: string, fechaFin?: string }) {
+    const updateData: any = {}
+    if (data.estado) updateData.estado = data.estado
+    if (data.fechaInicio) updateData.fechaInicio = new Date(data.fechaInicio)
+    if (data.fechaFin) updateData.fechaFin = new Date(data.fechaFin)
+
     const ticket = await prisma.ticketMantenimiento.update({
         where: { id },
-        data: { estado },
+        data: updateData,
         include: { residente: { include: { user: true } } }
     })
 
-    // Notificar al residente sobre el cambio de estado
-    await createNotification(
-        ticket.residente.userId,
-        'Actualización de Mantenimiento',
-        `Tu ticket "${ticket.titulo}" ahora está en estado: ${estado}`,
-        'TICKET',
-        '/modules/mantenimiento'
-    )
+    // Notificar al residente sobre el cambio de estado si se cambió
+    if (data.estado) {
+        await createNotification(
+            ticket.residente.userId,
+            'Actualización de Mantenimiento',
+            `Tu ticket "${ticket.titulo}" ahora está en estado: ${data.estado}`,
+            'TICKET',
+            '/modules/mantenimiento'
+        )
+    }
 
     revalidatePath('/modules/mantenimiento')
     revalidatePath('/modules/dashboard')

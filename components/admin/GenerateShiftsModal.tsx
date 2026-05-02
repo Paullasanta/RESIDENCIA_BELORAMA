@@ -1,15 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { CalendarClock, X } from 'lucide-react'
+import { CalendarClock, X, AlertTriangle, Lock, Unlock } from 'lucide-react'
 import { generateBulkShifts } from '@/app/actions/lavanderia'
 import { useRouter } from 'next/navigation'
 
-export function GenerateShiftsModal({ lavadora }: { lavadora: any }) {
+export function GenerateShiftsModal({ lavadora, hasAssignments }: { lavadora: any, hasAssignments: boolean }) {
     const [isOpen, setIsOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [successMsg, setSuccessMsg] = useState('')
     const [error, setError] = useState('')
+    const [isUnlocked, setIsUnlocked] = useState(!hasAssignments)
     const router = useRouter()
 
     const formatIntervalo = (mins: number) => {
@@ -61,8 +62,13 @@ export function GenerateShiftsModal({ lavadora }: { lavadora: any }) {
     return (
         <>
             <button 
-                onClick={() => setIsOpen(true)}
-                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                onClick={() => !hasAssignments && setIsOpen(true)}
+                disabled={hasAssignments}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                    hasAssignments 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' 
+                        : 'bg-white/10 hover:bg-white/20 text-white'
+                }`}
             >
                 <CalendarClock size={16} /> Auto-Generar Turnos
             </button>
@@ -135,7 +141,42 @@ export function GenerateShiftsModal({ lavadora }: { lavadora: any }) {
                                 <p className="text-[10px] font-bold text-orange-400 mt-2 italic">* Se resetearán los turnos LIBRES previos de estos días para evitar duplicados.</p>
                             </div>
 
-                            <button type="submit" disabled={loading} className="w-full bg-[#1D9E75] text-white px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-[#1D9E75]/20 hover:bg-[#157a5a] transition-all disabled:opacity-50 mt-4">
+                            {hasAssignments && (
+                                <div className={`p-4 rounded-2xl border transition-all duration-300 ${isUnlocked ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`}>
+                                    <div className="flex items-start gap-3">
+                                        <div className={`mt-0.5 p-1.5 rounded-lg ${isUnlocked ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
+                                            {isUnlocked ? <Unlock size={14} /> : <Lock size={14} />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className={`text-[10px] font-black uppercase tracking-widest ${isUnlocked ? 'text-green-700' : 'text-orange-700'}`}>
+                                                {isUnlocked ? 'Seguridad Desbloqueada' : 'Confirmación Requerida'}
+                                            </p>
+                                            <p className="text-[9px] text-gray-500 font-bold mt-0.5">
+                                                Hay turnos asignados. Debes confirmar que quieres re-generar el calendario manteniendo las asignaciones.
+                                            </p>
+                                            <label className="flex items-center gap-2 cursor-pointer mt-3 group">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={isUnlocked} 
+                                                    onChange={(e) => setIsUnlocked(e.target.checked)}
+                                                    className="w-4 h-4 rounded border-gray-300 text-[#1D9E75] focus:ring-[#1D9E75]"
+                                                />
+                                                <span className="text-[10px] font-black text-gray-600 group-hover:text-[#1D9E75] transition-colors uppercase">
+                                                    Sí, deseo re-generar turnos libres
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <button 
+                                type="submit" 
+                                disabled={loading || !isUnlocked} 
+                                className={`w-full px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all disabled:opacity-50 mt-4 ${
+                                    isUnlocked ? 'bg-[#1D9E75] text-white shadow-[#1D9E75]/20 hover:bg-[#157a5a]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                }`}
+                            >
                                 {loading ? 'Construyendo...' : 'Generar Algoritmo'}
                             </button>
                         </form>

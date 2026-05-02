@@ -84,11 +84,39 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
         orderBy: { nombre: 'asc' }
     }) : []
 
+    let turnosFijos: any[] = []
+    try {
+        turnosFijos = await (prisma as any).turnoFijo.findMany({
+            where: residenciaId ? { lavadora: { residenciaId } } : (isGlobal ? {} : { lavadora: { residenciaId: -1 } }),
+        })
+    } catch (e) {
+        // Fallback si prisma generate no se ha ejecutado aún (problemas de bloqueo en Windows)
+        try {
+            turnosFijos = await prisma.$queryRaw`SELECT * FROM "TurnoFijo"`
+            // Filtrado manual simple si es necesario
+            if (residenciaId) {
+                const lavadorasIds = lavadoras.map(l => l.id)
+                turnosFijos = turnosFijos.filter((tf: any) => lavadorasIds.includes(tf.lavadoraId))
+            }
+        } catch (e2) {
+            console.error("Error fetching turnosFijos raw:", e2)
+            turnosFijos = []
+        }
+    }
+
     const turnosByLavadora = lavadoras.map(lav => ({
         lavadora: lav,
         days: DIAS.map(dia => ({
             dia,
-            turnos: turnos.filter(t => t.lavadoraId === lav.id && t.dia === dia),
+            turnos: turnos.filter(t => t.lavadoraId === lav.id && t.dia === dia).map(t => ({
+                ...t,
+                esFijo: turnosFijos.some((tf: any) => 
+                    tf.lavadoraId === t.lavadoraId && 
+                    tf.dia === t.dia && 
+                    tf.horaInicio.trim() === t.horaInicio.trim() &&
+                    tf.residenteId === t.residenteId
+                )
+            })),
         })),
     }))
 
