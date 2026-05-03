@@ -4,29 +4,43 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { ResidentesTable } from '@/components/admin/ResidentesTable'
+import { GeneralPagination } from '@/components/shared/GeneralPagination'
 
-export default async function ResidentesPage() {
+export default async function ResidentesPage({ searchParams }: { searchParams: Promise<{ status?: string, page?: string, limit?: string }> }) {
     const session = await auth()
     const { residenciaId, rol } = session!.user
+    const { status, page: pageParam, limit: limitParam } = await searchParams
+    const page = parseInt(pageParam || '1')
+    const limit = parseInt(limitParam || '10')
+    const showInactive = status === 'inactive'
 
     // Aislamiento: Si no es Admin Global (sin sede), filtrar por su residenciaId
-    const whereClause = (rol === 'ADMIN' && !residenciaId) ? {} : {
-        user: { residenciaId: residenciaId || -1 }
+    const whereClause = {
+        activo: !showInactive,
+        ...((rol === 'ADMIN' && !residenciaId) ? {} : {
+            user: { residenciaId: residenciaId || -1 }
+        })
     }
+
+    const totalItems = await prisma.residente.count({ where: whereClause })
 
     const residentes = await prisma.residente.findMany({
         where: whereClause,
         include: {
-            user: true,
+            user: {
+                include: { residencia: true }
+            },
             habitacion: {
                 include: { residencia: true },
             },
             pagos: {
-                orderBy: { createdAt: 'desc' },
-                take: 1,
+                orderBy: { fechaVencimiento: 'desc' },
+                take: 20,
             },
         },
         orderBy: { fechaIngreso: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
     })
 
     return (
@@ -45,7 +59,29 @@ export default async function ResidentesPage() {
                 </Link>
             </div>
 
-            <ResidentesTable residentes={residentes} />
+            <div className="flex items-center gap-4 border-b border-gray-100 pb-1">
+                <Link 
+                    href="/modules/residentes" 
+                    className={`pb-4 px-2 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${!showInactive ? 'border-[#1D9E75] text-[#1D9E75]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                >
+                    Activos
+                </Link>
+                <Link 
+                    href="/modules/residentes?status=inactive" 
+                    className={`pb-4 px-2 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${showInactive ? 'border-[#1D9E75] text-[#1D9E75]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                >
+                    Inactivos
+                </Link>
+            </div>
+
+            <ResidentesTable residentes={residentes} isInactiveView={showInactive} />
+
+            <GeneralPagination 
+                totalItems={totalItems} 
+                currentPage={page} 
+                itemsPerPage={limit} 
+                label="Residentes" 
+            />
         </div>
     )
 }

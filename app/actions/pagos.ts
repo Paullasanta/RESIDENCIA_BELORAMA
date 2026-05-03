@@ -195,3 +195,42 @@ export async function enviarComprobantePago(data: { pagoId: number, comprobante:
   }
 }
 
+
+export async function sendPaymentReminder(residenteId: number) {
+  try {
+    const user = await checkAuth('MANAGE_PAYMENTS')
+
+    const residente = await prisma.residente.findUnique({
+      where: { id: residenteId },
+      include: {
+        user: true,
+        pagos: {
+          where: {
+            estado: { in: ['PENDIENTE', 'VENCIDO', 'CRITICO'] }
+          },
+          orderBy: { fechaVencimiento: 'asc' },
+          take: 1
+        }
+      }
+    })
+
+    if (!residente) throw new Error('Residente no encontrado')
+    if (residente.pagos.length === 0) throw new Error('No hay pagos pendientes para este residente')
+
+    const pago = residente.pagos[0]
+    const fechaVenc = pago.fechaVencimiento?.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) || 'No definida'
+    
+    await createNotification(
+      residente.userId,
+      '⚠️ Recordatorio de Pago',
+      `Hola ${residente.user.nombre}, te recordamos que tienes un pago pendiente (${pago.concepto}) en estado ${pago.estado}. Vence el: ${fechaVenc}.`,
+      'PAGO',
+      '/modules/pagos'
+    )
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error in sendPaymentReminder:', error)
+    return { success: false, error: error.message || 'Error al enviar recordatorio' }
+  }
+}

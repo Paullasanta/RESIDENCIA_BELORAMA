@@ -30,6 +30,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 const user = await prisma.user.findUnique({
                     where: { email: credentials.email as string },
                     include: {
+                        residente: true,
                         role: {
                             include: {
                                 permissions: {
@@ -41,6 +42,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 })
 
                 if (!user || user.password !== credentials.password) return null
+
+                // Prevenir login si el residente está inactivo
+                if (user.residente && user.residente.activo === false) {
+                    throw new Error('Cuenta inactiva')
+                }
 
                 return {
                     id: user.id.toString(),
@@ -63,6 +69,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 token.residenciaId = (user as any).residenciaId
             }
             
+            // Verificación en tiempo real: Si es residente, verificar que siga activo
+            if (token.id) {
+                const dbUser = await prisma.user.findUnique({
+                    where: { id: token.id as number },
+                    select: { residente: { select: { activo: true } } }
+                })
+                
+                // Si fue desactivado por el administrador mientras estaba logueado, forzar cierre
+                if (dbUser?.residente && dbUser.residente.activo === false) {
+                    return {} as any // Esto invalida el token
+                }
+            }
+            
             // Manejar actualización de sesión en tiempo real
             if (trigger === "update" && session?.user) {
                 if (session.user.nombre) token.nombre = session.user.nombre
@@ -71,6 +90,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return token
         },
         async session({ session, token }) {
+            // Si el token fue invalidado (ej: usuario desactivado), forzamos una sesión vacía
+            if (!token || !token.id) {
+                return {} as any
+            }
+            
             if (token && session.user) {
                 ;(session.user as any).id = Number(token.id)
                 session.user.rol = token.rol as string
@@ -86,6 +110,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     session: {
         strategy: 'jwt',
+        maxAge: 24 * 60 * 60, // 24 horas de duración
     },
     secret: process.env.NEXTAUTH_SECRET,
 })

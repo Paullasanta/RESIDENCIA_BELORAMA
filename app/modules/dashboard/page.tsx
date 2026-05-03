@@ -11,11 +11,14 @@ export default async function DashboardPage() {
     const { rol, nombre, email, residenciaId } = session!.user
     const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
 
-    // Auto-marcar pagos vencidos
+    // Auto-marcar pagos vencidos — usar UTC para no adelantar el vencimiento en timezones negativas
+    const today = new Date()
+    today.setUTCHours(0, 0, 0, 0)
+
     await prisma.pago.updateMany({
         where: {
             estado: 'PENDIENTE',
-            fechaVencimiento: { lt: new Date() }
+            fechaVencimiento: { lt: today }
         },
         data: { estado: 'VENCIDO' }
     })
@@ -60,8 +63,18 @@ export default async function DashboardPage() {
             }),
             prisma.pago.findMany({
                 where: {
-                    estado: 'CRITICO',
-                    ...wherePagoResidencia
+                    AND: [
+                        {
+                            OR: [
+                                { estado: 'CRITICO' },
+                                { 
+                                    estado: 'VENCIDO',
+                                    fechaVencimiento: { lt: today }
+                                }
+                            ]
+                        },
+                        wherePagoResidencia
+                    ]
                 },
                 take: 5,
                 include: { residente: { include: { user: true } } }
@@ -95,23 +108,31 @@ export default async function DashboardPage() {
                             <div className="py-20 text-center text-gray-400 font-medium">No hay actividad reciente.</div>
                         ) : (
                             <div className="divide-y divide-gray-50">
-                                {ultimosPagos.map((pago: any) => (
-                                    <div key={pago.id} className="flex items-center justify-between px-8 py-5 hover:bg-gray-50/50 transition-colors">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-[#072E1F]">
-                                                {pago.residente.user.nombre.charAt(0)}
+                                 {ultimosPagos.map((pago: any) => {
+                                    const fVenc = new Date(pago.fechaVencimiento)
+                                    fVenc.setUTCHours(0,0,0,0)
+                                    const dDiff = Math.ceil((fVenc.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                                    const isPorVencer = (pago.estado === 'PENDIENTE' || pago.estado === 'VENCIDO') && dDiff >= 0 && dDiff <= 3
+                                    const statusVis = isPorVencer ? 'POR_VENCER' : pago.estado
+
+                                    return (
+                                        <div key={pago.id} className="flex items-center justify-between px-8 py-5 hover:bg-gray-50/50 transition-colors">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-[#072E1F]">
+                                                    {pago.residente.user.nombre.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-gray-900 text-sm">{pago.residente.user.nombre} <span className="text-[9px] font-normal text-gray-400 ml-1">({pago.concepto})</span></p>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(pago.fechaVencimiento).toLocaleDateString('es-MX', { timeZone: 'UTC' })}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-bold text-gray-900 text-sm">{pago.residente.user.nombre}</p>
-                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(pago.createdAt).toLocaleDateString()}</p>
+                                            <div className="text-right">
+                                                <p className="font-black text-gray-900">${pago.monto.toLocaleString()}</p>
+                                                <StatusBadge status={statusVis as any} />
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="font-black text-gray-900">${pago.monto.toLocaleString()}</p>
-                                            <StatusBadge status={pago.estado as any} />
-                                        </div>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         )}
                     </div>
@@ -188,15 +209,25 @@ export default async function DashboardPage() {
                         <p className="text-sm text-gray-400 italic">No tienes pagos registrados aún.</p>
                     ) : (
                         <div className="space-y-4">
-                            {profile?.pagos.map(p => (
-                                <div key={p.id} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 border border-gray-50">
-                                    <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{new Date(p.createdAt).toLocaleDateString()}</span>
-                                        <span className="font-black text-gray-900">${p.monto.toLocaleString()}</span>
+                             {profile?.pagos.map(p => {
+                                const fVenc = new Date(p.fechaVencimiento)
+                                fVenc.setUTCHours(0,0,0,0)
+                                const dDiff = Math.ceil((fVenc.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                                const isPorVencer = (p.estado === 'PENDIENTE' || p.estado === 'VENCIDO') && dDiff >= 0 && dDiff <= 3
+                                const statusVis = isPorVencer ? 'POR_VENCER' : p.estado
+
+                                return (
+                                    <div key={p.id} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 border border-gray-50">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                                {p.concepto} — {new Date(p.fechaVencimiento).toLocaleDateString('es-MX', { timeZone: 'UTC' })}
+                                            </span>
+                                            <span className="font-black text-gray-900">${p.monto.toLocaleString()}</span>
+                                        </div>
+                                        <StatusBadge status={statusVis as any} />
                                     </div>
-                                    <StatusBadge status={p.estado as any} />
-                                </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     )}
                 </div>

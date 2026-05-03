@@ -3,6 +3,30 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
+/**
+ * Parsea un string 'YYYY-MM-DD' como mediodia UTC (12:00:00Z).
+ * Esto evita que al almacenar medianoche UTC la fecha se muestre
+ * como el dia anterior en timezones con offset negativo (ej. Lima UTC-5).
+ */
+function utcNoon(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+}
+
+/**
+ * Crea la fecha de vencimiento para un mes dado y un dia de pago.
+ * Si el dia no existe en ese mes (ej. dia 31 en abril), usa el ultimo dia del mes.
+ */
+function calcFechaVencimiento(year: number, month: number, diaPago: number): Date {
+  // Intenta crear la fecha con el dia de pago
+  const fecha = new Date(Date.UTC(year, month, diaPago, 12, 0, 0))
+  // Si el mes se desbordó (ej. abril dia 31 → mayo), retroceder al ultimo dia del mes original
+  if (fecha.getUTCMonth() !== month) {
+    fecha.setUTCDate(0) // último día del mes anterior (= mes original)
+  }
+  return fecha
+}
+
 export async function getResidenciasConHabitaciones() {
   return await prisma.residencia.findMany({
     include: {
@@ -56,6 +80,17 @@ export async function createResidente(data: any) {
   const comprobanteUrl = data.comprobanteUrl as string || null
 
   try {
+    // Verificar capacidad de habitación si se asigna una
+    if (habitacionId) {
+      const room = await prisma.habitacion.findUnique({
+        where: { id: habitacionId },
+        include: { residentes: { where: { activo: true } } }
+      })
+      if (room && room.residentes.length >= room.capacidad) {
+        throw new Error(`La habitación ${room.numero} ya alcanzó su capacidad máxima (${room.capacidad}).`)
+      }
+    }
+
     // Verificar si el correo o DNI ya existen
     const existing = await prisma.user.findFirst({
       where: {
@@ -74,16 +109,19 @@ export async function createResidente(data: any) {
     })
 
     if (existing) {
-      if (existing.dni === dni) throw new Error('DNI ya existente en el sistema')
-      if (existing.email === email) throw new Error('Correo electrónico ya registrado')
+      const hasResidente = !!(await prisma.residente.findUnique({ where: { userId: existing.id } }))
+      const orphanSuffix = !hasResidente ? ' (el usuario existe pero no tiene perfil de residente. Contacte al administrador para limpiar el registro si es necesario)' : ''
+
+      if (existing.dni === dni) throw new Error(`DNI ya existente en el sistema${orphanSuffix}`)
+      if (existing.email === email) throw new Error(`Correo electrónico ya registrado${orphanSuffix}`)
       if (
         existing.nombre.toLowerCase() === nombre.toLowerCase() &&
         existing.apellidoPaterno?.toLowerCase() === apellidoPaterno.toLowerCase() &&
         existing.apellidoMaterno?.toLowerCase() === apellidoMaterno.toLowerCase()
       ) {
-        throw new Error('Ya existe un residente con los mismos nombres y apellidos')
+        throw new Error(`Ya existe un residente con los mismos nombres y apellidos${orphanSuffix}`)
       }
-      throw new Error('Usuario ya existente')
+      throw new Error(`Usuario ya existente${orphanSuffix}`)
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -104,6 +142,7 @@ export async function createResidente(data: any) {
           emergenciaNombre,
           emergenciaTelefono,
           emergenciaParentesco,
+          fechaNacimiento: (data.fechaNacimiento && data.fechaNacimiento !== "") ? new Date(data.fechaNacimiento) : undefined,
           roleId: role.id,
           residenciaId: residenciaId
         }
@@ -115,8 +154,8 @@ export async function createResidente(data: any) {
           userId: user.id,
           habitacionId: habitacionId,
           activo: true,
-          fechaIngreso: (data.fechaIngreso && data.fechaIngreso !== "") ? new Date(data.fechaIngreso) : new Date(),
-          fechaFinal: (data.fechaFinal && data.fechaFinal !== "") ? new Date(data.fechaFinal) : null,
+          fechaIngreso: (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : new Date(),
+          fechaFinal: (data.fechaFinal && data.fechaFinal !== "") ? utcNoon(data.fechaFinal) : null,
           diaPago: diaPagoFinal,
           montoMensual: montoMensual,
           montoGarantia: montoGarantia,
@@ -135,21 +174,26 @@ export async function createResidente(data: any) {
 
       // 5. Generar Pagos Mensuales
       if (montoMensual > 0) {
-        const fechaInicio = (data.fechaIngreso && data.fechaIngreso !== "") ? new Date(data.fechaIngreso) : new Date();
-        const fechaFin = (data.fechaFinal && data.fechaFinal !== "") ? new Date(data.fechaFinal) : new Date(new Date().setFullYear(new Date().getFullYear() + 1));
+        const fechaInicio = (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : new Date();
+        const fechaFin = (data.fechaFinal && data.fechaFinal !== "") ? utcNoon(data.fechaFinal) : new Date(Date.UTC(new Date().getUTCFullYear() + 1, new Date().getUTCMonth(), new Date().getUTCDate(), 12, 0, 0));
+        const now = new Date();
+        now.setUTCHours(0, 0, 0, 0);
+
         let fechaActual = new Date(fechaInicio);
         const pagosToCreate: any[] = [];
 
         do {
-          let fechaVencimiento = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), diaPagoFinal);
-          if (fechaVencimiento.getMonth() !== fechaActual.getMonth()) {
-            fechaVencimiento.setDate(0); 
-          }
-
-          const mesString = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}`;
-          const nombreMes = fechaActual.toLocaleDateString('es-MX', { month: 'long' });
-          const concepto = `Mensualidad ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${fechaActual.getFullYear()}`;
           const isFirstPayment: boolean = pagosToCreate.length === 0;
+          // Usa UTC para evitar que medianoche local cambie de dia en timezones con offset
+          // El primer mes vence el mismo día de ingreso, los siguientes usan el diaPago
+          const fechaVencimiento = isFirstPayment ? new Date(fechaInicio) : calcFechaVencimiento(fechaActual.getUTCFullYear(), fechaActual.getUTCMonth(), diaPagoFinal);
+
+          const mesString = `${fechaActual.getUTCFullYear()}-${String(fechaActual.getUTCMonth() + 1).padStart(2, '0')}`;
+          const nombreMes = fechaActual.toLocaleDateString('es-MX', { timeZone: 'UTC', month: 'long' });
+          const concepto = `Mensualidad ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${fechaActual.getUTCFullYear()}`;
+
+          // Si el vencimiento es anterior a hoy, marcar como VENCIDO
+          const defaultStatus = fechaVencimiento < now ? 'VENCIDO' : 'PENDIENTE';
 
           pagosToCreate.push({
             residenteId: residente.id,
@@ -157,11 +201,11 @@ export async function createResidente(data: any) {
             mesCorrespondiente: mesString,
             fechaVencimiento: fechaVencimiento,
             monto: montoMensual,
-            estado: (isFirstPayment && pagoConfirmado) ? 'EN_REVISION' : 'PENDIENTE',
+            estado: (isFirstPayment && pagoConfirmado) ? 'EN_REVISION' : defaultStatus,
             comprobante: (isFirstPayment && pagoConfirmado) ? comprobanteUrl : null
           });
 
-          fechaActual.setMonth(fechaActual.getMonth() + 1);
+          fechaActual.setUTCMonth(fechaActual.getUTCMonth() + 1);
         } while (fechaActual < fechaFin);
 
         if (pagosToCreate.length > 0) {
@@ -174,20 +218,28 @@ export async function createResidente(data: any) {
         const montoRestante = Math.max(0, montoGarantia - montoPrimerPago)
         const montoOtrasCuotas = cuotasGarantia > 1 ? (montoRestante / (cuotasGarantia - 1)) : 0
 
-        const fechaBase = (data.fechaIngreso && data.fechaIngreso !== "") ? new Date(data.fechaIngreso) : new Date();
+        const fechaBase = (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : new Date();
+        const now = new Date();
+        now.setUTCHours(0, 0, 0, 0);
+
         const garantiasToCreate = Array.from({ length: cuotasGarantia }).map((_, i) => {
           const fecha = new Date(fechaBase)
-          fecha.setMonth(fecha.getMonth() + i)
+          fecha.setUTCMonth(fecha.getUTCMonth() + i)
           const montoCuota = i === 0 ? montoPrimerPago : montoOtrasCuotas
           const isFirstPayment = i === 0;
+
+          // La primera cuota vence el mismo día de ingreso, las siguientes usan el diaPago
+          const fechaVencimiento = isFirstPayment ? new Date(fechaBase) : calcFechaVencimiento(fecha.getUTCFullYear(), fecha.getUTCMonth(), diaPagoFinal);
+
+          const defaultStatus = fechaVencimiento < now ? 'VENCIDO' : 'PENDIENTE';
 
           return {
             residenteId: residente.id,
             concepto: `Garantía (Cuota ${i + 1}/${cuotasGarantia})`,
             monto: montoCuota,
             montoPagado: 0,
-            fechaVencimiento: fecha,
-            estado: ((isFirstPayment && pagoConfirmado) ? 'EN_REVISION' : 'PENDIENTE') as any,
+            fechaVencimiento: fechaVencimiento,
+            estado: ((isFirstPayment && pagoConfirmado) ? 'EN_REVISION' : defaultStatus) as any,
             comprobante: (isFirstPayment && pagoConfirmado) ? comprobanteUrl : null
           }
         });
@@ -231,6 +283,24 @@ export async function updateResidente(id: number, data: any) {
     if (!currentResidente) throw new Error('Residente no encontrado')
 
     // Verificar conflictos con otros usuarios
+    // Verificar capacidad de habitación si ha cambiado
+    if (habitacionId && currentResidente.habitacionId !== habitacionId) {
+      const room = await prisma.habitacion.findUnique({
+        where: { id: habitacionId },
+        include: { 
+          residentes: { 
+            where: { 
+              activo: true,
+              NOT: { id: id }
+            } 
+          } 
+        }
+      })
+      if (room && room.residentes.length >= room.capacidad) {
+        throw new Error(`La habitación ${room.numero} ya alcanzó su capacidad máxima (${room.capacidad}).`)
+      }
+    }
+
     const conflict = await prisma.user.findFirst({
       where: {
         OR: [
@@ -258,7 +328,8 @@ export async function updateResidente(id: number, data: any) {
         telefono,
         emergenciaNombre,
         emergenciaTelefono,
-        emergenciaParentesco
+        emergenciaParentesco,
+        fechaNacimiento: (data.fechaNacimiento && data.fechaNacimiento !== "") ? new Date(data.fechaNacimiento) : undefined
       }
       if (password && password.trim() !== "") userData.password = password
 
@@ -290,8 +361,8 @@ export async function updateResidente(id: number, data: any) {
         where: { id },
         data: { 
           habitacionId,
-          fechaIngreso: (data.fechaIngreso && data.fechaIngreso !== "") ? new Date(data.fechaIngreso) : undefined,
-          fechaFinal: (data.fechaFinal && data.fechaFinal !== "") ? new Date(data.fechaFinal) : null,
+          fechaIngreso: (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : undefined,
+          fechaFinal: (data.fechaFinal && data.fechaFinal !== "") ? utcNoon(data.fechaFinal) : null,
           diaPago: data.diaPago ? Number(data.diaPago) : undefined,
           montoMensual: data.montoMensual !== undefined && data.montoMensual !== "" ? Number(data.montoMensual) : undefined,
           montoGarantia: data.montoGarantia !== undefined && data.montoGarantia !== "" ? Number(data.montoGarantia) : undefined,
@@ -305,11 +376,16 @@ export async function updateResidente(id: number, data: any) {
       const parsedMontoGarantia = data.montoGarantia !== undefined && data.montoGarantia !== "" ? Number(data.montoGarantia) : null
 
       if (parsedMontoMensual !== null) {
+        // Actualizar monto en pagos no finalizados (excluye PAGADO y EN_REVISION)
         await tx.pago.updateMany({
           where: { 
-            residenteId: id, 
-            concepto: { contains: 'Mensualidad' },
-            estado: { in: ['PENDIENTE', 'RECHAZADO'] }
+            residenteId: id,
+            OR: [
+              { concepto: { contains: 'Mensua', mode: 'insensitive' } },
+              { concepto: { contains: 'Mes', mode: 'insensitive' } },
+              { concepto: { contains: 'Alquiler', mode: 'insensitive' } },
+            ],
+            estado: { in: ['PENDIENTE', 'RECHAZADO', 'VENCIDO', 'CRITICO'] }
           },
           data: { monto: parsedMontoMensual }
         })
@@ -325,55 +401,52 @@ export async function updateResidente(id: number, data: any) {
         const newTotalCuotas = data.cuotasGarantia ? Number(data.cuotasGarantia) : existingGarantias.length
         
         // Si el número de cuotas cambió o se quiere redistribuir
-        if (newTotalCuotas !== existingGarantias.length || parsedMontoGarantia !== residente.montoGarantia) {
-          const pagadas = existingGarantias.filter(p => p.estado === 'PAGADO')
-          const noPagadas = existingGarantias.filter(p => p.estado !== 'PAGADO')
+        if (newTotalCuotas !== existingGarantias.length || parsedMontoGarantia !== currentResidente.montoGarantia) {
+          // Identificar pagos que NO podemos tocar (finalizados o en revisión)
+          const finalizados = existingGarantias.filter(p => p.estado === 'PAGADO' || p.estado === 'EN_REVISION')
+          // Identificar pagos que SÍ podemos modificar o eliminar
+          const modificables = existingGarantias.filter(p => p.estado !== 'PAGADO' && p.estado !== 'EN_REVISION')
           
-          const montoPagado = pagadas.reduce((sum, p) => sum + p.monto, 0)
-          const montoRestante = Math.max(0, parsedMontoGarantia - montoPagado)
-          const numCuotasRestantes = Math.max(0, newTotalCuotas - pagadas.length)
+          const montoComprometido = finalizados.reduce((sum, p) => sum + p.monto, 0)
+          const montoRestante = Math.max(0, parsedMontoGarantia - montoComprometido)
+          const numCuotasRestantes = Math.max(0, newTotalCuotas - finalizados.length)
 
-          // Eliminar las no pagadas para regenerarlas
-          if (noPagadas.length > 0) {
-            await tx.pago.deleteMany({
-              where: { id: { in: noPagadas.map(p => p.id) } }
-            })
-          }
-
-          if (numCuotasRestantes > 0) {
-            const montoPorCuota = Number((montoRestante / numCuotasRestantes).toFixed(2))
-            const pagosToCreate = []
-            
-            for (let i = 0; i < numCuotasRestantes; i++) {
-              const installmentNum = pagadas.length + i + 1
-              const fechaVenc = new Date(residente.fechaIngreso)
-              fechaVenc.setMonth(fechaVenc.getMonth() + (installmentNum - 1))
-              fechaVenc.setDate(residente.diaPago)
-              if (fechaVenc.getDate() !== residente.diaPago) fechaVenc.setDate(0)
-
-              pagosToCreate.push({
-                residenteId: id,
-                concepto: `Garantía (Cuota ${installmentNum}/${newTotalCuotas})`,
-                monto: montoPorCuota,
-                fechaVencimiento: fechaVenc,
-                estado: 'PENDIENTE' as any
+          if (numCuotasRestantes > 0 || modificables.length > 0) {
+            // Eliminar los modificables para regenerarlos con el nuevo monto/distribución
+            if (modificables.length > 0) {
+              await tx.pago.deleteMany({
+                where: { id: { in: modificables.map(p => p.id) } }
               })
             }
-            if (pagosToCreate.length > 0) {
-              await tx.pago.createMany({ data: pagosToCreate })
+
+            if (numCuotasRestantes > 0) {
+              const montoPorCuota = Number((montoRestante / numCuotasRestantes).toFixed(2))
+              const pagosToCreate = []
+              
+              for (let i = 0; i < numCuotasRestantes; i++) {
+                const installmentNum = finalizados.length + i + 1
+                const base = new Date(currentResidente.fechaIngreso)
+                const fechaVenc = calcFechaVencimiento(
+                  base.getUTCFullYear(),
+                  base.getUTCMonth() + (installmentNum - 1),
+                  residente.diaPago
+                )
+
+                pagosToCreate.push({
+                  residenteId: id,
+                  concepto: `Garantía (Cuota ${installmentNum}/${newTotalCuotas})`,
+                  monto: i === numCuotasRestantes - 1 
+                    ? Number((montoRestante - (montoPorCuota * (numCuotasRestantes - 1))).toFixed(2)) // Ajuste para el último para evitar errores de redondeo
+                    : montoPorCuota,
+                  fechaVencimiento: fechaVenc,
+                  estado: 'PENDIENTE' as any
+                })
+              }
+              if (pagosToCreate.length > 0) {
+                await tx.pago.createMany({ data: pagosToCreate })
+              }
             }
           }
-        } else {
-          // Si el número de cuotas es el mismo, solo actualizar montos de las no pagadas
-          const montoPorCuota = existingGarantias.length > 0 ? (parsedMontoGarantia / existingGarantias.length) : parsedMontoGarantia
-          await tx.pago.updateMany({
-            where: { 
-              residenteId: id, 
-              concepto: { contains: 'Garantía', mode: 'insensitive' },
-              estado: { in: ['PENDIENTE', 'EN_REVISION', 'RECHAZADO', 'VENCIDO'] }
-            },
-            data: { monto: montoPorCuota }
-          })
         }
       }
 
@@ -388,16 +461,13 @@ export async function updateResidente(id: number, data: any) {
         const expectedMeses = [];
         
         do {
-          const mesString = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}`;
-          let fechaVencimiento = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), newDiaPago);
-          if (fechaVencimiento.getMonth() !== fechaActual.getMonth()) {
-            fechaVencimiento.setDate(0); 
-          }
-          const nombreMes = fechaActual.toLocaleDateString('es-MX', { month: 'long' });
-          const concepto = `Mensualidad ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${fechaActual.getFullYear()}`;
+          const mesString = `${fechaActual.getUTCFullYear()}-${String(fechaActual.getUTCMonth() + 1).padStart(2, '0')}`;
+          const fechaVencimiento = calcFechaVencimiento(fechaActual.getUTCFullYear(), fechaActual.getUTCMonth(), newDiaPago);
+          const nombreMes = fechaActual.toLocaleDateString('es-MX', { timeZone: 'UTC', month: 'long' });
+          const concepto = `Mensualidad ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${fechaActual.getUTCFullYear()}`;
           
           expectedMeses.push({ mesCorrespondiente: mesString, fechaVencimiento, concepto });
-          fechaActual.setMonth(fechaActual.getMonth() + 1);
+          fechaActual.setUTCMonth(fechaActual.getUTCMonth() + 1);
         } while (fechaActual < newFechaFinal);
 
         const existingPagos = await tx.pago.findMany({
@@ -424,7 +494,7 @@ export async function updateResidente(id: number, data: any) {
 
       // --- Sincronización Global de Pagos (Fuera del bloque de fechaFinal para que afecte a todos) ---
       const now = new Date()
-      now.setHours(0, 0, 0, 0)
+      now.setUTCHours(0, 0, 0, 0)
 
       // 6. Mensualidades (Búsqueda más amplia para evitar fallos por concepto o acentos)
       const allMensualidades = await tx.pago.findMany({
@@ -446,13 +516,11 @@ export async function updateResidente(id: number, data: any) {
           year = parseInt(parts[0]);
           month = parseInt(parts[1]) - 1;
         } else {
-          year = p.fechaVencimiento.getFullYear();
-          month = p.fechaVencimiento.getMonth();
+          year = p.fechaVencimiento.getUTCFullYear();
+          month = p.fechaVencimiento.getUTCMonth();
         }
 
-        let newFecha = new Date(year, month, newDiaPago);
-        if (newFecha.getMonth() !== month) newFecha.setDate(0);
-
+        const newFecha = calcFechaVencimiento(year, month, newDiaPago);
         const newStatus = newFecha < now ? 'VENCIDO' : 'PENDIENTE';
 
         await tx.pago.update({
@@ -477,11 +545,12 @@ export async function updateResidente(id: number, data: any) {
         const match = g.concepto.match(/Cuota (\d+)\/(\d+)/)
         if (match) {
           const i = parseInt(match[1]) - 1
-          const newFecha = new Date(newFechaIngreso)
-          newFecha.setMonth(newFecha.getMonth() + i)
-          newFecha.setDate(newDiaPago)
-          if (newFecha.getDate() !== newDiaPago) newFecha.setDate(0)
-
+          const base = new Date(newFechaIngreso)
+          const newFecha = calcFechaVencimiento(
+            base.getUTCFullYear(),
+            base.getUTCMonth() + i,
+            newDiaPago
+          )
           const gStatus = newFecha < now ? 'VENCIDO' : 'PENDIENTE'
           
           await tx.pago.update({
@@ -494,11 +563,11 @@ export async function updateResidente(id: number, data: any) {
         }
       }
 
-      revalidatePath('/modules/pagos')
-      revalidatePath('/modules/residentes')
       return residente
     })
 
+    revalidatePath('/modules/pagos')
+    revalidatePath('/modules/residentes')
     return { success: true, data: result }
   } catch (error: any) {
     return { success: false, error: error.message || 'Error al actualizar residente' }
@@ -523,46 +592,256 @@ export async function deleteResidente(id: number) {
         })
       }
 
-      // 2. Eliminar registros relacionados para evitar errores de FK
-      
-      // Pagos y sus cuotas
-      const pagos = await tx.pago.findMany({ where: { residenteId: id } })
-      const pagoIds = pagos.map(p => p.id)
-      await tx.pago.deleteMany({ where: { residenteId: id } })
+      // 2. Desactivar el residente (Soft Delete) - Mantenemos habitacionId para posible restauración
+      await tx.residente.update({
+        where: { id },
+        data: { 
+          activo: false,
+          deletedAt: new Date()
+        }
+      })
 
-      // Turnos de lavandería (los liberamos en lugar de borrarlos)
+      // 3. Liberar turnos de lavandería
       await tx.turnoLavanderia.updateMany({
         where: { residenteId: id },
         data: { residenteId: null, estado: 'LIBRE' }
       })
 
-      // Asistencias a comida
-      await tx.asistenciaComida.deleteMany({ where: { residenteId: id } })
+      // 4. Limpiar turnos fijos
+      await tx.turnoFijo.deleteMany({
+        where: { residenteId: id }
+      })
 
-      // Tickets de mantenimiento
-      await tx.ticketMantenimiento.deleteMany({ where: { residenteId: id } })
-      
-      // Notificaciones del usuario
-      await tx.notificacion.deleteMany({ where: { userId: res.userId } })
+      // 5. Desactivar productos en marketplace
+      await tx.productoMarketplace.updateMany({
+        where: { residenteId: id },
+        data: { estado: 'RECHAZADO' }
+      })
 
-      // Productos en marketplace
-      await tx.productoMarketplace.deleteMany({ where: { residenteId: id } })
-
-      // Reacciones del usuario
-      await tx.reaccion.deleteMany({ where: { userId: res.userId } })
-
-      // Egresos y Avisos (en caso de que el usuario haya tenido otro rol previamente)
-      await tx.egreso.deleteMany({ where: { adminId: res.userId } })
-      await tx.aviso.deleteMany({ where: { autorId: res.userId } })
-
-      // 3. Finalmente eliminar el residente y el usuario
-      await tx.residente.delete({ where: { id } })
-      await tx.user.delete({ where: { id: res.userId } })
+      // Nota: Mantenemos pagos, tickets de mantenimiento, asistencias y el usuario
+      // para conservar el historial financiero y administrativo de la sede.
     })
 
     revalidatePath('/modules/residentes')
     return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message }
+  }
+}
+
+export async function reactivateResidente(id: number, mode: 'restore' | 'reentry', data?: any) {
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      if (mode === 'restore') {
+        const current = await tx.residente.findUnique({ 
+          where: { id },
+          include: { 
+            habitacion: {
+              include: { 
+                residentes: { where: { activo: true } }
+              }
+            }
+          }
+        })
+        
+        if (current?.habitacionId) {
+          // DEBUG: Log de seguridad para rastrear por qué permite restaurar
+          const activeOccupants = await tx.residente.findMany({
+            where: {
+              habitacionId: current.habitacionId,
+              activo: true,
+              NOT: { id: id }
+            },
+            include: { user: true }
+          })
+
+          console.log(`[RESTORE DEBUG] Residente ${id} intentando volver a Habitación ID ${current.habitacionId}`);
+          console.log(`[RESTORE DEBUG] Ocupantes activos encontrados: ${activeOccupants.length}`);
+          activeOccupants.forEach(o => console.log(` - Ocupante: ${o.user.nombre} (ID: ${o.id})`));
+
+          if (activeOccupants.length > 0) {
+            throw new Error(`No se puede restaurar: la habitación ${current.habitacion?.numero} ya está siendo ocupada por ${activeOccupants[0].user.nombre}.`)
+          }
+
+          await tx.habitacion.update({
+            where: { id: current.habitacionId },
+            data: { estado: 'OCUPADO' }
+          })
+        }
+
+        return await tx.residente.update({
+          where: { id },
+          data: { 
+            activo: true,
+            deletedAt: null
+          }
+        })
+      }
+
+      if (mode === 'reentry') {
+        const { residenciaId, habitacionId, montoMensual, montoGarantia, cuotasGarantia, diaPago, fechaIngreso } = data
+        
+        // Validar capacidad de la nueva habitación
+        const targetRoom = await tx.habitacion.findUnique({
+          where: { id: parseInt(habitacionId) },
+          include: { residentes: { where: { activo: true } } }
+        })
+
+        if (targetRoom && targetRoom.residentes.length >= targetRoom.capacidad) {
+          throw new Error(`La habitación ${targetRoom.numero} ya alcanzó su capacidad máxima (${targetRoom.capacidad}).`)
+        }
+
+        const diaPagoInt = parseInt(diaPago || '1')
+        const ingresoDate = new Date(fechaIngreso)
+        ingresoDate.setUTCHours(12, 0, 0, 0)
+
+        // 1. Actualizar usuario (para que coincida la sede)
+        const residenteData = await tx.residente.findUnique({ where: { id } })
+        if (residenteData) {
+          await tx.user.update({
+            where: { id: residenteData.userId },
+            data: { residenciaId: parseInt(residenciaId) }
+          })
+
+          // 1b. Limpiar pagos pendientes previos para evitar acumulación
+          await tx.pago.updateMany({
+            where: {
+              residenteId: id,
+              estado: { in: ['PENDIENTE', 'VENCIDO', 'CRITICO'] }
+            },
+            data: {
+              estado: 'RECHAZADO'
+            }
+          })
+
+          // 1c. Limpiar turnos y asignaciones previas (empezar de cero)
+          await tx.turnoLavanderia.deleteMany({ where: { residenteId: id } })
+          await tx.turnoFijo.deleteMany({ where: { residenteId: id } })
+        }
+
+        // 2. Actualizar residente
+        const res = await tx.residente.update({
+          where: { id },
+          data: {
+            activo: true,
+            deletedAt: null,
+            habitacionId: parseInt(habitacionId),
+            montoMensual: parseFloat(montoMensual),
+            montoGarantia: parseFloat(montoGarantia || '0'),
+            diaPago: diaPagoInt,
+            fechaIngreso: ingresoDate,
+            fechaFinal: data.fechaFinal ? new Date(data.fechaFinal) : null
+          }
+        })
+
+        // 2. Ocupar habitación
+        await tx.habitacion.update({
+          where: { id: parseInt(habitacionId) },
+          data: { estado: 'OCUPADO' }
+        })
+
+        const now = new Date()
+        now.setUTCHours(0, 0, 0, 0)
+
+        // 3. Generar pagos de garantía
+        const mGarantia = parseFloat(montoGarantia || '0')
+        const nCuotas = parseInt(cuotasGarantia || '1')
+        if (mGarantia > 0) {
+          const montoPorCuota = parseFloat((mGarantia / nCuotas).toFixed(2))
+          const pagosGarantia = Array.from({ length: nCuotas }, (_, i) => {
+            // La primera cuota vence el mismo día de ingreso, las siguientes usan el diaPago
+            const fVenc = i === 0 ? new Date(ingresoDate) : calcFechaVencimiento(ingresoDate.getUTCFullYear(), ingresoDate.getUTCMonth() + i, diaPagoInt)
+            const status = fVenc < now ? 'VENCIDO' : 'PENDIENTE'
+            
+            return {
+              residenteId: id,
+              concepto: `Garantía (Cuota ${i + 1}/${nCuotas}) - Reintegro`,
+              monto: i === nCuotas - 1 ? parseFloat((mGarantia - (montoPorCuota * (nCuotas - 1))).toFixed(2)) : montoPorCuota,
+              fechaVencimiento: fVenc,
+              estado: status as any
+            }
+          })
+          await tx.pago.createMany({ data: pagosGarantia })
+        }
+
+        // 4. Generar mensualidades según la duración de la estadía
+        const fechaFinal = data.fechaFinal ? new Date(data.fechaFinal) : null
+        let numMeses = 1
+        if (fechaFinal) {
+          const diffYear = fechaFinal.getUTCFullYear() - ingresoDate.getUTCFullYear()
+          const diffMonth = fechaFinal.getUTCMonth() - ingresoDate.getUTCMonth()
+          numMeses = Math.max(1, (diffYear * 12) + diffMonth + (fechaFinal.getUTCDate() >= ingresoDate.getUTCDate() ? 1 : 0))
+        }
+
+        const pagosMensualidades = Array.from({ length: numMeses }, (_, i) => {
+          const targetDate = new Date(ingresoDate)
+          targetDate.setUTCMonth(ingresoDate.getUTCMonth() + i)
+          const nombreMes = targetDate.toLocaleDateString('es-MX', { timeZone: 'UTC', month: 'long' })
+          
+          // El primer mes vence el mismo día de ingreso, los siguientes usan el diaPago
+          const fVencMes = i === 0 ? new Date(ingresoDate) : calcFechaVencimiento(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), diaPagoInt)
+          const statusMes = fVencMes < now ? 'VENCIDO' : 'PENDIENTE'
+          
+          return {
+            residenteId: id,
+            concepto: `Mensualidad ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${targetDate.getUTCFullYear()} - Reintegro`,
+            mesCorrespondiente: `${targetDate.getUTCFullYear()}-${String(targetDate.getUTCMonth() + 1).padStart(2, '0')}`,
+            fechaVencimiento: fVencMes,
+            monto: parseFloat(montoMensual),
+            estado: statusMes as any
+          }
+        })
+
+        await tx.pago.createMany({ data: pagosMensualidades })
+
+        return res
+      }
+    })
+
+    revalidatePath('/modules/residentes')
+    revalidatePath('/modules/pagos')
+    return { success: true, data: result }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function hardDeleteResidente(id: number) {
+  try {
+    const residente = await prisma.residente.findUnique({
+      where: { id },
+      include: { user: true }
+    })
+
+    if (!residente) throw new Error('Residente no encontrado')
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Eliminar datos vinculados al Residente
+      await tx.pago.deleteMany({ where: { residenteId: id } })
+      await tx.turnoLavanderia.deleteMany({ where: { residenteId: id } })
+      await tx.turnoFijo.deleteMany({ where: { residenteId: id } })
+      await tx.asistenciaComida.deleteMany({ where: { residenteId: id } })
+      await tx.ticketMantenimiento.deleteMany({ where: { residenteId: id } })
+      await tx.productoMarketplace.deleteMany({ where: { residenteId: id } })
+
+      // 2. Eliminar datos vinculados al Usuario
+      const userId = residente.userId
+      await tx.notificacion.deleteMany({ where: { userId } })
+      await tx.reaccion.deleteMany({ where: { userId } })
+      await tx.aviso.deleteMany({ where: { autorId: userId } })
+      
+      // 3. Eliminar Perfil de Residente
+      await tx.residente.delete({ where: { id } })
+
+      // 4. Eliminar Usuario
+      await tx.user.delete({ where: { id: userId } })
+    })
+
+    revalidatePath('/modules/residentes')
+    revalidatePath('/modules/pagos')
+    return { success: true }
+  } catch (error: any) {
+    console.error('Error in hardDeleteResidente:', error)
+    return { success: false, error: error.message || 'Error al eliminar registro completo' }
   }
 }

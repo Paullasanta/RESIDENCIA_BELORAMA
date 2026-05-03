@@ -163,6 +163,7 @@ model Residente {
   habitacionId      Int?
   habitacion        Habitacion?       @relation(fields: [habitacionId], references: [id])
   activo            Boolean           @default(true)
+  deletedAt         DateTime?
   fechaIngreso      DateTime          @default(now())
   fechaFinal        DateTime?
   diaPago           Int               @default(1)
@@ -176,6 +177,7 @@ model Residente {
   turnosFijos       TurnoFijo[]
   alergias          String?
   restriccionesAlimentarias String?
+  createdAt         DateTime          @default(now())
 }
 
 model Lavadora {
