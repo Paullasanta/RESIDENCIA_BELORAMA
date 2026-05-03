@@ -300,7 +300,7 @@ export async function generateBulkShifts(lavadoraId: number, residenciaId: numbe
                         horaInicio: s.horaInicio.trim(),
                         horaFin: s.horaFin.trim(),
                         residenteId: s.residenteId,
-                        estado: s.estado
+                        estado: s.estado as EstadoTurno
                     }))
                 })
             }
@@ -334,7 +334,7 @@ export async function generateBulkShifts(lavadoraId: number, residenciaId: numbe
                             horaInicio: inicioStr,
                             horaFin: finStr,
                             residenteId: fixed ? fixed.residenteId : null,
-                            estado: fixed ? 'OCUPADO' : 'LIBRE'
+                            estado: fixed ? EstadoTurno.OCUPADO : EstadoTurno.LIBRE
                         })
                     }
                     current += intervaloMin

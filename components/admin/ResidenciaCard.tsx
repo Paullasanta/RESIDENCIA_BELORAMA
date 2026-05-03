@@ -12,7 +12,7 @@ interface ResidenciaCardProps {
 export function ResidenciaCard({ res }: ResidenciaCardProps) {
     const router = useRouter()
 
-    const handleDoubleClick = () => {
+    const handleClick = () => {
         router.push(`/modules/residencias/${res.id}`)
     }
 
@@ -24,7 +24,7 @@ export function ResidenciaCard({ res }: ResidenciaCardProps) {
 
     return (
         <div 
-            onDoubleClick={handleDoubleClick}
+            onClick={handleClick}
             className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-[#1D9E75]/30 cursor-pointer select-none ring-offset-2 focus-within:ring-2 focus-within:ring-[#1D9E75]"
         >
             {/* Header */}
@@ -88,7 +88,7 @@ export function ResidenciaCard({ res }: ResidenciaCardProps) {
             {/* Footer */}
             <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-50 flex items-center justify-between">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Capacidad máx: {res.capacidad} PAX</p>
-                <span className="text-[10px] font-black text-[#1D9E75] opacity-0 group-hover:opacity-100 transition-opacity">DOBLE CLICK VER MÁS</span>
+                <span className="text-[10px] font-black text-[#1D9E75] opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest">Ver más</span>
             </div>
         </div>
     )

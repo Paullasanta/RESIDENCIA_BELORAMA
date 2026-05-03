@@ -47,7 +47,7 @@ export function GenerateShiftsModal({ lavadora, hasAssignments }: { lavadora: an
         const result = await generateBulkShifts(lavadora.id, lavadora.residenciaId, data)
         
         if (result.success) {
-            setSuccessMsg(`¡${result.count} turnos generados correctamente!`)
+            setSuccessMsg(`¡${(result as any).count || ''} turnos generados correctamente!`)
             setTimeout(() => {
                 setIsOpen(false)
                 setSuccessMsg('')

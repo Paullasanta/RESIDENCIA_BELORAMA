@@ -64,38 +64,94 @@ export default async function PagosPage({ searchParams }: {
     const filterMonth = month
     const filterYear = year
 
-    if (fromMonth && fromYear && toMonth && toYear) {
-        const start = new Date(parseInt(fromYear), parseInt(fromMonth) - 1, 1)
-        const end = new Date(parseInt(toYear), parseInt(toMonth), 0, 23, 59, 59)
+    if (fromMonth && toMonth) {
+        const fYear = fromYear || new Date().getUTCFullYear().toString()
+        const tYear = toYear || fYear
+        let start = new Date(parseInt(fYear), parseInt(fromMonth) - 1, 1)
+        let end = new Date(parseInt(tYear), parseInt(toMonth), 0, 23, 59, 59)
+        
+        // Validación de seguridad: si el final es antes que el inicio, los igualamos
+        if (end < start) end = new Date(start.getFullYear(), start.getMonth() + 1, 0, 23, 59, 59)
+        
         dateWhere = { fechaVencimiento: { gte: start, lte: end } }
-    } else if (isAdmin && filterMonth && filterYear) {
-        // Solo si hay filtro explícito limitamos a ese mes
-        const start = new Date(parseInt(filterYear), parseInt(filterMonth) - 1, 1)
-        const end = new Date(parseInt(filterYear), parseInt(filterMonth), 0, 23, 59, 59)
+    } else if (isAdmin && filterMonth) {
+        const fYear = filterYear || new Date().getUTCFullYear().toString()
+        const start = new Date(parseInt(fYear), parseInt(filterMonth) - 1, 1)
+        const end = new Date(parseInt(fYear), parseInt(filterMonth), 0, 23, 59, 59)
         dateWhere = { fechaVencimiento: { gte: start, lte: end } }
     }
 
     // Data fetching
-    let pagosRaw: any[] = []
+    let residentesList: any[] = []
     let vouchersPendientes: any[] = []
+    let pagosRaw: any[] = [] // Para estadísticas globales
     
     if (isAdmin) {
-        pagosRaw = await prisma.pago.findMany({
+        // Buscamos RESIDENTES primero para que el buscador de nombre (q) sea efectivo
+        const residentsWithPagos = await prisma.residente.findMany({
             where: {
-                ...(isGlobalAdmin ? {} : { residente: { user: { residenciaId: residenciaId || -1 } } }),
-                ...dateWhere
+                user: {
+                    ...(isGlobalAdmin ? {} : { residenciaId: residenciaId || -1 }),
+                    ...(q ? {
+                        OR: [
+                            { nombre: { contains: q, mode: 'insensitive' } },
+                            { email: { contains: q, mode: 'insensitive' } }
+                        ]
+                    } : {})
+                },
+                ...(resId ? { habitacion: { residenciaId: parseInt(resId) } } : {}),
+                // Si hay filtro de fecha y no hay búsqueda por nombre, 
+                // solo mostramos residentes que tengan pagos en ese rango
+                ...(dateWhere.fechaVencimiento && !q ? {
+                    pagos: { some: dateWhere }
+                } : {})
             },
             include: {
-                residente: { 
-                    include: { 
-                        user: { select: { nombre: true, email: true } },
-                        habitacion: { include: { residencia: true } }
-                    } 
-                },
-            },
-            orderBy: { fechaVencimiento: 'asc' },
+                user: { select: { nombre: true, email: true } },
+                habitacion: { include: { residencia: true } },
+                pagos: {
+                    where: dateWhere,
+                    orderBy: { fechaVencimiento: 'asc' }
+                }
+            }
         })
 
+        // Transformamos al formato que la tabla espera
+        residentesList = residentsWithPagos.map(res => {
+            const pagos = res.pagos
+            const totalMonto = pagos.filter(p => p.estado !== 'RECHAZADO').reduce((sum, p) => sum + p.monto, 0)
+            const totalPagado = pagos.filter(p => p.estado !== 'RECHAZADO').reduce((sum, p) => sum + p.montoPagado, 0)
+            
+            // Calcular urgencia y minFecha para ordenamiento
+            let urgencia = 0
+            let minFecha = Infinity
+
+            pagos.forEach(p => {
+                const fV = new Date(p.fechaVencimiento || p.createdAt)
+                const diff = Math.ceil((fV.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                const isPV = (p.estado === 'PENDIENTE' || p.estado === 'VENCIDO') && diff >= 0 && diff <= 3
+                
+                let weight = 0
+                if (isPV) weight = 100
+                else if (p.estado === 'VENCIDO') weight = 90
+                else if (p.estado === 'CRITICO') weight = 80
+                else if (p.estado === 'PENDIENTE') weight = 50
+                
+                if (weight > urgencia) urgencia = weight
+                if (p.estado !== 'PAGADO' && fV.getTime() < minFecha) minFecha = fV.getTime()
+            })
+
+            return {
+                residente: res,
+                pagos,
+                totalMonto,
+                totalPagado,
+                urgencia,
+                minFecha: minFecha === Infinity ? null : minFecha
+            }
+        })
+
+        // Vouchers pendientes para el badge de revisión
         vouchersPendientes = await prisma.pago.findMany({
             where: {
                 estado: 'EN_REVISION',
@@ -103,6 +159,15 @@ export default async function PagosPage({ searchParams }: {
             },
             include: { residente: { include: { user: true } } }
         })
+
+        // Pagos raw para estadísticas de las cards superiores
+        pagosRaw = await prisma.pago.findMany({
+            where: {
+                ...(isGlobalAdmin ? {} : { residente: { user: { residenciaId: residenciaId || -1 } } }),
+                ...dateWhere
+            }
+        })
+
     } else {
         const residente = await prisma.residente.findFirst({
             where: { user: { email: session!.user.email as string } },
@@ -116,89 +181,22 @@ export default async function PagosPage({ searchParams }: {
         pagosRaw = (residente as any)?.pagos?.map((p: any) => ({ ...p, residente })) ?? []
     }
 
-    // Filtrar pagos para el RESIDENTE (limpiar historial viejo)
-    // El ADMIN sigue viendo todo el historial
-    if (!isAdmin) {
-        pagosRaw = pagosRaw.filter((p: any) => {
-            const res = p.residente || { fechaIngreso: (pagosRaw[0] as any)?.residente?.fechaIngreso }
-            if (!res?.fechaIngreso) return p.estado !== 'RECHAZADO'
-            const fV = new Date(p.fechaVencimiento || p.createdAt)
-            const fI = new Date(res.fechaIngreso)
-            fI.setUTCDate(1)
-            fI.setUTCHours(0, 0, 0, 0)
-            fV.setUTCHours(12, 0, 0, 0)
-            // Para el residente, ocultamos RECHAZADO y registros antes de su ingreso
-            return fV >= fI && p.estado !== 'RECHAZADO'
-        })
+    // Filtering logic
+    if (filter === 'debtors') {
+        residentesList = residentesList.filter((r: any) => (r.totalMonto - r.totalPagado) > 0)
     }
-
-    // Grouping logic for Admin Table
-    const groupedPagos = isAdmin ? pagosRaw.reduce((acc: any, current: any) => {
-        const resId = current.residenteId
-        if (!acc[resId]) {
-            acc[resId] = {
-                residente: current.residente,
-                pagos: [],
-                totalMonto: 0,
-                totalPagado: 0,
-                urgencia: 0
-            }
-        }
-        const fV = new Date(current.fechaVencimiento || current.createdAt); fV.setUTCHours(12,0,0,0)
-        const fI = new Date(current.residente?.fechaIngreso || 0)
-        fI.setUTCDate(1); fI.setUTCHours(0,0,0,0)
-        const isCurrentStay = fV >= fI
-
-        if (current.estado !== 'RECHAZADO') {
-            acc[resId].pagos.push(current)
-            acc[resId].totalMonto += current.monto
-            acc[resId].totalPagado += current.montoPagado
-        }
-        
-        // Calcular urgencia para ordenamiento
-        const diff = Math.ceil((fV.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-        const isPV = (current.estado === 'PENDIENTE' || current.estado === 'VENCIDO') && diff >= 0 && diff <= 3
-        
-        let weight = 0
-        if (isPV) weight = 100
-        else if (current.estado === 'VENCIDO') weight = 90
-        else if (current.estado === 'CRITICO') weight = 80
-        else if (current.estado === 'PENDIENTE') weight = 50
-        
-        if (weight > acc[resId].urgencia) {
-            acc[resId].urgencia = weight
-        }
-        
-        // Mantener la fecha más antigua de pago pendiente/vencido para el ordenamiento secundario
-        const fVTime = fV.getTime()
-        if (!acc[resId].minFecha || (current.estado !== 'PAGADO' && fVTime < acc[resId].minFecha)) {
-            acc[resId].minFecha = fVTime
-        }
-
-        return acc
-    }, {}) : {}
-
-    let residentesList = Object.values(groupedPagos)
 
     // Filtering logic
     if (filter === 'debtors') {
         residentesList = residentesList.filter((r: any) => (r.totalMonto - r.totalPagado) > 0)
     }
 
-    if (q) {
-        const query = q.toLowerCase()
-        residentesList = residentesList.filter((r: any) => 
-            r.residente.user.nombre.toLowerCase().includes(query) || 
-            r.residente.user.email.toLowerCase().includes(query)
-        )
-    }
-
-    if (resId) {
-        residentesList = residentesList.filter((r: any) => r.residente.habitacion?.residenciaId === parseInt(resId))
-    }
-
-    // Ordenar por fecha (más antigua primero)
-    residentesList.sort((a: any, b: any) => (a.minFecha || 0) - (b.minFecha || 0))
+    // Ordenar por fecha (más antigua primero). Residentes sin pagos pendientes van al final.
+    residentesList.sort((a: any, b: any) => {
+        const dateA = a.minFecha ?? Infinity
+        const dateB = b.minFecha ?? Infinity
+        return dateA - dateB
+    })
 
     // Pagination
     const totalItems = residentesList.length

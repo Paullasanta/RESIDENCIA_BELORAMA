@@ -9,7 +9,10 @@ export default async function Home() {
   const session = await auth()
 
   const habitacionesLibres = await prisma.habitacion.findMany({
-    where: { estado: 'LIBRE' },
+    where: {
+      estado: 'LIBRE',
+      residencia: { activa: true }
+    },
     include: {
       residencia: true,
       publicacion: true
@@ -33,11 +36,11 @@ export default async function Home() {
           <div className="flex justify-between h-16 sm:h-20 items-center">
             <div className="flex items-center gap-3 sm:gap-4 shrink-0">
               <div className="w-9 h-9 sm:w-11 sm:h-11 bg-[#1D9E75] rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-[#1D9E75]/20">
-                <span className="text-white font-black text-lg sm:text-xl">B</span>
+                <span className="text-white font-black text-lg sm:text-xl">G</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-lg sm:text-xl font-black text-[#072E1F] tracking-tighter leading-none">Belorama</span>
-                <span className="hidden sm:inline text-[9px] font-bold text-[#1D9E75] uppercase tracking-widest mt-1">Housing & coliving</span>
+                <span className="text-lg sm:text-xl font-black text-[#072E1F] tracking-tighter leading-none">Grow</span>
+                <span className="hidden sm:inline text-[9px] font-bold text-[#1D9E75] uppercase tracking-widest mt-1">Residencial</span>
               </div>
             </div>
 
@@ -123,7 +126,7 @@ export default async function Home() {
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                         <div className="absolute top-4 right-4 sm:top-6 sm:right-6 bg-white/90 backdrop-blur-md text-[#1D9E75] text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1.5 rounded-full uppercase tracking-widest shadow-xl">
-                          S/ {habitacion.publicacion?.id ? 'Precio Web' : 'S/850'}
+                          {habitacion.publicacion?.id ? 'Precio Web' : ''}
                         </div>
                       </div>
 

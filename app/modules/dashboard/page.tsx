@@ -5,6 +5,8 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Users, DollarSign, WashingMachine, Megaphone, ShoppingBag, UtensilsCrossed } from 'lucide-react'
 import Link from 'next/link'
+import { DashboardActivity } from '@/components/admin/DashboardActivity'
+import { DashboardCriticalDebts } from '@/components/admin/DashboardCriticalDebts'
 
 export default async function DashboardPage() {
     const session = await auth()
@@ -57,7 +59,7 @@ export default async function DashboardPage() {
             }),
             prisma.pago.findMany({
                 where: wherePagoResidencia,
-                take: 6,
+                take: 15, // Solo lo más reciente (3 páginas de 5)
                 orderBy: { createdAt: 'desc' },
                 include: { residente: { include: { user: { select: { nombre: true, email: true } } } } }
             }),
@@ -76,7 +78,8 @@ export default async function DashboardPage() {
                         wherePagoResidencia
                     ]
                 },
-                take: 5,
+                // Quitamos el take para mostrar TODOS los vencidos como pediste
+                orderBy: { fechaVencimiento: 'asc' },
                 include: { residente: { include: { user: true } } }
             })
         ])
@@ -98,75 +101,8 @@ export default async function DashboardPage() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Actividad Reciente */}
-                    <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-                        <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
-                            <h2 className="text-xl font-black text-[#072E1F]">Actividad Reciente</h2>
-                            <Link href="/modules/pagos" className="text-sm font-black text-[#1D9E75] hover:underline">Ver todo</Link>
-                        </div>
-                        {ultimosPagos.length === 0 ? (
-                            <div className="py-20 text-center text-gray-400 font-medium">No hay actividad reciente.</div>
-                        ) : (
-                            <div className="divide-y divide-gray-50">
-                                 {ultimosPagos.map((pago: any) => {
-                                    const fVenc = new Date(pago.fechaVencimiento)
-                                    fVenc.setUTCHours(0,0,0,0)
-                                    const dDiff = Math.ceil((fVenc.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-                                    const isPorVencer = (pago.estado === 'PENDIENTE' || pago.estado === 'VENCIDO') && dDiff >= 0 && dDiff <= 3
-                                    const statusVis = isPorVencer ? 'POR_VENCER' : pago.estado
-
-                                    return (
-                                        <div key={pago.id} className="flex items-center justify-between px-8 py-5 hover:bg-gray-50/50 transition-colors">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-[#072E1F]">
-                                                    {pago.residente.user.nombre.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-gray-900 text-sm">{pago.residente.user.nombre} <span className="text-[9px] font-normal text-gray-400 ml-1">({pago.concepto})</span></p>
-                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(pago.fechaVencimiento).toLocaleDateString('es-MX', { timeZone: 'UTC' })}</p>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-black text-gray-900">${pago.monto.toLocaleString()}</p>
-                                                <StatusBadge status={statusVis as any} />
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Pagos Críticos (Deuda Urgente) */}
-                    <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-200/50 border border-red-100 overflow-hidden">
-                        <div className="px-8 py-6 border-b border-red-50 flex items-center justify-between bg-red-50/30">
-                            <h2 className="text-xl font-black text-red-700">Deudas Críticas</h2>
-                            <span className="bg-red-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase">{pagosCriticos.length} Alertas</span>
-                        </div>
-                        {pagosCriticos.length === 0 ? (
-                            <div className="py-20 text-center text-gray-400 font-medium">Todo bajo control. No hay deudas críticas.</div>
-                        ) : (
-                            <div className="divide-y divide-gray-50">
-                                {pagosCriticos.map((pago: any) => (
-                                    <div key={pago.id} className="flex items-center justify-between px-8 py-5 hover:bg-red-50/20 transition-colors">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold">
-                                                !
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-gray-900 text-sm">{pago.residente.user.nombre}</p>
-                                                <p className="text-[10px] text-red-500 font-black uppercase">{pago.concepto}</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-black text-red-600">${pago.monto.toLocaleString()}</p>
-                                            <Link href={`/modules/pagos/residente/${pago.residente.id}`} className="text-[10px] font-black text-red-700 hover:underline">GESTIONAR</Link>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                    <DashboardActivity pagos={ultimosPagos} today={today} />
+                    <DashboardCriticalDebts pagos={pagosCriticos} />
                 </div>
             </div>
         )
@@ -210,17 +146,31 @@ export default async function DashboardPage() {
                     ) : (
                         <div className="space-y-4">
                              {profile?.pagos.map(p => {
-                                const fVenc = new Date(p.fechaVencimiento)
+                                const fVenc = new Date(p.fechaVencimiento!)
                                 fVenc.setUTCHours(0,0,0,0)
                                 const dDiff = Math.ceil((fVenc.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
                                 const isPorVencer = (p.estado === 'PENDIENTE' || p.estado === 'VENCIDO') && dDiff >= 0 && dDiff <= 3
-                                const statusVis = isPorVencer ? 'POR_VENCER' : p.estado
+                                
+                                const isGuarantee = p.concepto?.toLowerCase().includes('garantía') || p.concepto?.toLowerCase().includes('garantia')
+                                const isFirstGuarantee = isGuarantee && (p.concepto?.includes('Cuota 1/') || !p.concepto?.includes('Cuota'))
+                                
+                                const fechaIngreso = profile?.fechaIngreso ? new Date(profile.fechaIngreso) : null
+                                let isFirstMonth = false
+                                if (fechaIngreso && p.mesCorrespondiente) {
+                                    const firstMonthStr = `${fechaIngreso.getUTCFullYear()}-${String(fechaIngreso.getUTCMonth() + 1).padStart(2, '0')}`
+                                    if (p.mesCorrespondiente === firstMonthStr) {
+                                        isFirstMonth = true
+                                    }
+                                }
+
+                                const isLocked = dDiff > 15 && p.estado === 'PENDIENTE' && !isFirstMonth && !isFirstGuarantee
+                                const statusVis = isLocked ? 'PROXIMO' : (isPorVencer ? 'POR_VENCER' : p.estado)
 
                                 return (
                                     <div key={p.id} className="flex items-center justify-between p-4 rounded-2xl bg-gray-50/50 border border-gray-50">
                                         <div className="flex flex-col">
                                             <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                                                {p.concepto} — {new Date(p.fechaVencimiento).toLocaleDateString('es-MX', { timeZone: 'UTC' })}
+                                                {p.concepto} — {new Date(p.fechaVencimiento!).toLocaleDateString('es-MX', { timeZone: 'UTC' })}
                                             </span>
                                             <span className="font-black text-gray-900">${p.monto.toLocaleString()}</span>
                                         </div>

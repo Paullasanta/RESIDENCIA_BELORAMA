@@ -57,12 +57,12 @@ export function ResidentesTable({ residentes, isInactiveView = false }: Resident
 
         const tableRows = filteredResidentes.map((r) => {
             const fI = new Date(r.fechaIngreso); fI.setUTCHours(12, 0, 0, 0);
-            const pagosPeriodo = r.pagos.filter(p => {
+            const pagosPeriodo = r.pagos.filter((p: any) => {
                 const fV = new Date(p.fechaVencimiento || p.createdAt); fV.setUTCHours(12, 0, 0, 0);
                 return fV >= fI;
             });
-            const pPendiente = [...pagosPeriodo].filter(p => p.estado !== 'PAGADO' && p.estado !== 'RECHAZADO').sort((a, b) => new Date(a.fechaVencimiento!).getTime() - new Date(b.fechaVencimiento!).getTime())[0];
-            const pShow = pPendiente || [...pagosPeriodo].sort((a, b) => new Date(b.fechaVencimiento!).getTime() - new Date(a.fechaVencimiento!).getTime())[0];
+            const pPendiente = [...pagosPeriodo].filter((p: any) => p.estado !== 'PAGADO' && p.estado !== 'RECHAZADO').sort((a: any, b: any) => new Date(a.fechaVencimiento!).getTime() - new Date(b.fechaVencimiento!).getTime())[0];
+            const pShow = pPendiente || [...pagosPeriodo].sort((a: any, b: any) => new Date(b.fechaVencimiento!).getTime() - new Date(a.fechaVencimiento!).getTime())[0];
 
             return [
                 `${r.user.nombre} ${r.user.apellidoPaterno || ''} ${r.user.apellidoMaterno || ''}`,
@@ -101,12 +101,12 @@ export function ResidentesTable({ residentes, isInactiveView = false }: Resident
 
     const residentesExcelData = filteredResidentes.map((r) => {
         const fI = new Date(r.fechaIngreso); fI.setUTCHours(12, 0, 0, 0);
-        const pagosPeriodo = r.pagos.filter(p => {
+        const pagosPeriodo = r.pagos.filter((p: any) => {
             const fV = new Date(p.fechaVencimiento || p.createdAt); fV.setUTCHours(12, 0, 0, 0);
             return fV >= fI;
         });
-        const pPendiente = [...pagosPeriodo].filter(p => p.estado !== 'PAGADO' && p.estado !== 'RECHAZADO').sort((a, b) => new Date(a.fechaVencimiento!).getTime() - new Date(b.fechaVencimiento!).getTime())[0];
-        const pShow = pPendiente || [...pagosPeriodo].sort((a, b) => new Date(b.fechaVencimiento!).getTime() - new Date(a.fechaVencimiento!).getTime())[0];
+        const pPendiente = [...pagosPeriodo].filter((p: any) => p.estado !== 'PAGADO' && p.estado !== 'RECHAZADO').sort((a: any, b: any) => new Date(a.fechaVencimiento!).getTime() - new Date(b.fechaVencimiento!).getTime())[0];
+        const pShow = pPendiente || [...pagosPeriodo].sort((a: any, b: any) => new Date(b.fechaVencimiento!).getTime() - new Date(a.fechaVencimiento!).getTime())[0];
 
         return {
             'Nombre Completo': `${r.user.nombre} ${r.user.apellidoPaterno || ''} ${r.user.apellidoMaterno || ''}`,
@@ -269,7 +269,7 @@ export function ResidentesTable({ residentes, isInactiveView = false }: Resident
                                                     fI.setUTCDate(1)
                                                     fI.setUTCHours(0, 0, 0, 0)
                                                     
-                                                    const pagosPeriodo = r.pagos.filter(p => {
+                                                    const pagosPeriodo = r.pagos.filter((p: any) => {
                                                         const fV = new Date(p.fechaVencimiento || p.createdAt)
                                                         fV.setUTCHours(12, 0, 0, 0)
                                                         return fV >= fI
@@ -279,10 +279,10 @@ export function ResidentesTable({ residentes, isInactiveView = false }: Resident
 
                                                     // Prioridad: 1. Vencidos/Pendientes más antiguos, 2. Pagado más reciente
                                                     const pagoPendiente = [...pagosPeriodo]
-                                                        .filter(p => p.estado !== 'PAGADO' && p.estado !== 'RECHAZADO')
-                                                        .sort((a, b) => new Date(a.fechaVencimiento!).getTime() - new Date(b.fechaVencimiento!).getTime())[0]
+                                                        .filter((p: any) => p.estado !== 'PAGADO' && p.estado !== 'RECHAZADO')
+                                                        .sort((a: any, b: any) => new Date(a.fechaVencimiento!).getTime() - new Date(b.fechaVencimiento!).getTime())[0]
                                                     
-                                                    const pago = pagoPendiente || [...pagosPeriodo].sort((a, b) => new Date(b.fechaVencimiento!).getTime() - new Date(a.fechaVencimiento!).getTime())[0]
+                                                    const pago = pagoPendiente || [...pagosPeriodo].sort((a: any, b: any) => new Date(b.fechaVencimiento!).getTime() - new Date(a.fechaVencimiento!).getTime())[0]
 
                                                     if (!pago) return <span className="text-gray-200">—</span>
 

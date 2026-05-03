@@ -25,7 +25,13 @@ export default function LoginPage() {
         })
 
         if (res?.error) {
-            setError('Credenciales incorrectas. Verifícalas y vuelve a intentarlo.')
+            if (res.error.includes('Cuenta inactiva')) {
+                setError('Tu cuenta está inactiva o ha sido desactivada.')
+            } else if (res.error.includes('AccessDenied')) {
+                setError('Acceso denegado. Contacta con soporte.')
+            } else {
+                setError('Credenciales incorrectas. Verifícalas y vuelve a intentarlo.')
+            }
             setLoading(false)
             return
         }
@@ -38,11 +44,11 @@ export default function LoginPage() {
         <div className="min-h-screen flex w-full bg-[#072E1F] sm:bg-[#F4F6F4]">
             {/* Mitad Izquierda Formulario (Left Side) */}
             <div className="flex flex-col flex-1 shadow-none sm:shadow-2xl overflow-hidden bg-white z-10 w-full sm:rounded-r-[2.5rem] lg:w-5/12 xl:w-1/3 relative shrink-0">
-                
+
                 {/* Botón Volver */}
                 <div className="absolute top-8 left-8 z-20">
-                    <Link 
-                        href="/" 
+                    <Link
+                        href="/"
                         className="flex items-center gap-2 text-gray-400 hover:text-[#1D9E75] font-black text-[10px] uppercase tracking-widest transition-all group"
                     >
                         <div className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center group-hover:bg-[#1D9E75]/10">
@@ -70,7 +76,7 @@ export default function LoginPage() {
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                                         <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                                         </svg>
                                     </div>
                                     <input
@@ -121,9 +127,6 @@ export default function LoginPage() {
                                     <input type="checkbox" className="rounded text-[#1D9E75] focus:ring-[#1D9E75] bg-gray-50 border-gray-300 w-4 h-4 cursor-pointer" />
                                     <span className="ml-2 group-hover:text-gray-900 transition-colors">Recordarme</span>
                                 </label>
-                                <button type="button" className="font-semibold text-[#1D9E75] hover:text-[#085041] transition-colors focus:outline-none focus:underline">
-                                    ¿Olvidaste tu contraseña?
-                                </button>
                             </div>
 
                             <button
@@ -166,7 +169,7 @@ export default function LoginPage() {
 
             {/* Mitad Derecha (Background) - Oculto en móvil */}
             <div className="hidden sm:flex flex-1 relative bg-[#072E1F] items-center justify-center p-12 overflow-hidden">
-                <div 
+                <div
                     className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 hover:scale-105"
                     style={{ backgroundImage: "url('https://images.unsplash.com/photo-1555854877-bab0e564b8d5?q=80&w=2069&auto=format&fit=crop')" }}
                 ></div>
@@ -183,7 +186,7 @@ export default function LoginPage() {
                     <p className="text-lg text-gray-200 leading-relaxed font-light">
                         Una experiencia fluida y conectada. Administra cuartos, lavandería, finanzas y comida, todo en un solo lugar.
                     </p>
-                    
+
                     {/* Widget Decorativo */}
                     <div className="mt-12 bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-2xl flex items-center gap-4">
                         <div className="w-12 h-12 bg-[#1D9E75] rounded-full flex items-center justify-center shadow-lg shrink-0">

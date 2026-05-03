@@ -153,6 +153,7 @@ model Habitacion {
   estado       EstadoHabitacion        @default(LIBRE)
   fotos        String[]
   residentes   Residente[]
+  reservas     Reserva[]
   publicacion  PublicacionHabitacion?
 }
 
@@ -178,6 +179,26 @@ model Residente {
   alergias          String?
   restriccionesAlimentarias String?
   createdAt         DateTime          @default(now())
+}
+
+model Reserva {
+  id                Int          @id @default(autoincrement())
+  habitacionId      Int
+  habitacion        Habitacion   @relation(fields: [habitacionId], references: [id])
+  nombre            String
+  apellidoPaterno   String
+  apellidoMaterno   String?
+  dni               String
+  email             String?
+  telefono          String?
+  fechaIngreso      DateTime
+  montoMensual      Float        @default(0)
+  montoGarantia     Float        @default(0)
+  pagoConfirmado    Boolean      @default(false)
+  comprobanteUrl    String?
+  notas             String?
+  estado            String       @default("PENDIENTE") // PENDIENTE, CONFIRMADA, CANCELADA
+  createdAt         DateTime     @default(now())
 }
 
 model Lavadora {

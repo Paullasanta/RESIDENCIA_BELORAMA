@@ -20,6 +20,12 @@ export function ConfigForm({ initialConfig }: ConfigFormProps) {
       SYSTEM_NAME: formData.get('SYSTEM_NAME') as string,
       SUPPORT_EMAIL: formData.get('SUPPORT_EMAIL') as string,
       FOOTER_TEXT: formData.get('FOOTER_TEXT') as string,
+      CELULAR_CONTACTO: (formData.get('CELULAR_CONTACTO') as string).replace(/\s/g, ''),
+      WHATSAPP_CONTACTO: (formData.get('WHATSAPP_CONTACTO') as string).replace(/\s/g, ''),
+    }
+
+    if (!window.confirm('¿Estás seguro de que deseas guardar estos cambios en la configuración del sistema?')) {
+      return
     }
 
     startTransition(async () => {
@@ -72,6 +78,26 @@ export function ConfigForm({ initialConfig }: ConfigFormProps) {
                             required
                             className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700"
                             placeholder="soporte@belorama.com"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Celular de Contacto</label>
+                        <input
+                            name="CELULAR_CONTACTO"
+                            defaultValue={initialConfig.CELULAR_CONTACTO}
+                            placeholder="+51 999 999 999"
+                            className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">WhatsApp de Contacto</label>
+                        <input
+                            name="WHATSAPP_CONTACTO"
+                            defaultValue={initialConfig.WHATSAPP_CONTACTO}
+                            placeholder="51999999999"
+                            className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700"
                         />
                     </div>
 

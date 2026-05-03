@@ -2,20 +2,23 @@
 
 import { useState, useEffect } from 'react'
 import { Settings, X, Edit3, Image as ImageIcon, Users, Trash2, UploadCloud, CheckCircle2 } from 'lucide-react'
-import { 
-    updateHabitacion, 
-    uploadHabitacionFotos, 
-    deleteHabitacionFoto, 
-    getResidentesParaAsignar, 
-    assignResidenteToHabitacion 
+import {
+    updateHabitacion,
+    uploadHabitacionFotos,
+    deleteHabitacionFoto,
+    getResidentesParaAsignar,
+    assignResidenteToHabitacion
 } from '@/app/actions/habitaciones'
+import { confirmReserva, cancelReserva } from '@/app/actions/reservas'
 import { useRouter } from 'next/navigation'
+import { ReservaModal } from './ReservaModal'
 
 export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
     const [isOpen, setIsOpen] = useState(false)
     const [activeTab, setActiveTab] = useState<'EDITAR' | 'FOTOS' | 'RESIDENTES'>('EDITAR')
     const [loading, setLoading] = useState(false)
-    
+    const [showReserva, setShowReserva] = useState(false)
+
     // Residentes state
     const [residentesLibres, setResidentesLibres] = useState<any[]>([])
     const router = useRouter()
@@ -36,7 +39,7 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
             capacidad: Number(formData.get('capacidad')),
             estado: formData.get('estado') as any,
         }
-        
+
         await updateHabitacion(habitacion.id, data)
         setLoading(false)
         router.refresh()
@@ -47,7 +50,7 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
         setLoading(true)
         const formData = new FormData()
         Array.from(e.target.files).forEach(f => formData.append('fotos', f))
-        
+
         await uploadHabitacionFotos(habitacion.id, habitacion.residenciaId, formData)
         setLoading(false)
         router.refresh()
@@ -72,7 +75,7 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
 
     return (
         <>
-            <button 
+            <button
                 onClick={() => setIsOpen(true)}
                 className="text-[10px] flex items-center gap-1.5 font-bold text-gray-500 hover:text-[#1D9E75] bg-gray-100 hover:bg-[#1D9E75]/10 px-3 py-1.5 rounded-lg uppercase tracking-widest transition-all"
             >
@@ -82,7 +85,7 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
             {isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95">
-                        
+
                         {/* Header */}
                         <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                             <div>
@@ -104,11 +107,10 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id as any)}
-                                    className={`flex items-center gap-2 px-4 py-3 font-bold text-xs uppercase tracking-widest transition-all border-b-2 ${
-                                        activeTab === tab.id 
-                                            ? 'border-[#1D9E75] text-[#1D9E75]' 
+                                    className={`flex items-center gap-2 px-4 py-3 font-bold text-xs uppercase tracking-widest transition-all border-b-2 ${activeTab === tab.id
+                                            ? 'border-[#1D9E75] text-[#1D9E75]'
                                             : 'border-transparent text-gray-400 hover:text-gray-600'
-                                    }`}
+                                        }`}
                                 >
                                     {tab.icon} {tab.label}
                                 </button>
@@ -117,7 +119,7 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
 
                         {/* Content Area */}
                         <div className="p-8 overflow-y-auto flex-1 bg-white">
-                            
+
                             {/* TAB: EDITAR */}
                             {activeTab === 'EDITAR' && (
                                 <form onSubmit={handleUpdate} className="space-y-6">
@@ -136,18 +138,105 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Estado</label>
-                                            <select name="estado" defaultValue={habitacion.estado} className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold appearance-none">
-                                                <option value="LIBRE">Libre</option>
-                                                <option value="OCUPADO">Ocupado</option>
-                                                <option value="RESERVADO">Reservado</option>
-                                                <option value="POR_LIBERARSE">Por Liberarse</option>
-                                            </select>
+                                            <div className="relative">
+                                                <select
+                                                    name="estado"
+                                                    defaultValue={habitacion.estado}
+                                                    onChange={(e) => {
+                                                        if (e.target.value === 'RESERVADO') {
+                                                            setShowReserva(true)
+                                                        }
+                                                    }}
+                                                    className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold appearance-none"
+                                                >
+                                                    <option value="LIBRE">Libre</option>
+                                                    <option value="RESERVADO">Reservado</option>
+                                                    {/* Ocultos para selección manual */}
+                                                    {habitacion.estado === 'OCUPADO' && <option value="OCUPADO">Ocupado (Sistema)</option>}
+                                                    {habitacion.estado === 'POR_LIBERARSE' && <option value="POR_LIBERARSE">Por Liberarse (Sistema)</option>}
+                                                </select>
+                                                {habitacion.estado === 'OCUPADO' && (
+                                                    <p className="text-[9px] font-bold text-red-500 mt-1 uppercase tracking-tighter">* No se puede cambiar manualmente si está ocupada.</p>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                    <button type="submit" disabled={loading} className="w-full bg-[#072E1F] text-white px-6 py-4 rounded-2xl font-black text-xs shadow-xl shadow-[#072E1F]/20 hover:bg-[#0a412b] transition-all disabled:opacity-50 uppercase tracking-widest mt-4">
+
+                                    {/* Si está reservada, mostrar aviso y opción de confirmar */}
+                                    {habitacion.estado === 'RESERVADO' && (
+                                        <div className="p-6 bg-orange-50 border border-orange-100 rounded-3xl space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-xs font-black text-orange-700 uppercase tracking-widest">Información de Reserva</h4>
+                                                <span className="px-2 py-0.5 bg-orange-200 text-orange-800 text-[8px] font-black rounded-md">PENDIENTE</span>
+                                            </div>
+                                            <p className="text-xs text-orange-600 font-medium">Esta habitación tiene una reserva activa. Puedes confirmarla para convertirla en un residente oficial.</p>
+                                            <div className="flex flex-col gap-2">
+                                                <button
+                                                    type="button"
+                                                    disabled={loading}
+                                                    onClick={async () => {
+                                                        if (confirm('¿Confirmar la ocupación de esta habitación? Se creará el perfil de residente automáticamente.')) {
+                                                            setLoading(true)
+                                                            const resId = habitacion.reservas?.find((r: any) => r.estado === 'PENDIENTE')?.id
+                                                            if (resId) {
+                                                                const res = await confirmReserva(resId)
+                                                                if (res.success) {
+                                                                    router.refresh()
+                                                                    setIsOpen(false)
+                                                                } else {
+                                                                    alert('Error: ' + res.error)
+                                                                }
+                                                            }
+                                                            setLoading(false)
+                                                        }
+                                                    }}
+                                                    className="w-full py-3 bg-orange-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-orange-700 transition-all shadow-lg shadow-orange-200 disabled:opacity-50"
+                                                >
+                                                    {loading ? 'Procesando...' : 'Confirmar Ocupación'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled={loading}
+                                                    onClick={async () => {
+                                                        if (confirm('¿Seguro que deseas eliminar esta reserva? Se borrarán los datos del solicitante y la habitación quedará LIBRE.')) {
+                                                            setLoading(true)
+                                                            const resId = habitacion.reservas?.find((r: any) => r.estado === 'PENDIENTE')?.id
+                                                            if (resId) {
+                                                                const res = await cancelReserva(resId)
+                                                                if (res.success) {
+                                                                    router.refresh()
+                                                                    setIsOpen(false)
+                                                                } else {
+                                                                    alert('Error al cancelar: ' + res.error)
+                                                                }
+                                                            } else {
+                                                                alert('No se encontró el ID de la reserva.')
+                                                            }
+                                                            setLoading(false)
+                                                        }
+                                                    }}
+                                                    className="w-full py-2.5 bg-white border border-red-200 text-red-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-50 transition-all disabled:opacity-50"
+                                                >
+                                                    {loading ? 'Eliminando...' : 'Quitar Reserva (Eliminar)'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <button type="submit" disabled={loading || habitacion.estado === 'OCUPADO'} className="w-full bg-[#072E1F] text-white px-6 py-4 rounded-2xl font-black text-xs shadow-xl shadow-[#072E1F]/20 hover:bg-[#0a412b] transition-all disabled:opacity-50 uppercase tracking-widest mt-4">
                                         {loading ? 'Guardando Cambios...' : 'Guardar Propiedades'}
                                     </button>
                                 </form>
+                            )}
+
+                            {showReserva && (
+                                <ReservaModal
+                                    habitacion={habitacion}
+                                    onClose={() => {
+                                        setShowReserva(false)
+                                        // Reset select if cancelled? No, router.refresh handles it
+                                    }}
+                                />
                             )}
 
                             {/* TAB: FOTOS */}
@@ -164,12 +253,12 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
                                         </label>
                                         {loading && <div className="absolute inset-0 bg-white/60 flex items-center justify-center font-bold text-sm text-[#1D9E75]">Subiendo...</div>}
                                     </div>
-                                    
+
                                     <div className="grid grid-cols-3 gap-4">
                                         {habitacion.fotos?.map((foto: string, i: number) => (
                                             <div key={i} className="relative group rounded-2xl overflow-hidden aspect-square border border-gray-100 bg-gray-50">
                                                 <img src={foto} alt="Habitacion" className="w-full h-full object-cover" />
-                                                <button 
+                                                <button
                                                     onClick={() => handleDeleteFoto(foto)}
                                                     className="absolute top-2 right-2 bg-red-500 text-white p-2 text-xs rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-lg"
                                                 >
@@ -204,14 +293,13 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <button 
+                                                    <button
                                                         disabled={loading}
                                                         onClick={() => handleAssign(r.id, r.habitacionId)}
-                                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 ${
-                                                            isAssignedHere 
-                                                                ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 ${isAssignedHere
+                                                                ? 'bg-red-50 text-red-600 hover:bg-red-100'
                                                                 : 'bg-[#072E1F] text-white hover:bg-[#0a412b]'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {isAssignedHere ? 'Retirar' : 'Asignar Aquí'}
                                                     </button>

@@ -20,6 +20,26 @@ export function PagosDateFilters() {
 
     const updateParams = (newParams: Record<string, string | null>) => {
         const params = new URLSearchParams(searchParams.toString())
+        
+        // Validar rango si estamos en modo rango
+        if (isRangeMode) {
+            const currentFromMonth = newParams.fromMonth || fromMonth
+            const currentFromYear = newParams.fromYear || fromYear
+            const currentToMonth = newParams.toMonth || toMonth
+            const currentToYear = newParams.toYear || toYear
+
+            if (currentFromMonth && currentFromYear && currentToMonth && currentToYear) {
+                const start = parseInt(currentFromYear) * 100 + parseInt(currentFromMonth)
+                const end = parseInt(currentToYear) * 100 + parseInt(currentToMonth)
+
+                if (end < start) {
+                    // Si el final es menor al inicio, igualamos el final al inicio
+                    newParams.toMonth = currentFromMonth
+                    newParams.toYear = currentFromYear
+                }
+            }
+        }
+
         Object.entries(newParams).forEach(([key, value]) => {
             if (value === null) params.delete(key)
             else params.set(key, value)
@@ -94,7 +114,13 @@ export function PagosDateFilters() {
                         <span className="text-[9px] font-black text-gray-400 uppercase mr-1">Desde:</span>
                         <select 
                             value={fromMonth}
-                            onChange={(e) => updateParams({ fromMonth: e.target.value })}
+                            onChange={(e) => updateParams({ 
+                                fromMonth: e.target.value, 
+                                fromYear: fromYear, 
+                                toMonth: toMonth, 
+                                toYear: toYear,
+                                month: null, year: null 
+                            })}
                             className="bg-white border border-gray-100 rounded-xl px-2 py-2 text-xs font-bold text-gray-700"
                         >
                             <option value="">Mes</option>
@@ -102,7 +128,13 @@ export function PagosDateFilters() {
                         </select>
                         <select 
                             value={fromYear}
-                            onChange={(e) => updateParams({ fromYear: e.target.value })}
+                            onChange={(e) => updateParams({ 
+                                fromYear: e.target.value, 
+                                fromMonth: fromMonth, 
+                                toMonth: toMonth, 
+                                toYear: toYear,
+                                month: null, year: null 
+                            })}
                             className="bg-white border border-gray-100 rounded-xl px-2 py-2 text-xs font-bold text-gray-700"
                         >
                             <option value="">Año</option>
@@ -116,7 +148,13 @@ export function PagosDateFilters() {
                         <span className="text-[9px] font-black text-gray-400 uppercase mr-1">Hasta:</span>
                         <select 
                             value={toMonth}
-                            onChange={(e) => updateParams({ toMonth: e.target.value })}
+                            onChange={(e) => updateParams({ 
+                                toMonth: e.target.value, 
+                                toYear: toYear, 
+                                fromMonth: fromMonth, 
+                                fromYear: fromYear,
+                                month: null, year: null 
+                            })}
                             className="bg-white border border-gray-100 rounded-xl px-2 py-2 text-xs font-bold text-gray-700"
                         >
                             <option value="">Mes</option>
@@ -124,7 +162,13 @@ export function PagosDateFilters() {
                         </select>
                         <select 
                             value={toYear}
-                            onChange={(e) => updateParams({ toYear: e.target.value })}
+                            onChange={(e) => updateParams({ 
+                                toYear: e.target.value, 
+                                toMonth: toMonth, 
+                                fromMonth: fromMonth, 
+                                fromYear: fromYear,
+                                month: null, year: null 
+                            })}
                             className="bg-white border border-gray-100 rounded-xl px-2 py-2 text-xs font-bold text-gray-700"
                         >
                             <option value="">Año</option>

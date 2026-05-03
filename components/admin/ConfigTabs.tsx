@@ -57,9 +57,9 @@ export function ConfigTabs({ sistema, personal, roles }: ConfigTabsProps) {
 
             {/* Tab Content */}
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                {activeTab === 'SISTEMA' && sistema}
-                {activeTab === 'PERSONAL' && personal}
-                {activeTab === 'ROLES' && roles}
+                {activeTab === 'SISTEMA' && <div key="sistema">{sistema}</div>}
+                {activeTab === 'PERSONAL' && <div key="personal">{personal}</div>}
+                {activeTab === 'ROLES' && <div key="roles">{roles}</div>}
             </div>
         </div>
     )

@@ -31,7 +31,11 @@ export default async function ResidenciaDetallePage({ params }: { params: Promis
                 orderBy: { numero: 'asc' },
                 include: {
                     residentes: {
+                        where: { activo: true },
                         include: { user: true }
+                    },
+                    reservas: {
+                        where: { estado: 'PENDIENTE' }
                     }
                 }
             },

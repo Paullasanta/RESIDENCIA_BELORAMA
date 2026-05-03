@@ -119,7 +119,10 @@ export function ReactivateResidenteModal({ id, nombre, isOpen, onClose, defaultM
                             </button>
 
                             <button 
-                                onClick={() => setMode('reentry')}
+                                onClick={() => {
+                                    onClose()
+                                    window.location.href = `/modules/residentes/nuevo?reintegroId=${id}`
+                                }}
                                 className="group p-8 rounded-[2rem] border-2 border-gray-100 hover:border-[#EF9F27] hover:bg-orange-50/50 transition-all text-left flex flex-col gap-4"
                             >
                                 <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-[#EF9F27] group-hover:scale-110 transition-transform">
@@ -127,7 +130,7 @@ export function ReactivateResidenteModal({ id, nombre, isOpen, onClose, defaultM
                                 </div>
                                 <div>
                                     <h3 className="font-black text-[#072E1F] text-lg leading-none mb-2">Reintegración</h3>
-                                    <p className="text-xs text-gray-400 font-bold leading-relaxed">Úsalo si el residente vuelve después de tiempo. Reinicia habitación y genera nueva garantía.</p>
+                                    <p className="text-xs text-gray-400 font-bold leading-relaxed">Úsalo si el residente vuelve después de tiempo. Abre el formulario completo con sus datos precargados.</p>
                                 </div>
                             </button>
                         </div>

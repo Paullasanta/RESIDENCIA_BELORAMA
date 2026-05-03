@@ -34,7 +34,7 @@ export function ExportExcelButton({ data, filename, sheetName = 'Datos', columns
 
             // 2. Estilo del Encabezado (Premium Green)
             const headerRow = worksheet.getRow(1)
-            headerRow.values = worksheet.columns.map(c => c.header)
+            headerRow.values = worksheet.columns.map(c => c.header) as any
             
             headerRow.eachCell((cell) => {
                 cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }

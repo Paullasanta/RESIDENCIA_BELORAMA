@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createResidente, updateResidente } from '@/app/actions/residentes'
+import { createResidente, updateResidente, reactivateResidente } from '@/app/actions/residentes'
 import { Button } from '@/components/ui/button'
 import { Loader2, Save, X, Upload, Check } from 'lucide-react'
 
@@ -92,7 +92,11 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
   const [montoMensualInput, setMontoMensualInput] = useState(initialData?.montoMensual || 0)
   const [montoGarantiaInput, setMontoGarantiaInput] = useState(initialData?.montoGarantia || 0)
   const [cuotasGarantiaInput, setCuotasGarantiaInput] = useState(
-    initialData?.pagos?.filter((p: any) => p.concepto.includes('Garantía')).length || 1
+    initialData?.pagos?.filter((p: any) => 
+      p.concepto.includes('Garantía') && 
+      p.estado !== 'RECHAZADO' &&
+      (initialData.fechaIngreso ? new Date(p.fechaVencimiento) >= new Date(initialData.fechaIngreso) : true)
+    ).length || 1
   )
   const [montoGarantiaPrimerPago, setMontoGarantiaPrimerPago] = useState(0)
 
@@ -139,17 +143,29 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
 
       const data = Object.fromEntries(formData.entries())
 
-      // Añadir datos de confirmación
+      // Asegurar que todos los campos financieros del estado se incluyan explícitamente
       const finalData = {
         ...data,
+        montoMensual: montoMensualInput,
+        montoGarantia: montoGarantiaInput,
+        cuotasGarantia: cuotasGarantiaInput,
         pagoConfirmado: pagoConfirmado,
         comprobanteUrl: comprobanteUrl
       }
 
       startTransition(async () => {
-        const result = initialData
-          ? await updateResidente(initialData.id, finalData)
-          : await createResidente(finalData)
+        let result;
+        
+        if (initialData?.isReintegro) {
+          // Si es un reingreso, usamos la acción de reactivación con el modo 'reentry'
+          result = await reactivateResidente(initialData.oldResidenteId, 'reentry', finalData)
+        } else if (initialData?.id) {
+          // Si tiene ID y no es reingreso, es una actualización normal
+          result = await updateResidente(initialData.id, finalData)
+        } else {
+          // Si no tiene nada, es una creación nueva
+          result = await createResidente(finalData)
+        }
 
         if (result.success) {
           router.push('/modules/residentes')
@@ -654,27 +670,31 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-4 pt-10 border-t border-gray-50">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="px-8 py-4 rounded-2xl text-xs font-black text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all uppercase tracking-widest"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          disabled={isPending || uploading}
-          className="bg-[#1D9E75] hover:bg-[#167e5d] text-white rounded-2xl px-12 py-4 font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-[#1D9E75]/20 disabled:opacity-50 flex items-center gap-3"
-        >
-          {(isPending || uploading) ? (
-            <Loader2 size={18} className="animate-spin" />
-          ) : (
-            <Save size={18} />
-          )}
-          {initialData ? 'Actualizar Perfil' : 'Registrar Residente'}
-        </button>
-      </div>
+        <div className="flex justify-end gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+            className="px-8 py-6 rounded-2xl border-gray-100 font-bold text-gray-400 hover:text-gray-600 transition-all"
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            disabled={isPending || uploading}
+            className={`px-10 py-6 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all flex items-center gap-2 ${
+              initialData?.isReintegro ? 'bg-[#EF9F27] hover:bg-[#d88d1d] shadow-[#EF9F27]/20' : 
+              'bg-[#1D9E75] hover:bg-[#167e5d] shadow-[#1D9E75]/20'
+            }`}
+          >
+            {isPending || uploading ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : (
+              <Save size={20} />
+            )}
+            {initialData?.isReintegro ? 'Procesar Reintegración' : (initialData?.id ? 'Guardar Cambios' : 'Registrar Residente')}
+          </Button>
+        </div>
     </form>
   )
 }

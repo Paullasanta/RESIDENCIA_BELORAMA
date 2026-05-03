@@ -72,6 +72,11 @@ export async function importHabitacionesCSV(residenciaId: number, rows: any[]) {
 
 export async function updateHabitacion(id: number, data: Partial<z.infer<typeof habitacionSchema>>) {
   try {
+    // Restricción: No permitir OCUPADO manualmente
+    if (data.estado === 'OCUPADO') {
+      throw new Error('El estado OCUPADO solo se asigna automáticamente al registrar un residente.')
+    }
+
     const res = await prisma.habitacion.update({
       where: { id },
       data
@@ -79,7 +84,53 @@ export async function updateHabitacion(id: number, data: Partial<z.infer<typeof 
     revalidatePath(`/modules/residencias/${res.residenciaId}`)
     return { success: true, data: res }
   } catch (error: any) {
-    return { success: false, error: 'Error al actualizar la habitación' }
+    return { success: false, error: error.message || 'Error al actualizar la habitación' }
+  }
+}
+
+/**
+ * Función que revisa y actualiza los estados de las habitaciones dinámicamente.
+ * Se puede llamar al cargar el dashboard o la lista de habitaciones.
+ */
+export async function checkHabitacionesStatus() {
+  try {
+    const today = new Date()
+    today.setUTCHours(0,0,0,0)
+    
+    const limitDate = new Date(today)
+    limitDate.setDate(today.getDate() + 15)
+
+    // Buscar habitaciones ocupadas con residentes cuya fecha final esté cerca
+    const habitacionesOcupadas = await prisma.habitacion.findMany({
+      where: { estado: 'OCUPADO' },
+      include: {
+        residentes: {
+          where: { activo: true },
+          orderBy: { fechaFinal: 'asc' },
+          take: 1
+        }
+      }
+    })
+
+    for (const hab of habitacionesOcupadas) {
+      const residente = hab.residentes[0]
+      if (residente && residente.fechaFinal) {
+        const fechaFinal = new Date(residente.fechaFinal)
+        
+        // Si falta menos de 15 días y está ocupada -> POR_LIBERARSE
+        if (fechaFinal <= limitDate && hab.estado === 'OCUPADO') {
+          await prisma.habitacion.update({
+            where: { id: hab.id },
+            data: { estado: 'POR_LIBERARSE' }
+          })
+        }
+      }
+    }
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error checking room status:', error)
+    return { success: false }
   }
 }
 

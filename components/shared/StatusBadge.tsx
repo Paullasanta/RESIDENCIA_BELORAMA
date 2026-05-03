@@ -4,7 +4,7 @@ type StatusVariant =
   | 'EN_REVISION' | 'VENCIDO' | 'CRITICO'
   | 'APROBADO' | 'RECHAZADO'
   | 'ACTIVA' | 'INACTIVA'
-  | 'RESERVADO' | 'POR_LIBERARSE' | 'POR_VENCER' | 'PROXIMO'
+  | 'RESERVADO' | 'POR_LIBERARSE' | 'POR_VENCER' | 'PROXIMO' | 'VENDIDO'
 
 const variantMap: Record<StatusVariant, { label: string; classes: string }> = {
   LIBRE:      { label: 'Libre',      classes: 'bg-green-100 text-green-800' },

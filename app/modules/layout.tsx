@@ -12,12 +12,15 @@ import {
 
 import { MobileNavContainer } from '@/components/shared/MobileNavContainer'
 import { NotificationBell } from '@/components/shared/NotificationBell'
+import { SessionGuard } from '@/components/shared/SessionGuard'
+
+export const dynamic = 'force-dynamic'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
     const session = await auth()
 
-    if (!session) {
-        redirect('/login')
+    if (!session || !session.user || !(session.user as any).id) {
+        redirect('/auth/login')
     }
 
     const { rol, nombre, permisos } = session.user
@@ -55,6 +58,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     return (
         <div className="flex bg-[#F8FAF8] min-h-screen text-gray-900 font-sans">
+            <SessionGuard />
             {/* Sidebar Desktop */}
             <aside className="w-72 bg-[#072E1F] text-white hidden md:flex flex-col p-6 sticky top-0 h-screen shadow-2xl z-30 shrink-0">
                 <SidebarHeader 

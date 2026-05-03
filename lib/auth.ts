@@ -1,6 +1,7 @@
 import NextAuth, { type DefaultSession } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from './prisma'
+import { unstable_noStore as noStore } from 'next/cache'
 
 // Extender tipos de NextAuth
 declare module 'next-auth' {
@@ -27,8 +28,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) return null
 
-                const user = await prisma.user.findUnique({
-                    where: { email: credentials.email as string },
+                const user = await prisma.user.findFirst({
+                    where: { 
+                        email: { 
+                            equals: credentials.email as string, 
+                            mode: 'insensitive' 
+                        } 
+                    },
                     include: {
                         residente: true,
                         role: {
@@ -69,19 +75,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 token.residenciaId = (user as any).residenciaId
             }
             
-            // Verificación en tiempo real: Si es residente, verificar que siga activo
-            if (token.id) {
-                const dbUser = await prisma.user.findUnique({
-                    where: { id: token.id as number },
-                    select: { residente: { select: { activo: true } } }
-                })
-                
-                // Si fue desactivado por el administrador mientras estaba logueado, forzar cierre
-                if (dbUser?.residente && dbUser.residente.activo === false) {
-                    return {} as any // Esto invalida el token
-                }
-            }
-            
             // Manejar actualización de sesión en tiempo real
             if (trigger === "update" && session?.user) {
                 if (session.user.nombre) token.nombre = session.user.nombre
@@ -90,8 +83,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return token
         },
         async session({ session, token }) {
-            // Si el token fue invalidado (ej: usuario desactivado), forzamos una sesión vacía
+            // Forzar a que no se use caché para esta función
+            noStore()
+
+            // Si el token no tiene id, la sesión es inválida
             if (!token || !token.id) {
+                return {} as any
+            }
+
+            // Verificación en tiempo real de la base de datos
+            const dbUser = await prisma.user.findUnique({
+                where: { id: token.id as number },
+                select: { residente: { select: { activo: true } } }
+            })
+            
+            // Si el usuario fue eliminado, invalidar sesión
+            if (!dbUser) {
+                return {} as any
+            }
+
+            // Si fue desactivado por el administrador, invalidar sesión
+            if (dbUser.residente && dbUser.residente.activo === false) {
+                return {} as any
+            }
+
+            // Si su rol principal es RESIDENTE y se eliminó su perfil, invalidar sesión
+            if (token.rol === 'RESIDENTE' && !dbUser.residente) {
                 return {} as any
             }
             

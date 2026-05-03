@@ -14,6 +14,7 @@ interface ProductProps {
     precio: number
     fotos: string[]
     residente?: {
+        userId: number
         user: {
             nombre: string
             email: string

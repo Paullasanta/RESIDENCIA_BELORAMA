@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Filter, Search } from 'lucide-react'
 
@@ -13,6 +14,7 @@ interface PagosSearchFiltersProps {
 export function PagosSearchFilters({ q, resId, isGlobalAdmin, residencias }: PagosSearchFiltersProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
+    const [searchTerm, setSearchTerm] = useState(q || '')
 
     const updateParams = (newParams: Record<string, string | null>) => {
         const params = new URLSearchParams(searchParams.toString())
@@ -23,6 +25,16 @@ export function PagosSearchFilters({ q, resId, isGlobalAdmin, residencias }: Pag
         router.push(`?${params.toString()}`)
     }
 
+    // Debounce effect para búsqueda en tiempo real
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchTerm !== (q || '')) {
+                updateParams({ q: searchTerm || null, page: '1' })
+            }
+        }, 500)
+        return () => clearTimeout(timer)
+    }, [searchTerm])
+
     return (
         <div className="flex items-center gap-4 bg-white/50 backdrop-blur-sm p-4 rounded-3xl border border-gray-100 shadow-sm flex-1">
             <div className="relative flex-1">
@@ -30,12 +42,8 @@ export function PagosSearchFilters({ q, resId, isGlobalAdmin, residencias }: Pag
                 <input 
                     type="text"
                     placeholder="Buscar residente..."
-                    defaultValue={q}
-                    onKeyDown={(e: any) => {
-                        if (e.key === 'Enter') {
-                            updateParams({ q: e.target.value || null, page: '1' })
-                        }
-                    }}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full bg-white border border-gray-100 rounded-2xl pl-10 pr-4 py-2.5 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/20 transition-all"
                 />
             </div>

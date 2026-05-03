@@ -40,9 +40,10 @@ export default function ResidentPagoCard({ pago }: ResidentPagoCardProps) {
         }
     }
     const isGuarantee = pago.concepto?.toLowerCase().includes('garantía') || pago.concepto?.toLowerCase().includes('garantia')
+    const isFirstGuarantee = isGuarantee && (pago.concepto?.includes('Cuota 1/') || !pago.concepto?.includes('Cuota'))
 
     // Estado visual para el Badge
-    const isLocked = diffDays > 15 && pago.estado === 'PENDIENTE' && !isFirstMonth && !isGuarantee
+    const isLocked = diffDays > 15 && pago.estado === 'PENDIENTE' && !isFirstMonth && !isFirstGuarantee
     const statusVisual = isLocked ? 'PROXIMO' : (esPorVencer ? 'POR_VENCER' : pago.estado)
 
     return (

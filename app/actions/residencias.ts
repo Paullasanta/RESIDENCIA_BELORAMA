@@ -123,26 +123,29 @@ export async function updateResidencia(id: number, data: Partial<z.infer<typeof 
 
 export async function deleteResidencia(id: number) {
   try {
-    const count = await prisma.residencia.findUnique({
+    // Siempre desactivamos (Soft Delete) por seguridad e historial
+    await prisma.residencia.update({
       where: { id },
-      include: {
-        _count: { select: { users: true, habitaciones: true } }
-      }
+      data: { activa: false }
     })
-
-    if (count?._count.users || count?._count.habitaciones) {
-      await prisma.residencia.update({
-        where: { id },
-        data: { activa: false }
-      })
-      revalidatePath('/modules/residencias')
-      return { success: true, message: 'La residencia fue desactivada porque tiene datos vinculados.' }
-    }
-
-    await prisma.residencia.delete({ where: { id } })
+    
     revalidatePath('/modules/residencias')
-    return { success: true }
+    return { success: true, message: 'Residencia desactivada correctamente.' }
   } catch (error: any) {
-    return { success: false, error: 'Error al eliminar la residencia' }
+    return { success: false, error: 'Error al desactivar la residencia' }
+  }
+}
+
+export async function activateResidencia(id: number) {
+  try {
+    await prisma.residencia.update({
+      where: { id },
+      data: { activa: true }
+    })
+    
+    revalidatePath('/modules/residencias')
+    return { success: true, message: 'Residencia activada correctamente.' }
+  } catch (error: any) {
+    return { success: false, error: 'Error al activar la residencia' }
   }
 }

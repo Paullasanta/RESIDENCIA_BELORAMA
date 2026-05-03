@@ -174,39 +174,43 @@ export async function createResidente(data: any) {
 
       // 5. Generar Pagos Mensuales
       if (montoMensual > 0) {
-        const fechaInicio = (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : new Date();
-        const fechaFin = (data.fechaFinal && data.fechaFinal !== "") ? utcNoon(data.fechaFinal) : new Date(Date.UTC(new Date().getUTCFullYear() + 1, new Date().getUTCMonth(), new Date().getUTCDate(), 12, 0, 0));
+        const fIngreso = (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : new Date();
+        const fFinal = (data.fechaFinal && data.fechaFinal !== "") ? utcNoon(data.fechaFinal) : null;
+        
+        let numMeses = 1;
+        if (fFinal) {
+          const totalDays = Math.floor((fFinal.getTime() - fIngreso.getTime()) / (1000 * 60 * 60 * 24))
+          // Si son 31 días o menos, es 1 solo mes. Solo a partir del día 32 contamos el segundo mes.
+          numMeses = Math.max(1, Math.ceil(totalDays / 30.44))
+          if (totalDays <= 31) numMeses = 1
+        } else {
+          // Si no hay fecha final, generamos el primer mes por defecto
+          numMeses = 1;
+        }
+
         const now = new Date();
         now.setUTCHours(0, 0, 0, 0);
 
-        let fechaActual = new Date(fechaInicio);
-        const pagosToCreate: any[] = [];
+        const pagosToCreate = Array.from({ length: numMeses }, (_, i) => {
+          const isFirstPayment = i === 0;
+          const targetDate = new Date(fIngreso);
+          targetDate.setUTCMonth(fIngreso.getUTCMonth() + i);
+          
+          const fechaVencimiento = isFirstPayment ? new Date(fIngreso) : calcFechaVencimiento(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), diaPagoFinal);
+          const mesString = `${targetDate.getUTCFullYear()}-${String(targetDate.getUTCMonth() + 1).padStart(2, '0')}`;
+          const nombreMes = targetDate.toLocaleDateString('es-MX', { timeZone: 'UTC', month: 'long' });
+          const concepto = `Mensualidad ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${targetDate.getUTCFullYear()}`;
 
-        do {
-          const isFirstPayment: boolean = pagosToCreate.length === 0;
-          // Usa UTC para evitar que medianoche local cambie de dia en timezones con offset
-          // El primer mes vence el mismo día de ingreso, los siguientes usan el diaPago
-          const fechaVencimiento = isFirstPayment ? new Date(fechaInicio) : calcFechaVencimiento(fechaActual.getUTCFullYear(), fechaActual.getUTCMonth(), diaPagoFinal);
-
-          const mesString = `${fechaActual.getUTCFullYear()}-${String(fechaActual.getUTCMonth() + 1).padStart(2, '0')}`;
-          const nombreMes = fechaActual.toLocaleDateString('es-MX', { timeZone: 'UTC', month: 'long' });
-          const concepto = `Mensualidad ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${fechaActual.getUTCFullYear()}`;
-
-          // Si el vencimiento es anterior a hoy, marcar como VENCIDO
-          const defaultStatus = fechaVencimiento < now ? 'VENCIDO' : 'PENDIENTE';
-
-          pagosToCreate.push({
+          return {
             residenteId: residente.id,
             concepto: concepto,
             mesCorrespondiente: mesString,
             fechaVencimiento: fechaVencimiento,
             monto: montoMensual,
-            estado: (isFirstPayment && pagoConfirmado) ? 'EN_REVISION' : defaultStatus,
+            estado: (isFirstPayment && pagoConfirmado) ? 'EN_REVISION' : (fechaVencimiento < now ? 'VENCIDO' : 'PENDIENTE'),
             comprobante: (isFirstPayment && pagoConfirmado) ? comprobanteUrl : null
-          });
-
-          fechaActual.setUTCMonth(fechaActual.getUTCMonth() + 1);
-        } while (fechaActual < fechaFin);
+          };
+        });
 
         if (pagosToCreate.length > 0) {
           await tx.pago.createMany({ data: pagosToCreate });
@@ -214,28 +218,35 @@ export async function createResidente(data: any) {
       }
 
       if (montoGarantia > 0) {
-        const montoPrimerPago = Number(data.montoGarantiaPrimerPago || (montoGarantia / cuotasGarantia))
+        const fIngresoG = (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : new Date();
+        const fFinalG = (data.fechaFinal && data.fechaFinal !== "") ? utcNoon(data.fechaFinal) : null;
+        let stayMonths = 12;
+        if (fFinalG) {
+          const totalDays = Math.round((fFinalG.getTime() - fIngresoG.getTime()) / (1000 * 60 * 60 * 24))
+          stayMonths = totalDays <= 31 ? 1 : Math.max(1, Math.ceil(totalDays / 30.44))
+        }
+        
+        // Usar las cuotas solicitadas directamente
+        const finalCuotas = cuotasGarantia;
+        const nowG = new Date();
+        nowG.setUTCHours(0, 0, 0, 0);
+        
+        const montoPrimerPago = Number(data.montoGarantiaPrimerPago || (montoGarantia / finalCuotas))
         const montoRestante = Math.max(0, montoGarantia - montoPrimerPago)
-        const montoOtrasCuotas = cuotasGarantia > 1 ? (montoRestante / (cuotasGarantia - 1)) : 0
+        const montoOtrasCuotas = finalCuotas > 1 ? (montoRestante / (finalCuotas - 1)) : 0
 
-        const fechaBase = (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : new Date();
-        const now = new Date();
-        now.setUTCHours(0, 0, 0, 0);
-
-        const garantiasToCreate = Array.from({ length: cuotasGarantia }).map((_, i) => {
-          const fecha = new Date(fechaBase)
+        const garantiasToCreate = Array.from({ length: finalCuotas }).map((_, i) => {
+          const fecha = new Date(fIngresoG)
           fecha.setUTCMonth(fecha.getUTCMonth() + i)
           const montoCuota = i === 0 ? montoPrimerPago : montoOtrasCuotas
           const isFirstPayment = i === 0;
 
-          // La primera cuota vence el mismo día de ingreso, las siguientes usan el diaPago
-          const fechaVencimiento = isFirstPayment ? new Date(fechaBase) : calcFechaVencimiento(fecha.getUTCFullYear(), fecha.getUTCMonth(), diaPagoFinal);
-
-          const defaultStatus = fechaVencimiento < now ? 'VENCIDO' : 'PENDIENTE';
+          const fechaVencimiento = isFirstPayment ? new Date(fIngresoG) : calcFechaVencimiento(fecha.getUTCFullYear(), fecha.getUTCMonth(), diaPagoFinal);
+          const defaultStatus = fechaVencimiento < nowG ? 'VENCIDO' : 'PENDIENTE';
 
           return {
             residenteId: residente.id,
-            concepto: `Garantía (Cuota ${i + 1}/${cuotasGarantia})`,
+            concepto: `Garantía (Cuota ${i + 1}/${finalCuotas})`,
             monto: montoCuota,
             montoPagado: 0,
             fechaVencimiento: fechaVencimiento,
@@ -392,16 +403,25 @@ export async function updateResidente(id: number, data: any) {
       }
 
       if (parsedMontoGarantia !== null) {
-        // Obtener cuotas de garantía actuales
+        // Obtener cuotas de garantía actuales (solo las de la estancia vigente)
         const existingGarantias = await tx.pago.findMany({
-          where: { residenteId: id, concepto: { contains: 'Garantía', mode: 'insensitive' } },
+          where: { 
+            residenteId: id, 
+            concepto: { contains: 'Garantía', mode: 'insensitive' },
+            estado: { not: 'RECHAZADO' },
+            fechaVencimiento: { gte: currentResidente.fechaIngreso }
+          },
           orderBy: { fechaVencimiento: 'asc' }
         })
 
         const newTotalCuotas = data.cuotasGarantia ? Number(data.cuotasGarantia) : existingGarantias.length
         
-        // Si el número de cuotas cambió o se quiere redistribuir
-        if (newTotalCuotas !== existingGarantias.length || parsedMontoGarantia !== currentResidente.montoGarantia) {
+        // Si hay una intención explícita de cambiar cuotas o monto, o si los números no coinciden
+        if (data.cuotasGarantia || data.montoGarantia) {
+          const hasAmountChanged = Math.abs(parsedMontoGarantia - (currentResidente.montoGarantia || 0)) > 0.01
+          const hasCuotasChanged = newTotalCuotas !== existingGarantias.length
+          
+          if (hasCuotasChanged || hasAmountChanged) {
           // Identificar pagos que NO podemos tocar (finalizados o en revisión)
           const finalizados = existingGarantias.filter(p => p.estado === 'PAGADO' || p.estado === 'EN_REVISION')
           // Identificar pagos que SÍ podemos modificar o eliminar
@@ -425,12 +445,20 @@ export async function updateResidente(id: number, data: any) {
               
               for (let i = 0; i < numCuotasRestantes; i++) {
                 const installmentNum = finalizados.length + i + 1
-                const base = new Date(currentResidente.fechaIngreso)
-                const fechaVenc = calcFechaVencimiento(
-                  base.getUTCFullYear(),
-                  base.getUTCMonth() + (installmentNum - 1),
-                  residente.diaPago
-                )
+                const baseDate = new Date(residente.fechaIngreso)
+                
+                // REGLA: El primer pago (Cuota 1) siempre vence el día de ingreso.
+                // Los siguientes (Cuota 2, 3...) vencen en los meses siguientes según el diaPago.
+                let fechaVenc;
+                if (installmentNum === 1) {
+                  fechaVenc = new Date(baseDate)
+                } else {
+                  fechaVenc = calcFechaVencimiento(
+                    baseDate.getUTCFullYear(),
+                    baseDate.getUTCMonth() + (installmentNum - 1),
+                    residente.diaPago
+                  )
+                }
 
                 pagosToCreate.push({
                   residenteId: id,
@@ -446,11 +474,22 @@ export async function updateResidente(id: number, data: any) {
                 await tx.pago.createMany({ data: pagosToCreate })
               }
             }
+
+            // Actualizar conceptos de los pagos que NO se borraron (los finalizados)
+            for (const f of finalizados) {
+              const match = f.concepto.match(/Cuota (\d+)\//)
+              const currentNum = match ? match[1] : "1"
+              await tx.pago.update({
+                where: { id: f.id },
+                data: { concepto: `Garantía (Cuota ${currentNum}/${newTotalCuotas})` }
+              })
+            }
           }
         }
       }
+    }
 
-      // 5. Sincronizar meses si cambiaron las fechas
+    // 5. Sincronizar meses si cambiaron las fechas
       const newFechaIngreso = residente.fechaIngreso;
       const newFechaFinal = residente.fechaFinal;
       const newDiaPago = residente.diaPago;
@@ -490,6 +529,18 @@ export async function updateResidente(id: number, data: any) {
           await tx.pago.createMany({ data: pagosToCreate });
         }
 
+        const expectedMesesStrings = expectedMeses.map(exp => exp.mesCorrespondiente);
+        const pagosToDelete = existingPagos.filter(p => 
+          p.mesCorrespondiente && !expectedMesesStrings.includes(p.mesCorrespondiente) && 
+          p.estado !== 'PAGADO' && p.estado !== 'EN_REVISION'
+        );
+
+        if (pagosToDelete.length > 0) {
+          await tx.pago.deleteMany({
+            where: { id: { in: pagosToDelete.map(p => p.id) } }
+          });
+        }
+
       }
 
       // --- Sincronización Global de Pagos (Fuera del bloque de fechaFinal para que afecte a todos) ---
@@ -516,8 +567,8 @@ export async function updateResidente(id: number, data: any) {
           year = parseInt(parts[0]);
           month = parseInt(parts[1]) - 1;
         } else {
-          year = p.fechaVencimiento.getUTCFullYear();
-          month = p.fechaVencimiento.getUTCMonth();
+          year = p.fechaVencimiento!.getUTCFullYear();
+          month = p.fechaVencimiento!.getUTCMonth();
         }
 
         const newFecha = calcFechaVencimiento(year, month, newDiaPago);
@@ -566,10 +617,13 @@ export async function updateResidente(id: number, data: any) {
       return residente
     })
 
-    revalidatePath('/modules/pagos')
     revalidatePath('/modules/residentes')
+    revalidatePath(`/modules/residentes/${id}`)
+    revalidatePath(`/modules/residentes/${id}/editar`)
+    revalidatePath('/modules/pagos')
     return { success: true, data: result }
   } catch (error: any) {
+    console.error('Error updating residente:', error)
     return { success: false, error: error.message || 'Error al actualizar residente' }
   }
 }
@@ -707,7 +761,7 @@ export async function reactivateResidente(id: number, mode: 'restore' | 'reentry
           await tx.pago.updateMany({
             where: {
               residenteId: id,
-              estado: { in: ['PENDIENTE', 'VENCIDO', 'CRITICO'] }
+              estado: { in: ['PENDIENTE', 'VENCIDO', 'CRITICO', 'EN_REVISION'] }
             },
             data: {
               estado: 'RECHAZADO'
@@ -743,52 +797,79 @@ export async function reactivateResidente(id: number, mode: 'restore' | 'reentry
         const now = new Date()
         now.setUTCHours(0, 0, 0, 0)
 
+        // 3. Calcular duración de la estadía primero
+        const fechaFinal = data.fechaFinal ? utcNoon(data.fechaFinal) : null
+        let numMeses = 1
+        const start = new Date(ingresoDate)
+        start.setUTCHours(12, 0, 0, 0)
+
+        if (fechaFinal) {
+          const totalDays = Math.round((fechaFinal.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+          // Si son 31 días o menos, es 1 solo mes. Solo a partir del día 32 contamos el segundo mes.
+          numMeses = Math.max(1, Math.ceil(totalDays / 30.44))
+          if (totalDays <= 31) numMeses = 1
+        }
+
         // 3. Generar pagos de garantía
         const mGarantia = parseFloat(montoGarantia || '0')
-        const nCuotas = parseInt(cuotasGarantia || '1')
+        const requestedCuotas = parseInt(cuotasGarantia || '1')
+        // Generar pagos de garantía respetando las cuotas solicitadas
+        const finalCuotasGarantia = requestedCuotas
+
         if (mGarantia > 0) {
-          const montoPorCuota = parseFloat((mGarantia / nCuotas).toFixed(2))
-          const pagosGarantia = Array.from({ length: nCuotas }, (_, i) => {
+          // Dividir el monto total entre las cuotas finales permitidas
+          const montoPorCuota = parseFloat((mGarantia / finalCuotasGarantia).toFixed(2))
+          const pagosGarantia = Array.from({ length: finalCuotasGarantia }, (_, i) => {
+            const isFirstPayment = i === 0;
             // La primera cuota vence el mismo día de ingreso, las siguientes usan el diaPago
-            const fVenc = i === 0 ? new Date(ingresoDate) : calcFechaVencimiento(ingresoDate.getUTCFullYear(), ingresoDate.getUTCMonth() + i, diaPagoInt)
-            const status = fVenc < now ? 'VENCIDO' : 'PENDIENTE'
+            const fVenc = isFirstPayment ? new Date(ingresoDate) : calcFechaVencimiento(ingresoDate.getUTCFullYear(), ingresoDate.getUTCMonth() + i, diaPagoInt)
             
+            let status = fVenc < now ? 'VENCIDO' : 'PENDIENTE'
+            let comprobante = null
+
+            if (isFirstPayment && data.pagoConfirmado) {
+              status = 'EN_REVISION'
+              comprobante = data.comprobanteUrl
+            }
+
             return {
               residenteId: id,
-              concepto: `Garantía (Cuota ${i + 1}/${nCuotas}) - Reintegro`,
-              monto: i === nCuotas - 1 ? parseFloat((mGarantia - (montoPorCuota * (nCuotas - 1))).toFixed(2)) : montoPorCuota,
+              concepto: `Garantía (Cuota ${i + 1}/${finalCuotasGarantia})`,
+              monto: i === finalCuotasGarantia - 1 ? parseFloat((mGarantia - (montoPorCuota * (finalCuotasGarantia - 1))).toFixed(2)) : montoPorCuota,
               fechaVencimiento: fVenc,
-              estado: status as any
+              estado: status as any,
+              comprobante: comprobante
             }
           })
           await tx.pago.createMany({ data: pagosGarantia })
         }
 
-        // 4. Generar mensualidades según la duración de la estadía
-        const fechaFinal = data.fechaFinal ? new Date(data.fechaFinal) : null
-        let numMeses = 1
-        if (fechaFinal) {
-          const diffYear = fechaFinal.getUTCFullYear() - ingresoDate.getUTCFullYear()
-          const diffMonth = fechaFinal.getUTCMonth() - ingresoDate.getUTCMonth()
-          numMeses = Math.max(1, (diffYear * 12) + diffMonth + (fechaFinal.getUTCDate() >= ingresoDate.getUTCDate() ? 1 : 0))
-        }
-
+        // 5. Generar mensualidades según numMeses ya calculado
         const pagosMensualidades = Array.from({ length: numMeses }, (_, i) => {
+          const isFirstMonth = i === 0;
           const targetDate = new Date(ingresoDate)
           targetDate.setUTCMonth(ingresoDate.getUTCMonth() + i)
           const nombreMes = targetDate.toLocaleDateString('es-MX', { timeZone: 'UTC', month: 'long' })
           
           // El primer mes vence el mismo día de ingreso, los siguientes usan el diaPago
-          const fVencMes = i === 0 ? new Date(ingresoDate) : calcFechaVencimiento(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), diaPagoInt)
-          const statusMes = fVencMes < now ? 'VENCIDO' : 'PENDIENTE'
+          const fVencMes = isFirstMonth ? new Date(ingresoDate) : calcFechaVencimiento(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), diaPagoInt)
+          
+          let statusMes = fVencMes < now ? 'VENCIDO' : 'PENDIENTE'
+          let comprobanteMes = null
+
+          if (isFirstMonth && data.pagoConfirmado) {
+            statusMes = 'EN_REVISION'
+            comprobanteMes = data.comprobanteUrl
+          }
           
           return {
             residenteId: id,
-            concepto: `Mensualidad ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${targetDate.getUTCFullYear()} - Reintegro`,
+            concepto: `Mensualidad ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${targetDate.getUTCFullYear()}`,
             mesCorrespondiente: `${targetDate.getUTCFullYear()}-${String(targetDate.getUTCMonth() + 1).padStart(2, '0')}`,
             fechaVencimiento: fVencMes,
             monto: parseFloat(montoMensual),
-            estado: statusMes as any
+            estado: statusMes as any,
+            comprobante: comprobanteMes
           }
         })
 
