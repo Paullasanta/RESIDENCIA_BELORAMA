@@ -45,7 +45,7 @@ export function ResidentesTable({ residentes, isInactiveView = false }: Resident
 
         doc.setFontSize(22)
         doc.setTextColor(29, 158, 117)
-        doc.text('BELORAMA', 14, 20)
+        doc.text('GROW RESIDENCIAL', 14, 20)
         
         doc.setFontSize(16)
         doc.setTextColor(7, 46, 31)
@@ -183,7 +183,7 @@ export function ResidentesTable({ residentes, isInactiveView = false }: Resident
                     <EmptyState
                         icon={<Users size={64} className="text-gray-200 mb-4" />}
                         title={search ? "No se encontraron resultados" : "No hay residentes registrados"}
-                        description={search ? `Refina tu búsqueda o intenta con otros términos para "${search}"` : "Los residentes aparecerán aquí una vez que se den de alta en el sistema."}
+                        description={search ? `Refina tu búsqueda o intenta con otros términos para "${search}"` : "Los residentes aparecerán aquí una vez que se den de alta en el sistema en Grow Residencial."}
                     />
                 ) : (
                     <div className="overflow-x-auto">

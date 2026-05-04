@@ -415,13 +415,13 @@ export async function updateResidente(id: number, data: any) {
         })
 
         const newTotalCuotas = data.cuotasGarantia ? Number(data.cuotasGarantia) : existingGarantias.length
-        
-        // Si hay una intención explícita de cambiar cuotas o monto, o si los números no coinciden
-        if (data.cuotasGarantia || data.montoGarantia) {
-          const hasAmountChanged = Math.abs(parsedMontoGarantia - (currentResidente.montoGarantia || 0)) > 0.01
-          const hasCuotasChanged = newTotalCuotas !== existingGarantias.length
-          
-          if (hasCuotasChanged || hasAmountChanged) {
+
+        // Solo recalcular si el admin realmente cambió el monto o el número de cuotas
+        // Comparamos contra los valores guardados en BD para evitar falsos positivos
+        const hasAmountChanged = Math.abs(parsedMontoGarantia - (currentResidente.montoGarantia || 0)) > 0.01
+        const hasCuotasChanged = newTotalCuotas !== existingGarantias.length
+
+        if (hasAmountChanged || hasCuotasChanged) {
           // Identificar pagos que NO podemos tocar (finalizados o en revisión)
           const finalizados = existingGarantias.filter(p => p.estado === 'PAGADO' || p.estado === 'EN_REVISION')
           // Identificar pagos que SÍ podemos modificar o eliminar
@@ -464,7 +464,7 @@ export async function updateResidente(id: number, data: any) {
                   residenteId: id,
                   concepto: `Garantía (Cuota ${installmentNum}/${newTotalCuotas})`,
                   monto: i === numCuotasRestantes - 1 
-                    ? Number((montoRestante - (montoPorCuota * (numCuotasRestantes - 1))).toFixed(2)) // Ajuste para el último para evitar errores de redondeo
+                    ? Number((montoRestante - (montoPorCuota * (numCuotasRestantes - 1))).toFixed(2))
                     : montoPorCuota,
                   fechaVencimiento: fechaVenc,
                   estado: 'PENDIENTE' as any
@@ -487,9 +487,8 @@ export async function updateResidente(id: number, data: any) {
           }
         }
       }
-    }
 
-    // 5. Sincronizar meses si cambiaron las fechas
+      // 5. Sincronizar meses si cambiaron las fechas
       const newFechaIngreso = residente.fechaIngreso;
       const newFechaFinal = residente.fechaFinal;
       const newDiaPago = residente.diaPago;

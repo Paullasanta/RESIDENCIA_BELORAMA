@@ -53,7 +53,7 @@ export default async function AvisosPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 max-w-4xl mx-auto">
                 <PageHeader
                     title="Muro de Avisos"
-                    description="Enterate de lo último en Belorama."
+                    description="Enterate de lo último en Grow Residencial."
                 />
                 {isAdmin && (
                     <Link

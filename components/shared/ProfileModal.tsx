@@ -21,12 +21,19 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     const [userData, setUserData] = useState<any>(null)
     const [mounted, setMounted] = useState<boolean>(false)
 
+    const [telefono, setTelefono] = useState('')
+    const [emergenciaTelefono, setEmergenciaTelefono] = useState('')
+
     useEffect(() => {
         setMounted(true)
         if (isOpen && session?.user?.id) {
             fetch(`/api/user/${session.user.id}`)
                 .then(res => res.json())
-                .then(data => setUserData(data))
+                .then(data => {
+                    setUserData(data)
+                    setTelefono(data.telefono || '')
+                    setEmergenciaTelefono(data.emergenciaTelefono || '')
+                })
         }
         return () => setMounted(false)
     }, [isOpen, session])
@@ -66,7 +73,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                 <div className="p-8 border-b border-gray-50 flex items-center justify-between shrink-0">
                     <div>
                         <h3 className="text-2xl font-black text-[#072E1F] tracking-tight">Editar Mi Perfil</h3>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">Personaliza tu experiencia en Belorama</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.2em]">Personaliza tu experiencia en Grow Residencial</p>
                     </div>
                     <button onClick={onClose} className="p-3 hover:bg-gray-50 rounded-2xl transition-all text-gray-400 hover:text-gray-900">
                         <X size={24} />
@@ -120,7 +127,14 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                     </h4>
                                     <div className="space-y-2 text-left">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Teléfono Móvil</label>
-                                        <input name="telefono" defaultValue={userData.telefono} className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" />
+                                        <input 
+                                            name="telefono" 
+                                            value={telefono} 
+                                            onChange={(e) => setTelefono(e.target.value.replace(/[^0-9]/g, '').slice(0, 9))}
+                                            inputMode="numeric"
+                                            maxLength={9}
+                                            className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] outline-none transition-all font-bold text-gray-700" 
+                                        />
                                     </div>
                                     <div className="space-y-2 text-left">
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Calendar size={12} /> Fecha Nacimiento</label>
@@ -139,7 +153,13 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                         </div>
                                         <div className="space-y-2 text-left">
                                             <label className="text-[10px] font-black text-red-300 uppercase tracking-widest ml-1">Contacto Teléfono</label>
-                                            <input name="emergenciaTelefono" defaultValue={userData.emergenciaTelefono} className="w-full px-4 py-3 rounded-xl border border-red-100/50 bg-white focus:border-red-400 outline-none transition-all font-bold text-gray-700 text-sm" />
+                                            <input 
+                                                name="emergenciaTelefono" 
+                                                value={emergenciaTelefono} 
+                                                onChange={(e) => setEmergenciaTelefono(e.target.value.replace(/[^0-9]/g, ''))}
+                                                inputMode="numeric"
+                                                className="w-full px-4 py-3 rounded-xl border border-red-100/50 bg-white focus:border-red-400 outline-none transition-all font-bold text-gray-700 text-sm" 
+                                            />
                                         </div>
                                     </div>
                                 </div>

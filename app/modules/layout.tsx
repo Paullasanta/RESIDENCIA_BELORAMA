@@ -28,7 +28,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     // Fetch dynamic branding
     const systemNameConfig = await prisma.configuracion.findUnique({ where: { clave: 'SYSTEM_NAME' } })
-    const systemName = systemNameConfig?.valor || 'Belorama'
+    const systemName = systemNameConfig?.valor || 'Grow Residencial'
 
     // Permisos Helpers
     const hasPerm = (p: string) => permisos?.includes(p) || rol === 'ADMIN'
@@ -64,7 +64,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 <SidebarHeader 
                     title={theme.title}
                     logoStyle={theme.logo}
-                    systemName="SISTEMA BELORAMA"
+                    systemName="GROW RESIDENCIAL"
                     userName={nombre}
                 />
 

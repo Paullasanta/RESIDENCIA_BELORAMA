@@ -5,7 +5,6 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { Home, Users, ArrowLeft, Upload, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { ImportHabitacionesCSV } from '@/components/admin/ImportHabitacionesCSV'
 import { AddHabitacionButton } from '@/components/admin/AddHabitacionButton'
 import { ManageHabitacionModal } from '@/components/admin/ManageHabitacionModal'
 
@@ -72,7 +71,6 @@ export default async function ResidenciaDetallePage({ params }: { params: Promis
                         description={`Gestión de habitaciones y ocupación - ${residencia.direccion}`}
                     />
                     <div className="flex items-center gap-3">
-                        <ImportHabitacionesCSV residenciaId={id} />
                         <AddHabitacionButton residenciaId={id} />
                     </div>
                 </div>

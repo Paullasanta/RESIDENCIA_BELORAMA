@@ -135,7 +135,7 @@ export async function confirmReserva(reservaId: number) {
             nombre: reserva.nombre,
             apellidoPaterno: reserva.apellidoPaterno,
             apellidoMaterno: reserva.apellidoMaterno,
-            email: reserva.email || `${reserva.dni}@belorama.com`,
+            email: reserva.email || `${reserva.dni}@growresidencial.com`,
             password: reserva.dni, // El DNI será su contraseña inicial
             roleId: 2, // Rol de residente
           }

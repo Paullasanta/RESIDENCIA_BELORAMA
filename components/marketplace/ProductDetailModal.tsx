@@ -152,7 +152,7 @@ export function ProductDetailModal({
                                 <div className="flex-1">
                                     <p className="font-black text-[#072E1F] leading-none mb-1">{producto.residente?.user.nombre || 'Administración'}</p>
                                     <p className="text-xs font-bold text-gray-400 flex items-center gap-1.5">
-                                        <User size={12} className="text-[#1D9E75]" /> {producto.residente ? 'Residente' : 'Equipo de Belorama'}
+                                        <User size={12} className="text-[#1D9E75]" /> {producto.residente ? 'Residente' : 'Equipo de Grow Residencial'}
                                     </p>
                                 </div>
                             </div>

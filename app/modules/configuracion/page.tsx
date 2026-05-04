@@ -23,9 +23,9 @@ export default async function ConfiguracionPage() {
     }), {} as Record<string, string>)
 
     const initialConfig = {
-        SYSTEM_NAME: 'Belorama',
-        SUPPORT_EMAIL: 'soporte@belorama.com',
-        FOOTER_TEXT: `© ${new Date().getFullYear()} Belorama - Gestión de Residencias`,
+        SYSTEM_NAME: 'Grow Residencial',
+        SUPPORT_EMAIL: 'soporte@growresidencial.com',
+        FOOTER_TEXT: `© ${new Date().getFullYear()} Grow Residencial - Gestión de Residencias`,
         ...configMap
     }
 
@@ -43,20 +43,20 @@ export default async function ConfiguracionPage() {
                 title="Centro de Control"
                 description="Gestión administrativa, personal y seguridad del sistema."
             />
-            
-            <ConfigTabs 
+
+            <ConfigTabs
                 sistema={<ConfigForm initialConfig={initialConfig} />}
                 personal={
-                    <StaffManager 
-                        staff={staff as any} 
-                        roles={roles} 
-                        residencias={residencias} 
+                    <StaffManager
+                        staff={staff as any}
+                        roles={roles}
+                        residencias={residencias}
                     />
                 }
                 roles={
-                    <RolesManager 
-                        roles={roles as any} 
-                        allPermissions={allPermissions} 
+                    <RolesManager
+                        roles={roles as any}
+                        allPermissions={allPermissions}
                     />
                 }
             />

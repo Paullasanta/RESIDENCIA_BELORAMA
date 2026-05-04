@@ -41,7 +41,7 @@ export function ExportExcelButton({ data, filename, sheetName = 'Datos', columns
                 cell.fill = {
                     type: 'pattern',
                     pattern: 'solid',
-                    fgColor: { argb: 'FF1D9E75' } // Verde Belorama
+                    fgColor: { argb: 'FF1D9E75' } // Verde Grow Residencial
                 }
                 cell.alignment = { vertical: 'middle', horizontal: 'center' }
                 cell.border = {

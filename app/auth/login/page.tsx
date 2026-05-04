@@ -55,7 +55,7 @@ export default function LoginPage() {
                             <ArrowLeft size={18} />
                         </div>
                     </Link>
-                    <h1 className="text-xl font-black tracking-widest text-[#1D9E75] uppercase">Belorama</h1>
+                    <h1 className="text-xl font-black tracking-widest text-[#1D9E75] uppercase">Grow Residencial</h1>
                     <div className="w-10"></div> {/* Spacer to center logo */}
                 </div>
 
@@ -137,33 +137,7 @@ export default function LoginPage() {
                             </button>
                         </form>
 
-                        {/* Accesos de Prueba Táctiles */}
-                        <div className="pt-6 border-t border-gray-50">
-                            <h3 className="text-[10px] font-black text-gray-300 mb-4 text-center uppercase tracking-widest">Accesos Rápidos (Demo)</h3>
-                            <div className="grid grid-cols-1 gap-2">
-                                {[
-                                    { role: 'Admin', email: 'admin@belorama.com', pass: 'admin123' },
-                                    { role: 'Residente', email: 'ana@belorama.com', pass: 'res123' },
-                                    { role: 'Cocinero', email: 'cocinero@belorama.com', pass: 'cocina123' }
-                                ].map((acc) => (
-                                    <button
-                                        key={acc.email}
-                                        type="button"
-                                        onClick={() => {
-                                            setEmail(acc.email)
-                                            setPassword(acc.pass)
-                                        }}
-                                        className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-100 transition-all active:scale-95 text-left group"
-                                    >
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] font-black text-[#1D9E75] uppercase tracking-tighter">{acc.role}</span>
-                                            <span className="text-[10px] font-bold text-gray-400">{acc.email}</span>
-                                        </div>
-                                        <div className="text-[8px] font-black text-gray-300 group-hover:text-[#1D9E75] transition-colors">USAR ESTE</div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+
                     </div>
                 </div>
             </div>
@@ -178,28 +152,14 @@ export default function LoginPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#072E1F] via-transparent to-transparent"></div>
 
                 <div className="relative z-10 max-w-lg text-white space-y-6 mt-32">
-                    <span className="inline-block py-1.5 px-3.5 rounded-full bg-[#EF9F27]/20 backdrop-blur-sm text-[#EF9F27] border border-[#EF9F27]/30 text-sm font-bold tracking-wider">
-                        SISTEMA DE GESTIÓN V2
-                    </span>
                     <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
                         La forma <span className="text-[#EF9F27]">inteligente</span> de gestionar tu residencia.
                     </h1>
                     <p className="text-lg text-gray-200 leading-relaxed font-light">
-                        Una experiencia fluida y conectada. Administra cuartos, lavandería, finanzas y comida, todo en un solo lugar.
+                        Una experiencia fluida y conectada. Cuartos, lavandería, finanzas y comida, todo en un solo lugar.
                     </p>
 
-                    {/* Widget Decorativo */}
-                    <div className="mt-12 bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-2xl flex items-center gap-4">
-                        <div className="w-12 h-12 bg-[#1D9E75] rounded-full flex items-center justify-center shadow-lg shrink-0">
-                            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                            </svg>
-                        </div>
-                        <div>
-                            <p className="font-bold text-white leading-tight">Plataforma 100% Sincronizada</p>
-                            <p className="text-sm text-gray-300 font-medium">Actualizaciones de módulos en tiempo real.</p>
-                        </div>
-                    </div>
+
                 </div>
             </div>
         </div>

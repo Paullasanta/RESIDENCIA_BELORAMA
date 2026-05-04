@@ -86,8 +86,8 @@ async function main() {
     // 3. Crear Usuarios Iniciales
     const adminUser = await prisma.user.create({
         data: {
-            nombre: 'Admin Belorama',
-            email: 'admin@belorama.com',
+            nombre: 'Admin Grow Residencial',
+            email: 'admin@growresidencial.com',
             password: 'admin123',
             roleId: roleAdmin.id,
         }
@@ -96,7 +96,7 @@ async function main() {
     const cocineroUser = await prisma.user.create({
         data: {
             nombre: 'Carlos Cocinero',
-            email: 'cocinero@belorama.com',
+            email: 'cocinero@growresidencial.com',
             password: 'cocina123',
             roleId: roleCocinero.id,
         }
@@ -152,11 +152,11 @@ async function main() {
 
     // Crear Residentes
     const residentesList = [
-        { nombre: 'Ana García', email: 'ana@belorama.com', habIdx: 0, resId: res1.id },
-        { nombre: 'Luis Pérez', email: 'luis@belorama.com', habIdx: 1, resId: res1.id },
-        { nombre: 'María López', email: 'maria@belorama.com', habIdx: 2, resId: res1.id },
-        { nombre: 'Jorge Díaz', email: 'jorge@belorama.com', habIdx: 0, resId: res2.id },
-        { nombre: 'Sofia Ruiz', email: 'sofia@belorama.com', habIdx: 1, resId: res2.id },
+        { nombre: 'Ana García', email: 'ana@growresidencial.com', habIdx: 0, resId: res1.id },
+        { nombre: 'Luis Pérez', email: 'luis@growresidencial.com', habIdx: 1, resId: res1.id },
+        { nombre: 'María López', email: 'maria@growresidencial.com', habIdx: 2, resId: res1.id },
+        { nombre: 'Jorge Díaz', email: 'jorge@growresidencial.com', habIdx: 0, resId: res2.id },
+        { nombre: 'Sofia Ruiz', email: 'sofia@growresidencial.com', habIdx: 1, resId: res2.id },
     ]
 
     const residentes = await Promise.all(
