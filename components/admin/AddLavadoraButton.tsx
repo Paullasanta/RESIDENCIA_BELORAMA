@@ -35,9 +35,10 @@ export function AddLavadoraButton({ residencias }: { residencias: any[] }) {
         <>
             <button 
                 onClick={() => setIsOpen(true)}
-                className="bg-[#1D9E75] text-white px-5 py-3 rounded-2xl flex items-center justify-center gap-2 font-black text-xsuppercase tracking-widest shadow-xl shadow-[#1D9E75]/20 hover:bg-[#157a5a] transition-all hover:-translate-y-1"
+                className="bg-[#1D9E75] text-white h-12 px-6 rounded-2xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-[0.15em] shadow-xl shadow-[#1D9E75]/20 hover:bg-[#157a5a] active:scale-95 transition-all"
             >
-                <Plus size={18} /> Nueva Lavadora
+                <Plus size={18} strokeWidth={3} /> 
+                <span>Nueva Lavadora</span>
             </button>
 
             {isOpen && (

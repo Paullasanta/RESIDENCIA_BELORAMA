@@ -31,10 +31,10 @@ export function ClearShiftsButton({ lavadoraId, residenciaId, hasAssignments }: 
         <button 
             onClick={handleClear}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-red-500/20"
+            className="flex items-center justify-center w-10 h-10 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl transition-all active:scale-90 shadow-lg shadow-red-500/5"
+            title="Limpiar Turnos"
         >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-            Limpiar Turnos
+            {loading ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
         </button>
     )
 }

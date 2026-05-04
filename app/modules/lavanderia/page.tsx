@@ -22,7 +22,7 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
     const searchParamsObj = await (searchParams as any)
     const filterResidenciaId = searchParamsObj?.residenciaId ? parseInt(searchParamsObj.residenciaId) : null
 
-    const isGlobal = rol === 'ADMIN' && !sessionResId
+    const isGlobal = (rol === 'ADMIN' || rol === 'COCINERO') && !sessionResId;
 
     // Aislamiento: Prioridad de residencia
     let residenciaId: number | null = filterResidenciaId || sessionResId || null
@@ -108,15 +108,27 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
         lavadora: lav,
         days: DIAS.map(dia => ({
             dia,
-            turnos: turnos.filter(t => t.lavadoraId === lav.id && t.dia === dia).map(t => ({
-                ...t,
-                esFijo: turnosFijos.some((tf: any) => 
+            turnos: turnos.filter(t => t.lavadoraId === lav.id && t.dia === dia).map(t => {
+                // Buscar si existe un turno fijo (dueño original) para este slot
+                const fixed = (turnosFijos as any[]).find((tf: any) => 
                     tf.lavadoraId === t.lavadoraId && 
                     tf.dia === t.dia && 
-                    tf.horaInicio.trim() === t.horaInicio.trim() &&
-                    tf.residenteId === t.residenteId
+                    tf.horaInicio.trim() === t.horaInicio.trim()
                 )
-            })),
+
+                // Obtener el nombre del dueño original si existe
+                let nombreDuenioBase = null
+                if (fixed) {
+                    const residenteOriginal = residentes.find(r => r.id === fixed.residenteId)
+                    nombreDuenioBase = residenteOriginal?.user.nombre || 'Asignado'
+                }
+
+                return {
+                    ...t,
+                    esFijo: fixed && fixed.residenteId === t.residenteId,
+                    duenioBase: nombreDuenioBase
+                }
+            }),
         })),
     }))
 

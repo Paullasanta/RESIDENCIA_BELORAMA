@@ -19,7 +19,7 @@ export async function checkAuth(requiredPermission?: string) {
  * Si no, el residenciaId del recurso debe coincidir con el del usuario.
  */
 export function checkResidenciaAccess(user: any, resourceResidenciaId: number | null) {
-    if (user.rol === 'ADMIN' && !user.residenciaId) return true // Global Admin
+    if ((user.rol === 'ADMIN' || user.rol === 'COCINERO') && !user.residenciaId) return true // Global Admin/Cocinero
     if (user.residenciaId === resourceResidenciaId) return true
     throw new Error('No autorizado: No tienes acceso a los recursos de esta residencia')
 }

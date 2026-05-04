@@ -45,39 +45,39 @@ export default async function DetallePagosResidentePage({ params }: { params: Pr
 
   return (
     <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500 max-w-5xl mx-auto pb-20">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center">
           <Link 
             href="/modules/pagos" 
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-100 rounded-2xl text-xs font-black text-gray-400 hover:text-[#072E1F] hover:shadow-lg transition-all"
+            className="inline-flex items-center justify-center w-10 h-10 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-[#1D9E75] hover:shadow-lg transition-all active:scale-90"
           >
-            <ArrowLeft size={16} />
-            VOLVER A PAGOS
+            <ArrowLeft size={20} />
           </Link>
+          <div className="ml-4">
+              <h1 className="text-2xl font-black text-[#072E1F] tracking-tighter">Estado de Cuenta</h1>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{residente.user.nombre}</p>
+          </div>
       </div>
 
-      <PageHeader
-        title={`Historial de Pagos`}
-        description={`Gestión de estado de cuenta para ${residente.user.nombre}.`}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-[2.5rem] p-8 border shadow-xl shadow-gray-200/20 flex items-center gap-6 group hover:-translate-y-1 transition-all duration-300">
-              <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center text-green-600 border border-green-100">
-                  <CheckCircle size={32} />
+      <div className="grid grid-cols-2 gap-3 sm:gap-6">
+          <div className="bg-white rounded-[2rem] p-4 sm:p-8 border border-gray-50 shadow-xl shadow-gray-200/20 flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-6 group transition-all">
+              <div className="w-10 h-10 sm:w-16 sm:h-16 bg-green-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-green-600 border border-green-100 shrink-0">
+                  <CheckCircle size={24} className="sm:hidden" />
+                  <CheckCircle size={32} className="hidden sm:block" />
               </div>
-              <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Total Pagado</p>
-                  <p className="text-3xl font-black text-[#072E1F] tracking-tighter">S/ {totalPagado.toLocaleString('es-MX')}</p>
+              <div className="text-center sm:text-left">
+                  <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">Pagado</p>
+                  <p className="text-sm sm:text-3xl font-black text-[#072E1F] tracking-tighter">S/ {totalPagado.toLocaleString('es-MX')}</p>
               </div>
           </div>
 
-          <div className="bg-white rounded-[2.5rem] p-8 border shadow-xl shadow-gray-200/20 flex items-center gap-6 group hover:-translate-y-1 transition-all duration-300 border-red-100">
-              <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-500 border border-red-100">
-                  <Clock size={32} />
+          <div className="bg-white rounded-[2rem] p-4 sm:p-8 border border-red-50 shadow-xl shadow-gray-200/20 flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-6 group transition-all">
+              <div className="w-10 h-10 sm:w-16 sm:h-16 bg-red-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-red-500 border border-red-100 shrink-0">
+                  <Clock size={24} className="sm:hidden" />
+                  <Clock size={32} className="hidden sm:block" />
               </div>
-              <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Deuda Pendiente</p>
-                  <p className="text-3xl font-black text-red-600 tracking-tighter">S/ {totalDeuda.toLocaleString('es-MX')}</p>
+              <div className="text-center sm:text-left">
+                  <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">Pendiente</p>
+                  <p className="text-sm sm:text-3xl font-black text-red-600 tracking-tighter">S/ {totalDeuda.toLocaleString('es-MX')}</p>
               </div>
           </div>
       </div>
@@ -151,34 +151,28 @@ function PagoItem({ pago, isHistorical = false }: { pago: any, isHistorical?: bo
     const monthShort = dObj ? dObj.toLocaleDateString('es-MX', { month: 'short', timeZone: 'UTC' }).replace('.', '') : '—'
 
     return (
-        <div className={`p-8 flex items-center justify-between hover:bg-gray-50/30 transition-colors ${isHistorical ? 'py-4' : ''}`}>
-            <div className="flex items-center gap-6">
-                <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center font-black border ${
+        <div className={`p-4 sm:p-8 flex items-center justify-between hover:bg-gray-50/30 transition-colors ${isHistorical ? 'py-3 sm:py-4' : ''}`}>
+            <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+                <div className={`w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center font-black border shrink-0 ${
                 pago.estado === 'PAGADO' ? 'bg-green-50 text-green-600 border-green-100' : 
                 pago.estado === 'EN_REVISION' ? 'bg-blue-50 text-blue-600 border-blue-100' : 
                 pago.estado === 'RECHAZADO' ? 'bg-red-50 text-red-300 border-red-100' :
                 'bg-gray-50 text-gray-400 border-gray-100'
                 }`}>
-                    <span className="text-[10px] uppercase leading-none mb-1 opacity-60">{monthShort}</span>
-                    <span className="text-lg leading-none">{day}</span>
+                    <span className="text-[8px] sm:text-[10px] uppercase leading-none mb-0.5 sm:mb-1 opacity-60">{monthShort}</span>
+                    <span className="text-sm sm:text-lg leading-none">{day}</span>
                 </div>
-                <div>
-                    <p className={`text-lg font-black text-[#072E1F] leading-none mb-2 ${isHistorical ? 'text-sm text-gray-400' : ''}`}>{pago.concepto}</p>
-                    <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        <span className={isHistorical ? 'text-gray-300' : 'text-[#1D9E75]'}>S/ {pago.monto.toLocaleString('es-MX')}</span>
-                        <span>•</span>
-                        <span>Vence: {dObj ? dObj.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', timeZone: 'UTC' }) : 'N/A'}</span>
-                        {pago.fechaPago && (
-                            <>
-                            <span>•</span>
-                            <span className="text-green-600">Pagado: {new Date(pago.fechaPago).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}</span>
-                            </>
-                        )}
+                <div className="min-w-0">
+                    <p className={`text-sm sm:text-lg font-black text-[#072E1F] leading-tight mb-1 truncate ${isHistorical ? 'text-xs text-gray-400' : ''}`}>{pago.concepto}</p>
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        <span className={isHistorical ? 'text-gray-300' : 'text-[#1D9E75] font-black'}>S/ {pago.monto.toLocaleString('es-MX')}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="truncate">Vence: {dObj ? dObj.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : 'N/A'}</span>
                     </div>
                 </div>
             </div>
-            <div className="flex items-center gap-4">
-            <StatusBadge status={pago.estado as any} />
+            <div className="flex items-center gap-2 sm:gap-4 ml-2 shrink-0">
+                <StatusBadge status={pago.estado as any} />
             </div>
         </div>
     )

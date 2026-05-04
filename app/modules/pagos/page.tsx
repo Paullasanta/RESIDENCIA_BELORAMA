@@ -20,6 +20,33 @@ const months = [
     { v: '10', l: 'Octubre' }, { v: '11', l: 'Noviembre' }, { v: '12', l: 'Diciembre' }
 ]
 
+function getPagoLogic(entry: any, today: Date) {
+    const pendiente = entry.totalMonto - entry.totalPagado
+    const isHealthy = pendiente === 0
+    
+    const relevantPagos = [...entry.pagos].sort((a:any, b:any) => new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime())
+    const pVencido = relevantPagos.find(p => p.estado === 'VENCIDO' || p.estado === 'CRITICO')
+    const pPendiente = relevantPagos.find(p => p.estado === 'PENDIENTE')
+    const pPagado = [...relevantPagos].reverse().find(p => p.estado === 'PAGADO')
+    
+    const p = pVencido || pPendiente || pPagado || relevantPagos[0]
+    if (!p) return { p: null }
+
+    const fechaVencimiento = new Date(p.fechaVencimiento || p.createdAt)
+    const fechaVencimientoSinHora = new Date(fechaVencimiento)
+    fechaVencimientoSinHora.setUTCHours(0, 0, 0, 0)
+    const diffTime = fechaVencimientoSinHora.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    const esPorVencer = (p.estado === 'PENDIENTE' || p.estado === 'VENCIDO') && diffDays >= 0 && diffDays <= 3
+    
+    let statusVisual = p.estado
+    if (esPorVencer) statusVisual = 'POR_VENCER'
+    else if (isHealthy && p.estado !== 'EN_REVISION') statusVisual = 'PAGADO'
+    else if (!isHealthy && p.estado === 'PAGADO' && pPendiente) statusVisual = 'PENDIENTE'
+
+    return { p, statusVisual, isHealthy, pendiente }
+}
+
 export default async function PagosPage({ searchParams }: { 
     searchParams: Promise<{ 
         filter?: string,
@@ -254,33 +281,36 @@ export default async function PagosPage({ searchParams }: {
 
 
 
-            {/* Stats Dashboard */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Link href="/modules/pagos" className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl shadow-gray-200/20 flex items-center gap-6 group hover:-translate-y-1 transition-all duration-300">
-                    <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center text-green-600 border border-green-100 group-hover:scale-110 transition-transform">
-                        <CheckCircle size={32} />
+            {/* Stats Dashboard Compacto */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+                <Link href="/modules/pagos" className="bg-white rounded-3xl p-4 md:p-8 border border-gray-100 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-6 group hover:-translate-y-1 transition-all">
+                    <div className="w-10 h-10 md:w-16 md:h-16 bg-green-50 rounded-2xl flex items-center justify-center text-green-600 border border-green-100">
+                        <CheckCircle size={24} className="md:hidden" />
+                        <CheckCircle size={32} className="hidden md:block" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">{stats.t1}</p>
-                        <p className="text-3xl font-black text-[#072E1F] tracking-tighter">S/ {stats.v1.toLocaleString('es-MX')}</p>
+                        <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5 md:mb-1">{stats.t1}</p>
+                        <p className="text-lg md:text-3xl font-black text-[#072E1F] tracking-tighter">S/ {stats.v1.toLocaleString('es-MX')}</p>
                     </div>
                 </Link>
-                <Link href="/modules/pagos?filter=debtors" className={`bg-white rounded-[2.5rem] p-8 border shadow-xl shadow-gray-200/20 flex items-center gap-6 group hover:-translate-y-1 transition-all duration-300 ${filter === 'debtors' ? 'border-[#EF9F27] ring-4 ring-orange-50' : 'border-gray-100'}`}>
-                    <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center text-[#EF9F27] border border-orange-100 group-hover:scale-110 transition-transform">
-                        <Clock size={32} />
+                <Link href="/modules/pagos?filter=debtors" className={`bg-white rounded-3xl p-4 md:p-8 border shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-6 group hover:-translate-y-1 transition-all ${filter === 'debtors' ? 'border-[#EF9F27] ring-4 ring-orange-50' : 'border-gray-100'}`}>
+                    <div className="w-10 h-10 md:w-16 md:h-16 bg-orange-50 rounded-2xl flex items-center justify-center text-[#EF9F27] border border-orange-100">
+                        <Clock size={24} className="md:hidden" />
+                        <Clock size={32} className="hidden md:block" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">{stats.t2}</p>
-                        <p className="text-3xl font-black text-[#072E1F] tracking-tighter">S/ {stats.v2.toLocaleString('es-MX')}</p>
+                        <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5 md:mb-1">{stats.t2}</p>
+                        <p className="text-lg md:text-3xl font-black text-[#072E1F] tracking-tighter">S/ {stats.v2.toLocaleString('es-MX')}</p>
                     </div>
                 </Link>
-                <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl shadow-gray-200/20 flex items-center gap-6 group hover:-translate-y-1 transition-all duration-300">
-                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center border transition-all group-hover:scale-110 ${stats.v3 > 0 ? 'bg-red-50 text-red-500 border-red-100 animate-pulse' : 'bg-gray-50 text-gray-300 border-gray-100'}`}>
-                        <Bell size={32} />
+                <div className="bg-white rounded-3xl p-4 md:p-8 border border-gray-100 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-6 col-span-2 md:col-span-1 group">
+                    <div className={`w-10 h-10 md:w-16 md:h-16 rounded-2xl flex items-center justify-center border transition-all ${stats.v3 > 0 ? 'bg-red-50 text-red-500 border-red-100 animate-pulse' : 'bg-gray-50 text-gray-300 border-gray-100'}`}>
+                        <Bell size={24} className="md:hidden" />
+                        <Bell size={32} className="hidden md:block" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">{stats.t3}</p>
-                        <p className={`text-3xl font-black tracking-tighter ${stats.v3 > 0 ? 'text-red-600' : 'text-[#072E1F]'}`} suppressHydrationWarning>
+                        <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5 md:mb-1">{stats.t3}</p>
+                        <p className={`text-lg md:text-3xl font-black tracking-tighter ${stats.v3 > 0 ? 'text-red-600' : 'text-[#072E1F]'}`} suppressHydrationWarning>
                             {stats.v3 === '—' ? stats.v3 : typeof stats.v3 === 'number' ? stats.v3 : new Date(stats.v3).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
                         </p>
                     </div>
@@ -318,8 +348,8 @@ export default async function PagosPage({ searchParams }: {
                              <StatusBadge status="PENDIENTE" />
                         </div>
                     </div>
-                    
-                    <div className="overflow-x-auto">
+                          {/* Vista para TABLET/DESKTOP (Tabla tradicional) */}
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">
@@ -340,31 +370,9 @@ export default async function PagosPage({ searchParams }: {
                                         </td>
                                     </tr>
                                 ) : paginatedList.map((entry: any) => {
-                                    const pendiente = entry.totalMonto - entry.totalPagado
-                                    const isHealthy = pendiente === 0
-                                    
-                                    // Prioridad de pago a mostrar: 1. Vencido, 2. Pendiente, 3. Pagado (el más reciente de los filtrados)
-                                    const relevantPagos = [...entry.pagos].sort((a,b) => new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime())
-                                    const pVencido = relevantPagos.find(p => p.estado === 'VENCIDO' || p.estado === 'CRITICO')
-                                    const pPendiente = relevantPagos.find(p => p.estado === 'PENDIENTE')
-                                    const pPagado = [...relevantPagos].reverse().find(p => p.estado === 'PAGADO')
-                                    
-                                    const p = pVencido || pPendiente || pPagado || relevantPagos[0]
+                                    const { p, statusVisual, isHealthy, pendiente } = getPagoLogic(entry, today)
                                     if (!p) return null
-
                                     const fechaVencimiento = new Date(p.fechaVencimiento || p.createdAt)
-                                    const fechaVencimientoSinHora = new Date(fechaVencimiento)
-                                    fechaVencimientoSinHora.setUTCHours(0, 0, 0, 0)
-                                    const esPagoFuturo = p.estado === 'PENDIENTE' && fechaVencimientoSinHora > today
-                                    const esHoy = fechaVencimientoSinHora.getTime() === today.getTime()
-                                    const diffTime = fechaVencimientoSinHora.getTime() - today.getTime()
-                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-                                    const esPorVencer = (p.estado === 'PENDIENTE' || p.estado === 'VENCIDO') && diffDays >= 0 && diffDays <= 3
-                                    
-                                    let statusVisual = p.estado
-                                    if (esPorVencer) statusVisual = 'POR_VENCER'
-                                    else if (isHealthy && p.estado !== 'EN_REVISION') statusVisual = 'PAGADO'
-                                    else if (!isHealthy && p.estado === 'PAGADO' && pPendiente) statusVisual = 'PENDIENTE'
 
                                     return (
                                         <tr key={entry.residente.id} className="hover:bg-gray-50/50 transition-colors group">
@@ -391,25 +399,18 @@ export default async function PagosPage({ searchParams }: {
                                                         <span className="text-green-600">
                                                             Pagado el {p.fechaPago ? new Date(p.fechaPago).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' }) : '---'}
                                                         </span>
-                                                    ) : esHoy ? (
-                                                        <span className="text-[#EF9F27]">Vence hoy ({fechaVencimiento.toLocaleDateString('es-MX', { timeZone: 'UTC', day: 'numeric', month: 'long' })})</span>
                                                     ) : (
-                                                        <span className="text-gray-400">
-                                                            {esPagoFuturo ? 'Vence el' : 'Vencido el'} {fechaVencimiento.toLocaleDateString('es-MX', { timeZone: 'UTC', day: 'numeric', month: 'long' })}
+                                                        <span className={p.estado === 'PENDIENTE' ? 'text-gray-400' : 'text-red-400'}>
+                                                            {p.estado === 'PENDIENTE' ? 'Vence' : 'Venció'} {fechaVencimiento.toLocaleDateString('es-MX', { timeZone: 'UTC', day: 'numeric', month: 'long' })}
                                                         </span>
                                                     )}
                                                 </div>
                                             </td>
                                             <td className="px-10 py-6 text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    {pendiente > 0 && (
-                                                        <RecordarButton residenteId={entry.residente.id} />
-                                                    )}
-                                                    <Link
-                                                        href={`/modules/pagos/residente/${entry.residente.id}`}
-                                                        className="px-6 py-2 bg-[#1D9E75]/5 text-[#1D9E75] rounded-xl text-[10px] font-black uppercase tracking-widest border border-[#1D9E75]/10 hover:bg-[#1D9E75] hover:text-white transition-all whitespace-nowrap"
-                                                    >
-                                                        Ver Pagos
+                                                    {pendiente > 0 && <RecordarButton residenteId={entry.residente.id} />}
+                                                    <Link href={`/modules/pagos/residente/${entry.residente.id}`} className="px-6 py-2 bg-[#1D9E75]/5 text-[#1D9E75] rounded-xl text-[10px] font-black uppercase tracking-widest border border-[#1D9E75]/10 hover:bg-[#1D9E75] hover:text-white transition-all">
+                                                        Ver
                                                     </Link>
                                                 </div>
                                             </td>
@@ -418,6 +419,54 @@ export default async function PagosPage({ searchParams }: {
                                 })}
                             </tbody>
                         </table>
+                    </div>
+
+                    {/* Vista para MÓVIL (Cards Verticales) */}
+                    <div className="md:hidden divide-y divide-gray-100">
+                        {paginatedList.length === 0 ? (
+                            <div className="p-10 text-center text-gray-400 font-bold italic">No hay resultados</div>
+                        ) : paginatedList.map((entry: any) => {
+                            const { p, statusVisual, isHealthy, pendiente } = getPagoLogic(entry, today)
+                            if (!p) return null
+                            const fechaVencimiento = new Date(p.fechaVencimiento || p.createdAt)
+
+                            return (
+                                <div key={entry.residente.id} className="p-5 space-y-4">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h4 className="font-black text-[#072E1F] text-sm">{entry.residente.user.nombre}</h4>
+                                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                                                Residencia {entry.residente.habitacion?.residencia?.nombre || 'S/N'}
+                                            </p>
+                                        </div>
+                                        <StatusBadge status={statusVisual as any} />
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                                        <div>
+                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Cargo Total</p>
+                                            <p className="font-black text-[#072E1F]">S/ {entry.totalMonto.toLocaleString('es-MX')}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Saldo Pendiente</p>
+                                            <p className={`font-black ${pendiente > 0 ? 'text-red-500' : 'text-[#1D9E75]'}`}>S/ {pendiente.toLocaleString('es-MX')}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3 pt-2">
+                                        <div className="text-[9px] font-black uppercase text-gray-400">
+                                            {isHealthy ? 'Al día' : `${p.estado === 'PENDIENTE' ? 'Vence' : 'Venció'}: ${fechaVencimiento.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}`}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {pendiente > 0 && <RecordarButton residenteId={entry.residente.id} />}
+                                            <Link href={`/modules/pagos/residente/${entry.residente.id}`} className="px-5 py-2 bg-[#1D9E75] text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[#1D9E75]/20">
+                                                Detalles
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
                     </div>
                     <GeneralPagination totalItems={totalItems} currentPage={page} itemsPerPage={limit} label="Residentes" />
                 </div>
@@ -466,26 +515,28 @@ export default async function PagosPage({ searchParams }: {
                                     Historial de Pagos Realizados
                                     <span className="h-px bg-gray-100 flex-1"></span>
                                 </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="space-y-4">
                                     {pagosRaw.filter(p => p.estado === 'PAGADO').sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
                                     .map((item, idx) => (
-                                        <div key={`${item.id}-${idx}`} className="bg-white/50 border border-gray-100 rounded-3xl p-6 flex items-center justify-between group hover:bg-white transition-all shadow-sm">
+                                        <div key={`${item.id}-${idx}`} className="bg-white rounded-3xl p-5 flex items-center justify-between border border-gray-100 shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-2xl bg-green-50 flex items-center justify-center text-green-600">
-                                                    <CheckCircle size={20} />
+                                                <div className="w-12 h-12 rounded-2xl bg-[#1D9E75]/10 flex items-center justify-center text-[#1D9E75] shrink-0 border border-[#1D9E75]/20">
+                                                    <CheckCircle size={24} strokeWidth={2.5} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">
+                                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.1em] mb-0.5">
                                                         {item.concepto}
                                                     </p>
-                                                    <p className="text-lg font-black text-gray-900 leading-none">
+                                                    <p className="text-xl font-black text-[#072E1F] tracking-tighter">
                                                         S/ {item.monto.toLocaleString('es-MX')}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="text-[9px] font-bold text-gray-400 uppercase">Completado</p>
-                                                <p className="text-[10px] font-black text-gray-600">
+                                            <div className="text-right flex flex-col items-end">
+                                                <div className="px-2 py-0.5 bg-green-50 text-[#1D9E75] rounded-md text-[8px] font-black uppercase tracking-widest mb-2 border border-green-100">
+                                                    Éxito
+                                                </div>
+                                                <p className="text-[10px] font-bold text-gray-400">
                                                     {item.fechaPago ? new Date(item.fechaPago).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) : new Date(item.updatedAt || item.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
                                                 </p>
                                             </div>

@@ -47,26 +47,26 @@ export default function ResidentPagoCard({ pago }: ResidentPagoCardProps) {
     const statusVisual = isLocked ? 'PROXIMO' : (esPorVencer ? 'POR_VENCER' : pago.estado)
 
     return (
-        <div className={`bg-white rounded-[2.5rem] shadow-xl shadow-gray-100 border border-gray-100 overflow-hidden flex flex-col group hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 ${pago.estado === 'PAGADO' ? 'grayscale opacity-80' : ''}`}>
-            <div className="p-10 pb-6">
-                <div className="flex items-start justify-between mb-8">
+        <div className={`bg-white rounded-[2rem] shadow-xl shadow-gray-100 border border-gray-100 overflow-hidden flex flex-col group hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 ${pago.estado === 'PAGADO' ? 'grayscale opacity-80' : ''}`}>
+            <div className="p-6 md:p-10 pb-6">
+                <div className="flex items-start justify-between mb-4 md:mb-8">
                     <div className="space-y-1">
-                        <p className={`text-[10px] font-black uppercase tracking-widest ${esPagoFuturo ? 'text-blue-500' : (esHoy || esPorVencer) ? 'text-orange-500' : 'text-[#EF9F27]'}`}>
+                        <p className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest ${esPagoFuturo ? 'text-blue-500' : (esHoy || esPorVencer) ? 'text-orange-500' : 'text-[#EF9F27]'}`}>
                             {pago.concepto} {esPagoFuturo ? '(Próximo)' : esHoy ? '(Hoy)' : esPorVencer ? '(Por Vencer)' : ''}
                         </p>
-                        <p className="text-4xl font-black text-gray-900 tracking-tighter">
+                        <p className="text-2xl md:text-4xl font-black text-gray-900 tracking-tighter">
                             S/ {pago.monto.toLocaleString('es-MX')}
                         </p>
                     </div>
                     <StatusBadge status={statusVisual as any} />
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-3">
                     <div className="flex justify-between items-end">
-                        <p className="text-xs font-bold text-gray-500">Progreso del pago</p>
-                        <p className="text-xs font-black text-[#1D9E75]">{progPct}%</p>
+                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest">Estado de pago</p>
+                        <p className="text-[10px] md:text-xs font-black text-[#1D9E75]">{progPct}%</p>
                     </div>
-                    <div className="h-3 bg-gray-100 rounded-full overflow-hidden p-0.5">
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
                             className={`h-full rounded-full transition-all duration-1000 ${progPct === 100 ? 'bg-green-500' : 'bg-[#1D9E75]'}`}
                             style={{ width: `${progPct}%` }}

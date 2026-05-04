@@ -93,11 +93,11 @@ export default async function DashboardPage() {
                     description={`Hola ${nombre}, aquí está el resumen global de las residencias.`}
                 />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <StatCard label="Residentes" value={totalResidentes} color="green" icon={<Users size={22} />} />
-                    <StatCard label="Ingresos Mes" value={`$${ingresosMes.toLocaleString('es-MX')}`} color="yellow" icon={<DollarSign size={22} />} />
-                    <StatCard label="Lavandería" value={turnosActivos} color="teal" icon={<WashingMachine size={22} />} />
-                    <StatCard label="Publicaciones" value={publicacionesActivas} color="dark" icon={<Megaphone size={22} />} />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+                    <StatCard label="Residentes" value={totalResidentes} color="green" icon={<Users size={18} />} />
+                    <StatCard label="Ingresos" value={`$${ingresosMes.toLocaleString('es-MX')}`} color="yellow" icon={<DollarSign size={18} />} />
+                    <StatCard label="Lavado" value={turnosActivos} color="teal" icon={<WashingMachine size={18} />} />
+                    <StatCard label="Avisos" value={publicacionesActivas} color="dark" icon={<Megaphone size={18} />} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

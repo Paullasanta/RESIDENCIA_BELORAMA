@@ -64,47 +64,48 @@ export function GenerateShiftsModal({ lavadora, hasAssignments }: { lavadora: an
             <button 
                 onClick={() => !hasAssignments && setIsOpen(true)}
                 disabled={hasAssignments}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                className={`flex items-center gap-2 px-4 h-10 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg ${
                     hasAssignments 
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' 
-                        : 'bg-white/10 hover:bg-white/20 text-white'
+                        ? 'bg-gray-100/50 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none' 
+                        : 'bg-[#1D9E75] text-white hover:bg-[#157a5a] shadow-[#1D9E75]/30 active:scale-95'
                 }`}
             >
-                <CalendarClock size={16} /> Auto-Generar Turnos
+                <CalendarClock size={16} />
+                <span className="hidden sm:inline">Auto-Generar</span>
             </button>
 
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-                    <div className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95">
-                        <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+                    <div className="bg-white h-full sm:h-auto sm:rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-y-auto no-scrollbar animate-in zoom-in-95 slide-in-from-bottom-10">
+                        <div className="sticky top-0 z-10 px-8 py-5 border-b border-gray-100 flex items-center justify-between bg-white/80 backdrop-blur-md">
                             <div>
-                                <h2 className="text-xl font-black text-[#072E1F]">Cronograma de Lavado</h2>
-                                <p className="text-xs text-gray-500 font-bold mt-1">Generador heurístico para {lavadora.nombre}</p>
+                                <h2 className="text-xl font-black text-[#072E1F]">Cronograma</h2>
+                                <p className="text-[10px] text-[#1D9E75] font-black uppercase tracking-widest">Generador para {lavadora.nombre}</p>
                             </div>
-                            <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-gray-200 rounded-xl text-gray-400 transition-colors">
-                                <X size={24} />
+                            <button onClick={() => setIsOpen(false)} className="p-3 bg-gray-50 hover:bg-gray-100 rounded-2xl text-gray-400 transition-all active:scale-90">
+                                <X size={20} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                            {error && <div className="p-4 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100 uppercase text-center">{error}</div>}
-                            {successMsg && <div className="p-4 bg-green-50 text-[#1D9E75] rounded-xl text-xs font-bold border border-green-100 uppercase text-center">{successMsg}</div>}
+                        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5">
+                            {error && <div className="p-4 bg-red-50 text-red-600 rounded-xl text-[10px] font-black border border-red-100 uppercase text-center">{error}</div>}
+                            {successMsg && <div className="p-4 bg-green-50 text-[#1D9E75] rounded-xl text-[10px] font-black border border-green-100 uppercase text-center">{successMsg}</div>}
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Hora Inicial del Día</label>
-                                    <input type="time" name="horaInicio" defaultValue="08:00" required className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" />
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Hora Inicio</label>
+                                    <input type="time" name="horaInicio" defaultValue="08:00" required className="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold text-sm" />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Hora Límite del Día</label>
-                                    <input type="time" name="horaFin" defaultValue="20:00" required className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" />
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Hora Límite</label>
+                                    <input type="time" name="horaFin" defaultValue="20:00" required className="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold text-sm" />
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Duración por Turno</label>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Duración del Turno</label>
                                 <div className="flex items-center w-full rounded-2xl border border-gray-100 bg-gray-50 overflow-hidden focus-within:border-[#1D9E75] focus-within:bg-white transition-colors">
-                                    <div className="flex-1 px-5 py-3 font-bold text-gray-700">
+                                    <div className="flex-1 px-4 py-3 font-bold text-gray-700 text-sm">
                                         {formatIntervalo(intervalo)}
                                     </div>
                                     <div className="flex items-center border-l border-gray-100">
@@ -128,41 +129,37 @@ export function GenerateShiftsModal({ lavadora, hasAssignments }: { lavadora: an
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Días a afectar</label>
-                                <div className="flex flex-wrap gap-2">
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 ml-1">Días a afectar</label>
+                                <div className="grid grid-cols-4 gap-1.5">
                                     {['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'].map(dia => (
-                                        <label key={dia} className="flex items-center gap-2 cursor-pointer bg-gray-50 px-3 py-2 rounded-xl border border-gray-100 hover:border-[#1D9E75] transition-colors">
-                                            <input type="checkbox" name="dias" value={dia} defaultChecked className="accent-[#1D9E75] w-4 h-4 cursor-pointer" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">{dia.slice(0,3)}</span>
+                                        <label key={dia} className="flex flex-col items-center gap-1.5 cursor-pointer bg-gray-50 p-2 rounded-xl border border-gray-100 has-[:checked]:border-[#1D9E75] has-[:checked]:bg-[#1D9E75]/5 transition-all active:scale-95">
+                                            <input type="checkbox" name="dias" value={dia} defaultChecked className="accent-[#1D9E75] w-3.5 h-3.5 cursor-pointer" />
+                                            <span className="text-[8px] font-black uppercase tracking-tight text-gray-400 peer-checked:text-[#1D9E75]">{dia.slice(0,3)}</span>
                                         </label>
                                     ))}
                                 </div>
-                                <p className="text-[10px] font-bold text-orange-400 mt-2 italic">* Se resetearán los turnos LIBRES previos de estos días para evitar duplicados.</p>
                             </div>
 
                             {hasAssignments && (
-                                <div className={`p-4 rounded-2xl border transition-all duration-300 ${isUnlocked ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`}>
+                                <div className={`p-4 rounded-2xl border transition-all duration-300 ${isUnlocked ? 'bg-green-50 border-green-100' : 'bg-orange-50 border-orange-100'}`}>
                                     <div className="flex items-start gap-3">
                                         <div className={`mt-0.5 p-1.5 rounded-lg ${isUnlocked ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
                                             {isUnlocked ? <Unlock size={14} /> : <Lock size={14} />}
                                         </div>
                                         <div className="flex-1">
                                             <p className={`text-[10px] font-black uppercase tracking-widest ${isUnlocked ? 'text-green-700' : 'text-orange-700'}`}>
-                                                {isUnlocked ? 'Seguridad Desbloqueada' : 'Confirmación Requerida'}
+                                                {isUnlocked ? 'Confirmado' : 'Seguridad'}
                                             </p>
-                                            <p className="text-[9px] text-gray-500 font-bold mt-0.5">
-                                                Hay turnos asignados. Debes confirmar que quieres re-generar el calendario manteniendo las asignaciones.
-                                            </p>
-                                            <label className="flex items-center gap-2 cursor-pointer mt-3 group">
+                                            <label className="flex items-center gap-2 cursor-pointer mt-2 group">
                                                 <input 
                                                     type="checkbox" 
                                                     checked={isUnlocked} 
                                                     onChange={(e) => setIsUnlocked(e.target.checked)}
                                                     className="w-4 h-4 rounded border-gray-300 text-[#1D9E75] focus:ring-[#1D9E75]"
                                                 />
-                                                <span className="text-[10px] font-black text-gray-600 group-hover:text-[#1D9E75] transition-colors uppercase">
-                                                    Sí, deseo re-generar turnos libres
+                                                <span className="text-[9px] font-bold text-gray-500 group-hover:text-[#1D9E75] transition-colors leading-tight">
+                                                    Deseo re-generar el calendario
                                                 </span>
                                             </label>
                                         </div>
@@ -173,8 +170,8 @@ export function GenerateShiftsModal({ lavadora, hasAssignments }: { lavadora: an
                             <button 
                                 type="submit" 
                                 disabled={loading || !isUnlocked} 
-                                className={`w-full px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all disabled:opacity-50 mt-4 ${
-                                    isUnlocked ? 'bg-[#1D9E75] text-white shadow-[#1D9E75]/20 hover:bg-[#157a5a]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                className={`w-full px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl transition-all active:scale-95 disabled:opacity-50 ${
+                                    isUnlocked ? 'bg-[#1D9E75] text-white shadow-[#1D9E75]/30 hover:bg-[#157a5a]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                 }`}
                             >
                                 {loading ? 'Construyendo...' : 'Generar Algoritmo'}

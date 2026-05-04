@@ -8,8 +8,17 @@ export function LogoutButton() {
     const [isLoggingOut, setIsLoggingOut] = useState(false)
 
     const handleLogout = async () => {
-        setIsLoggingOut(true)
-        await signOut({ callbackUrl: '/auth/login', redirect: true })
+        try {
+            setIsLoggingOut(true)
+            // Intentamos el cierre de sesión estándar
+            await signOut({ redirect: false })
+            // Redirigimos manualmente para evitar errores de parseo de JSON
+            window.location.href = '/auth/login'
+        } catch (error) {
+            console.error('Error durante el cierre de sesión, redirigiendo forzosamente...', error)
+            // Si falla (el error del token <), forzamos la salida al login
+            window.location.href = '/auth/login'
+        }
     }
 
     return (

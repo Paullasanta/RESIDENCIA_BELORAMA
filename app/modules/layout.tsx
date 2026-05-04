@@ -13,6 +13,7 @@ import {
 import { MobileNavContainer } from '@/components/shared/MobileNavContainer'
 import { NotificationBell } from '@/components/shared/NotificationBell'
 import { SessionGuard } from '@/components/shared/SessionGuard'
+import { BottomNav } from '@/components/shared/BottomNav'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,7 +56,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         COCINERO: { title: 'Cocina Central', logo: 'bg-[#085041] text-white' },
         RESIDENTE: { title: 'Mi Residencia', logo: 'bg-[#EF9F27] text-black' }
     }[rol as 'ADMIN' | 'COCINERO' | 'RESIDENTE'] || { title: systemName, logo: 'bg-[#072E1F] text-white' }
-
     return (
         <div className="flex bg-[#F8FAF8] min-h-screen text-gray-900 font-sans">
             <SessionGuard />
@@ -89,22 +89,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto relative flex flex-col">
-                {/* Top Bar Desktop */}
-                <header className="sticky top-0 z-20 bg-[#F8FAF8]/80 backdrop-blur-md px-4 md:px-8 lg:px-12 py-4 flex items-center justify-between md:justify-end gap-4">
+            <main className="flex-1 overflow-y-auto relative flex flex-col pb-24 md:pb-0">
+                {/* Top Bar Mobile/Desktop */}
+                <header className="sticky top-0 z-20 bg-[#F8FAF8]/80 backdrop-blur-md px-4 md:px-8 py-3 flex items-center justify-between">
                     <div className="md:hidden">
-                        <MobileNavContainer 
-                            navItems={navItems}
-                            userName={nombre}
-                            theme={theme}
-                        />
+                        <p className="text-xl font-black text-[#072E1F] tracking-tighter">{systemName}</p>
                     </div>
+
+                    {/* Spacer for desktop to keep notifications on the right */}
+                    <div className="hidden md:block flex-1"></div>
                     
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                         <NotificationBell />
                         <div className="hidden md:flex flex-col items-end">
                             <span className="text-[10px] font-black text-[#1D9E75] uppercase tracking-widest">{rol}</span>
-                            <span className="text-xs font-bold text-gray-900">{nombre}</span>
+                            <span className="text-xs font-bold text-gray-900 leading-none">{nombre}</span>
                         </div>
                     </div>
                 </header>
@@ -115,6 +114,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
                     </div>
                 </div>
             </main>
+            
+            <BottomNav navItems={navItems} />
         </div>
     )
 }

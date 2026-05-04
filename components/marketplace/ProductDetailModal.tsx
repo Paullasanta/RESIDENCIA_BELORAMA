@@ -59,13 +59,13 @@ export function ProductDetailModal({
 
     return (
         <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-10 animate-in fade-in duration-300"
+            className="fixed inset-0 z-50 flex items-center justify-center sm:p-6 md:p-10 animate-in fade-in duration-300"
             onClick={onClose}
         >
-            <div className="absolute inset-0 bg-[#072E1F]/60 backdrop-blur-md" />
+            <div className="absolute inset-0 bg-[#072E1F]/80 backdrop-blur-xl" />
             
             <div 
-                className="relative w-full max-w-5xl bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 slide-in-from-bottom-10 duration-500"
+                className="relative w-full h-full sm:h-auto sm:max-w-5xl bg-white sm:rounded-[3rem] shadow-2xl overflow-y-auto no-scrollbar flex flex-col md:flex-row animate-in zoom-in-95 slide-in-from-bottom-10 duration-500"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Botón Cerrar Móvil */}
@@ -77,7 +77,7 @@ export function ProductDetailModal({
                 </button>
 
                 {/* Sección Imagen / Carrusel */}
-                <div className="relative w-full md:w-3/5 aspect-square md:aspect-auto bg-gray-50 flex items-center justify-center overflow-hidden h-[400px] md:h-auto">
+                <div className="relative w-full md:w-3/5 aspect-square md:aspect-auto bg-gray-50 flex items-center justify-center overflow-hidden h-[300px] sm:h-[400px] md:h-auto shrink-0">
                     {producto.fotos.length > 0 ? (
                         <img 
                             src={producto.fotos[currentIndex]} 
@@ -95,17 +95,17 @@ export function ProductDetailModal({
                         <>
                             <button 
                                 onClick={prevImage}
-                                className="absolute left-6 top-1/2 -translate-y-1/2 p-4 rounded-2xl bg-white/20 hover:bg-white/90 backdrop-blur-md text-white hover:text-[#1D9E75] transition-all shadow-2xl border border-white/30"
+                                className="absolute left-6 top-1/2 -translate-y-1/2 p-3 sm:p-4 rounded-2xl bg-white/20 hover:bg-white/90 backdrop-blur-md text-white hover:text-[#1D9E75] transition-all shadow-2xl border border-white/30"
                             >
-                                <ChevronLeft size={24} />
+                                <ChevronLeft size={20} />
                             </button>
                             <button 
                                 onClick={nextImage}
-                                className="absolute right-6 top-1/2 -translate-y-1/2 p-4 rounded-2xl bg-white/20 hover:bg-white/90 backdrop-blur-md text-white hover:text-[#1D9E75] transition-all shadow-2xl border border-white/30"
+                                className="absolute right-6 top-1/2 -translate-y-1/2 p-3 sm:p-4 rounded-2xl bg-white/20 hover:bg-white/90 backdrop-blur-md text-white hover:text-[#1D9E75] transition-all shadow-2xl border border-white/30"
                             >
-                                <ChevronRight size={24} />
+                                <ChevronRight size={20} />
                             </button>
-                            <div className="absolute bottom-10 inset-x-0 flex justify-center gap-2">
+                            <div className="absolute bottom-6 sm:bottom-10 inset-x-0 flex justify-center gap-2">
                                 {producto.fotos.map((_, i) => (
                                     <div 
                                         key={i} 
@@ -118,7 +118,7 @@ export function ProductDetailModal({
                 </div>
 
                 {/* Sección Información */}
-                <div className="w-full md:w-2/5 p-8 md:p-12 flex flex-col justify-between bg-white overflow-y-auto">
+                <div className="w-full md:w-2/5 p-6 sm:p-8 md:p-12 flex flex-col justify-between bg-white overflow-visible">
                     <div className="space-y-8">
                         <div>
                             <div className="flex items-center gap-3 mb-4">

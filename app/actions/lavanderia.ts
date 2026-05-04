@@ -6,144 +6,104 @@ import { EstadoTurno } from '@prisma/client'
 import { checkAuth, checkResidenciaAccess } from '@/lib/auth-utils'
 import { createNotification, notifyAdmins } from './notificaciones'
 
-export async function asignarTurnoLavanderia(turnoId: number, id: number, useUserId: boolean = false) {
+/**
+ * ASIGNAR O SOLICITAR TURNO (Lógica 1+1)
+ * - Si hay cupo y es el primer extra -> Directo (EXTRA)
+ * - Si no hay cupo o ya tiene extras -> Solicitud (SOLICITUD)
+ */
+export async function reservarTurnoLavanderia(turnoId: number, residenteId: number) {
   try {
     const user = await checkAuth()
     
-    let residenteId = id;
-    if (useUserId) {
-        const profile = await prisma.residente.findUnique({ where: { userId: id } })
-        if (!profile) {
-            const newProfile = await prisma.residente.create({ data: { userId: id } })
-            residenteId = newProfile.id
-        } else {
-            residenteId = profile.id
-        }
-    }
-    
     const turno = await prisma.turnoLavanderia.findUnique({
-        where: { id: turnoId }
+      where: { id: turnoId },
+      include: { residencia: true }
     })
     
     if (!turno) throw new Error('Turno no encontrado')
-    
-    // Si no es admin, solo puede asignarse turnos de su propia residencia
     checkResidenciaAccess(user, turno.residenciaId)
 
-    // Si el usuario no es admin, todos los turnos pasan por solicitud previa
-    if (user.rol !== 'ADMIN') {
-        return solicitarTurnoLavanderia(turnoId, residenteId)
-    }
-
-    const updatedTurno = await prisma.turnoLavanderia.update({
-      where: { id: turnoId },
-      data: {
-        residenteId,
-        estado: EstadoTurno.OCUPADO
-      },
-      include: { residente: true }
+    // 1. Contar turnos actuales del residente en esta instancia (semana)
+    // Consideramos OCUPADOS (su base + extras)
+    const turnosOcupados = await prisma.turnoLavanderia.count({
+      where: { 
+        residenteId, 
+        estado: EstadoTurno.OCUPADO,
+        // Aquí podríamos filtrar por fecha si manejamos múltiples semanas
+      }
     })
 
-    // Si un admin asignó el turno y no es para sí mismo, notificar al residente
-    if (updatedTurno.residente && updatedTurno.residente.userId !== user.id) {
-        await createNotification(
-            updatedTurno.residente.userId,
-            'Turno de Lavandería Asignado',
-            `Se te ha asignado un turno el ${updatedTurno.dia} a las ${updatedTurno.horaInicio}`,
-            'INFO',
-            '/modules/lavanderia'
-        )
+    // REGLA ESTRICTA: Solo 1 turno directo. 
+    // Si ya tiene su BASE (1), cualquier EXTRA (2) pasa a ser SOLICITUD.
+    // O si es ADMIN, siempre es directo.
+    const esDirecto = (turno.estado === EstadoTurno.LIBRE && turnosOcupados < 1) || user.rol === 'ADMIN'
+
+    if (esDirecto) {
+      await prisma.$transaction([
+        prisma.turnoLavanderia.update({
+          where: { id: turnoId },
+          data: {
+            residenteId,
+            estado: EstadoTurno.OCUPADO,
+            tipoReserva: 'EXTRA'
+          }
+        }),
+        prisma.historialLavanderia.create({
+          data: {
+            residenteId,
+            accion: 'RESERVA_DIRECTA',
+            detalle: `Reserva extra automática: ${turno.dia} ${turno.horaInicio}`
+          }
+        })
+      ])
+      
+      revalidatePath('/modules/lavanderia')
+      return { success: true, message: 'Turno reservado automáticamente' }
+    } else {
+      // Si no es directo, es una SOLICITUD
+      await prisma.$transaction([
+        prisma.turnoLavanderia.update({
+          where: { id: turnoId },
+          data: {
+            residenteId,
+            estado: EstadoTurno.SOLICITADO,
+            tipoReserva: 'SOLICITUD'
+          }
+        }),
+        prisma.historialLavanderia.create({
+          data: {
+            residenteId,
+            accion: 'SOLICITUD',
+            detalle: `Solicitud de turno adicional [${user.rol}]: ${turno.dia} ${turno.horaInicio}`
+          }
+        })
+      ])
+
+      // Notificar a admins
+      await notifyAdmins(
+        turno.residenciaId,
+        'Nueva Solicitud de Lavandería',
+        `${user.nombre} ha solicitado un turno extra para el ${turno.dia}`,
+        '/modules/lavanderia'
+      )
+
+      revalidatePath('/modules/lavanderia')
+      return { success: true, message: 'Solicitud enviada al administrador' }
     }
-    
-    revalidatePath('/modules/lavanderia')
-    return { success: true }
   } catch (error: any) {
-    return { success: false, error: error.message || 'Error al asignar el turno' }
+    return { success: false, error: error.message || 'Error al procesar la reserva' }
   }
-}
-
-export async function solicitarTurnoLavanderia(turnoId: number, id: number, useUserId: boolean = false) {
-    try {
-        const user = await checkAuth()
-        
-        let residenteId = id;
-        if (useUserId) {
-            const profile = await prisma.residente.findUnique({ where: { userId: id } })
-            if (!profile) {
-                const newProfile = await prisma.residente.create({ data: { userId: id } })
-                residenteId = newProfile.id
-            } else {
-                residenteId = profile.id
-            }
-        }
-        
-        const turno = await prisma.turnoLavanderia.findUnique({
-            where: { id: turnoId }
-        })
-        
-        if (!turno) throw new Error('Turno no encontrado')
-        checkResidenciaAccess(user, turno.residenciaId)
-
-        // LÓGICA DE ASIGNACIÓN INTELIGENTE:
-        // 1. Contar cuántos turnos ya tiene OCUPADOS el usuario
-        const turnosOcupados = await prisma.turnoLavanderia.count({
-            where: { residenteId, estado: EstadoTurno.OCUPADO }
-        })
-
-        // 2. Si no tiene ninguno, se le asigna DIRECTO. Si ya tiene, es SOLICITUD.
-        const esPrimerTurno = turnosOcupados === 0
-        const nuevoEstado = esPrimerTurno ? EstadoTurno.OCUPADO : EstadoTurno.SOLICITADO
-
-        await prisma.turnoLavanderia.update({
-            where: { id: turnoId },
-            data: {
-                residenteId,
-                estado: nuevoEstado
-            }
-        })
-
-        // 3. Notificaciones según el caso
-        if (esPrimerTurno) {
-            // Notificar a los administradores de la asignación directa
-            await notifyAdmins(
-                turno.residenciaId,
-                'Turno Asignado Directo',
-                `${user.nombre} se ha asignado el turno del ${turno.dia} (${turno.horaInicio})`,
-                '/modules/lavanderia'
-            )
-            revalidatePath('/modules/lavanderia')
-            return { success: true, message: 'Turno asignado correctamente' }
-        } else {
-            // Notificar a los administradores de la solicitud adicional
-            await notifyAdmins(
-                turno.residenciaId,
-                'Solicitud de Turno Adicional',
-                `${user.nombre} solicita un segundo turno para el ${turno.dia} (${turno.horaInicio})`,
-                '/modules/lavanderia'
-            )
-            revalidatePath('/modules/lavanderia')
-            return { success: true, message: 'Se ha enviado tu solicitud para un turno adicional' }
-        }
-    } catch (error: any) {
-        return { success: false, error: error.message || 'Error al procesar el turno' }
-    }
 }
 
 export async function cambiarTurnoLavanderia(turnoActualId: number, turnoNuevoId: number, residenteId: number) {
     try {
-        const user = await checkAuth()
+        await checkAuth()
         
         // Primero liberamos el actual
-        await prisma.turnoLavanderia.update({
-            where: { id: turnoActualId },
-            data: {
-                residenteId: null,
-                estado: EstadoTurno.LIBRE
-            }
-        })
+        await liberarTurnoLavanderia(turnoActualId)
 
-        // Luego asignamos el nuevo
-        return asignarTurnoLavanderia(turnoNuevoId, residenteId)
+        // Luego intentamos reservar el nuevo
+        return reservarTurnoLavanderia(turnoNuevoId, residenteId)
     } catch (error: any) {
         return { success: false, error: error.message || 'Error al cambiar el turno' }
     }
@@ -155,18 +115,30 @@ export async function aprobarTurnoSolicitado(turnoId: number) {
         
         const turno = await prisma.turnoLavanderia.update({
             where: { id: turnoId },
-            data: { estado: EstadoTurno.OCUPADO },
+            data: { 
+                estado: EstadoTurno.OCUPADO,
+                tipoReserva: 'EXTRA' // Al aprobar una solicitud, se convierte en reserva extra
+            },
             include: { residente: true }
         })
 
         if (turno.residente) {
-            await createNotification(
-                turno.residente.userId,
-                'Turno Aprobado',
-                `Tu solicitud para el turno del ${turno.dia} ha sido aprobada.`,
-                'INFO',
-                '/modules/lavanderia'
-            )
+            await Promise.all([
+                createNotification(
+                    turno.residente.userId,
+                    'Turno Aprobado',
+                    `Tu solicitud para el turno del ${turno.dia} ha sido aprobada.`,
+                    'INFO',
+                    '/modules/lavanderia'
+                ),
+                prisma.historialLavanderia.create({
+                    data: {
+                        residenteId: turno.residenteId!,
+                        accion: 'APROBACION',
+                        detalle: `Aprobación de turno: ${turno.dia} ${turno.horaInicio}`
+                    }
+                })
+            ])
         }
 
         revalidatePath('/modules/lavanderia')
@@ -198,18 +170,54 @@ export async function updateTurnoTime(turnoId: number, data: { dia: any, horaIni
 
 export async function liberarTurnoLavanderia(turnoId: number) {
   try {
-    await prisma.turnoLavanderia.update({
-      where: { id: turnoId },
-      data: {
-        residenteId: null,
-        estado: EstadoTurno.LIBRE
-      }
+    const user = await checkAuth()
+    
+    const turno = await prisma.turnoLavanderia.findUnique({ 
+        where: { id: turnoId },
+        include: { residencia: true }
     })
     
+    if (!turno || !turno.residenteId) return { success: false, error: 'Turno no válido' }
+
+    // 1. Verificar si este slot tiene un dueño permanente (TurnoFijo)
+    const fixed = await prisma.turnoFijo.findFirst({
+        where: {
+            lavadoraId: turno.lavadoraId,
+            dia: turno.dia,
+            horaInicio: turno.horaInicio.trim()
+        }
+    })
+
+    const esCancelacion = turno.estado === EstadoTurno.SOLICITADO
+    const esDuenioOriginal = fixed && fixed.residenteId === turno.residenteId
+
+    // Si el que libera es el DUEÑO ORIGINAL, el turno queda LIBRE.
+    // Si el que libera es OTRO (o una solicitud), se RESTAURA al dueño.
+    const nuevoResidenteId = (fixed && !esDuenioOriginal) ? fixed.residenteId : null
+    const nuevoEstado = (fixed && !esDuenioOriginal) ? EstadoTurno.OCUPADO : EstadoTurno.LIBRE
+
+    await prisma.$transaction([
+        prisma.turnoLavanderia.update({
+            where: { id: turnoId },
+            data: {
+                residenteId: nuevoResidenteId,
+                estado: nuevoEstado,
+                tipoReserva: 'BASE'
+            }
+        }),
+        prisma.historialLavanderia.create({
+            data: {
+                residenteId: turno.residenteId,
+                accion: esCancelacion ? 'CANCELACION_SOLICITUD' : 'LIBERACION',
+                detalle: `${esCancelacion ? 'Canceló solicitud' : 'Liberó turno'}: ${turno.dia} ${turno.horaInicio}`
+            }
+        })
+    ])
+    
     revalidatePath('/modules/lavanderia')
-    return { success: true }
+    return { success: true, message: esCancelacion ? 'Solicitud cancelada' : 'Turno liberado' }
   } catch (error: any) {
-    return { success: false, error: 'Error al liberar el turno' }
+    return { success: false, error: 'Error al procesar la acción' }
   }
 }
 
@@ -334,7 +342,8 @@ export async function generateBulkShifts(lavadoraId: number, residenciaId: numbe
                             horaInicio: inicioStr,
                             horaFin: finStr,
                             residenteId: fixed ? fixed.residenteId : null,
-                            estado: fixed ? EstadoTurno.OCUPADO : EstadoTurno.LIBRE
+                            estado: fixed ? EstadoTurno.OCUPADO : EstadoTurno.LIBRE,
+                            tipoReserva: 'BASE' // Por defecto al generar son BASE
                         })
                     }
                     current += intervaloMin
@@ -386,7 +395,8 @@ export async function clearAllShifts(lavadoraId: number, residenciaId: number) {
                     },
                     data: { 
                         residenteId: fs.residenteId, 
-                        estado: EstadoTurno.OCUPADO 
+                        estado: EstadoTurno.OCUPADO,
+                        tipoReserva: 'BASE'
                     }
                 })
             }
