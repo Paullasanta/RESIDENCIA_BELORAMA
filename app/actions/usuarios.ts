@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { auth } from '@/lib/auth'
+import bcrypt from 'bcryptjs'
 
 /**
  * Obtiene todos los usuarios que NO son residentes (Staff)
@@ -44,7 +45,9 @@ export async function upsertUsuario(data: any) {
         roleId: Number(data.roleId),
         residenciaId: data.residenciaId ? Number(data.residenciaId) : null,
       }
-      if (data.password) updateData.password = data.password
+      if (data.password) {
+        updateData.password = await bcrypt.hash(data.password, 10)
+      }
 
       await prisma.user.update({
         where: { id: Number(data.id) },
@@ -56,7 +59,7 @@ export async function upsertUsuario(data: any) {
         data: {
           nombre: data.nombre,
           email: data.email,
-          password: data.password || 'belo123',
+          password: await bcrypt.hash(data.password || 'belo123', 10),
           roleId: Number(data.roleId),
           residenciaId: data.residenciaId ? Number(data.residenciaId) : null,
         }

@@ -3,6 +3,7 @@ import { authConfig } from './auth.config'
 import { prisma } from './prisma'
 import { unstable_noStore as noStore } from 'next/cache'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import bcrypt from 'bcryptjs'
 
 // Extender tipos de NextAuth
 declare module 'next-auth' {
@@ -49,8 +50,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     }
                 })
 
-                // En Belorama usamos contraseñas en texto plano según tu configuración
-                if (!user || user.password !== credentials.password) {
+                if (!user) return null
+
+                // Verificamos la contraseña usando bcrypt
+                const passwordMatch = await bcrypt.compare(credentials.password as string, user.password)
+                
+                if (!passwordMatch) {
                     return null
                 }
 

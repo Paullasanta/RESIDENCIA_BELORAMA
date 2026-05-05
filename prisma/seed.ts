@@ -1,4 +1,5 @@
 import { PrismaClient, DiaSemana, EstadoTurno, TipoMenu } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -84,20 +85,22 @@ async function main() {
     console.log('🎭 Roles creados (ADMIN, RESIDENTE, COCINERO)')
 
     // 3. Crear Usuarios Iniciales
+    const hashedPasswordAdmin = await bcrypt.hash('admin123', 10)
     const adminUser = await prisma.user.create({
         data: {
             nombre: 'Admin Belorama',
             email: 'admin@belorama.com',
-            password: 'admin123',
+            password: hashedPasswordAdmin,
             roleId: roleAdmin.id,
         }
     })
 
+    const hashedPasswordCocinero = await bcrypt.hash('cocina123', 10)
     const cocineroUser = await prisma.user.create({
         data: {
             nombre: 'Carlos Cocinero',
             email: 'cocinero@belorama.com',
-            password: 'cocina123',
+            password: hashedPasswordCocinero,
             roleId: roleCocinero.id,
         }
     })
@@ -162,11 +165,12 @@ async function main() {
     const residentes = await Promise.all(
         residentesList.map(async (r, i) => {
             const hab = i < 3 ? habitaciones1[r.habIdx] : habitaciones2[r.habIdx]
+            const hashedPasswordRes = await bcrypt.hash('res123', 10)
             const user = await prisma.user.create({
                 data: {
                     nombre: r.nombre,
                     email: r.email,
-                    password: 'res123',
+                    password: hashedPasswordRes,
                     roleId: roleResidente.id,
                     residenciaId: r.resId,
                 }

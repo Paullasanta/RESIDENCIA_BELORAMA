@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import bcrypt from 'bcryptjs'
 
 /**
  * Parsea un string 'YYYY-MM-DD' como mediodia UTC (12:00:00Z).
@@ -60,7 +61,7 @@ export async function createResidente(data: any) {
   const apellidoMaterno = data.apellidoMaterno as string
   const dni = data.dni as string
   const email = data.email as string
-  const password = dni // Contraseña por defecto es el DNI
+  const password = await bcrypt.hash(dni, 10) // Contraseña por defecto es el DNI hasheado
   const telefono = data.telefono as string
   
   const emergenciaNombre = data.emergenciaNombre as string
@@ -342,7 +343,9 @@ export async function updateResidente(id: number, data: any) {
         emergenciaParentesco,
         fechaNacimiento: (data.fechaNacimiento && data.fechaNacimiento !== "") ? new Date(data.fechaNacimiento) : undefined
       }
-      if (password && password.trim() !== "") userData.password = password
+      if (password && password.trim() !== "") {
+        userData.password = await bcrypt.hash(password, 10)
+      }
 
       if (data.imagen) userData.imagen = data.imagen
 

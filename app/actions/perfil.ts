@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
+import bcrypt from 'bcryptjs'
 
 export async function updateProfile(data: {
     nombre?: string,
@@ -32,7 +33,7 @@ export async function updateProfile(data: {
         }
 
         if (data.password && data.password.trim() !== '') {
-            updateData.password = data.password
+            updateData.password = await bcrypt.hash(data.password, 10)
         }
         
         if (data.fechaNacimiento && data.fechaNacimiento !== "") {
