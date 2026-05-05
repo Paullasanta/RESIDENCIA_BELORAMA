@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { EstadoHabitacion } from '@prisma/client'
 import { createResidente } from './residentes'
 
 export async function createReserva(data: any) {
