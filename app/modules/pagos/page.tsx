@@ -30,7 +30,7 @@ function getPagoLogic(entry: any, today: Date) {
     const pPagado = [...relevantPagos].reverse().find(p => p.estado === 'PAGADO')
     
     const p = pVencido || pPendiente || pPagado || relevantPagos[0]
-    if (!p) return { p: null }
+    if (!p) return { p: null, statusVisual: null, isHealthy: false, pendiente: 0 }
 
     const fechaVencimiento = new Date(p.fechaVencimiento || p.createdAt)
     const fechaVencimientoSinHora = new Date(fechaVencimiento)
