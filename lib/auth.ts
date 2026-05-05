@@ -50,17 +50,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     }
                 })
 
-<<<<<<< HEAD
                 if (!user) return null
 
                 // Verificamos la contraseña usando bcrypt
                 const passwordMatch = await bcrypt.compare(credentials.password as string, user.password)
                 
                 if (!passwordMatch) {
-=======
-                // En Grow Residencial usamos contraseñas en texto plano según tu configuración
-                if (!user || user.password !== credentials.password) {
->>>>>>> 706fa9525ee3cf82d77c3f2f805d46c56caf5115
                     return null
                 }
 

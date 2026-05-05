@@ -24,7 +24,10 @@ export async function POST(request: NextRequest) {
     const uploadDir = path.join(process.cwd(), 'public', 'uploads')
     const filePath = path.join(uploadDir, fileName)
 
-    await writeFile(filePath, buffer)
+    // Asegurar que el directorio existe con permisos de lectura (755)
+    await (await import('fs/promises')).mkdir(uploadDir, { recursive: true, mode: 0o755 })
+
+    await writeFile(filePath, buffer, { mode: 0o644 })
 
     return NextResponse.json({ 
         url: `/uploads/${fileName}`,

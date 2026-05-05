@@ -2,11 +2,8 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-<<<<<<< HEAD
 import bcrypt from 'bcryptjs'
-=======
 import { EstadoHabitacion, EstadoPago, EstadoProducto } from '@prisma/client'
->>>>>>> 706fa9525ee3cf82d77c3f2f805d46c56caf5115
 
 /**
  * Parsea un string 'YYYY-MM-DD' como mediodia UTC (12:00:00Z).

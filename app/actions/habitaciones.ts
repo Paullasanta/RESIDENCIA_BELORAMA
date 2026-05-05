@@ -196,10 +196,13 @@ export async function uploadHabitacionFotos(habitacionId: number, residenciaId: 
     for (const file of files) {
       const buffer = Buffer.from(await file.arrayBuffer())
       const filename = `${Date.now()}_${file.name.replace(/\\s+/g, '_')}`
-      // The public absolute path on local storage
-      const filepath = path.join(process.cwd(), 'public', 'uploads', 'habitaciones', filename)
+      // Asegurar que el directorio existe con permisos de lectura (755)
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'habitaciones')
+      await mkdir(uploadDir, { recursive: true, mode: 0o755 })
+
+      const filepath = path.join(uploadDir, filename)
       
-      await writeFile(filepath, buffer)
+      await writeFile(filepath, buffer, { mode: 0o644 })
       savedUrls.push(`/uploads/habitaciones/${filename}`)
     }
 

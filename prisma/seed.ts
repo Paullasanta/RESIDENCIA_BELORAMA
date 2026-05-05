@@ -88,15 +88,9 @@ async function main() {
     const hashedPasswordAdmin = await bcrypt.hash('admin123', 10)
     const adminUser = await prisma.user.create({
         data: {
-<<<<<<< HEAD
-            nombre: 'Admin Belorama',
-            email: 'admin@belorama.com',
-            password: hashedPasswordAdmin,
-=======
             nombre: 'Admin Grow Residencial',
             email: 'admin@growresidencial.com',
-            password: 'admin123',
->>>>>>> 706fa9525ee3cf82d77c3f2f805d46c56caf5115
+            password: hashedPasswordAdmin,
             roleId: roleAdmin.id,
         }
     })
@@ -105,13 +99,8 @@ async function main() {
     const cocineroUser = await prisma.user.create({
         data: {
             nombre: 'Carlos Cocinero',
-<<<<<<< HEAD
-            email: 'cocinero@belorama.com',
-            password: hashedPasswordCocinero,
-=======
             email: 'cocinero@growresidencial.com',
-            password: 'cocina123',
->>>>>>> 706fa9525ee3cf82d77c3f2f805d46c56caf5115
+            password: hashedPasswordCocinero,
             roleId: roleCocinero.id,
         }
     })
