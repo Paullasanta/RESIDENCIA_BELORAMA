@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { EstadoPago } from '@prisma/client'
 import { checkAuth, checkResidenciaAccess } from '@/lib/auth-utils'
 import { createNotification, notifyAdmins } from './notificaciones'
 
@@ -22,7 +23,7 @@ export async function createPago(data: any) {
         periodo,
         metodoPago,
         montoPagado: yaPagado ? (monto / cuotasCount) : 0,
-        estado: yaPagado ? 'PAGADO' as any : 'PENDIENTE' as any,
+        estado: yaPagado ? EstadoPago.PAGADO : EstadoPago.PENDIENTE,
         fechaVencimiento: new Date(Date.now() + i * 30 * 24 * 60 * 60 * 1000),
     }));
 
@@ -54,7 +55,7 @@ export async function approveVoucher(pagoId: number) {
       where: { id: pagoId },
       data: {
         montoPagado: pago.monto,
-        estado: 'PAGADO',
+        estado: EstadoPago.PAGADO,
         fechaPago: new Date(),
       }
     })
@@ -96,7 +97,7 @@ export async function rejectVoucher(pagoId: number) {
     await prisma.pago.update({
       where: { id: pagoId },
       data: {
-        estado: isVencido ? 'VENCIDO' : 'PENDIENTE',
+        estado: isVencido ? EstadoPago.VENCIDO : EstadoPago.PENDIENTE,
         comprobante: null,
         metodoPago: null
       }
@@ -128,7 +129,7 @@ export async function togglePagoStatus(id: number, pagado: boolean) {
       where: { id },
       data: { 
           montoPagado: pagado ? pago.monto : 0,
-          estado: pagado ? 'PAGADO' : 'PENDIENTE',
+          estado: pagado ? EstadoPago.PAGADO : EstadoPago.PENDIENTE,
           fechaPago: pagado ? new Date() : null
       }
     })
@@ -150,7 +151,7 @@ export async function payPago(pagoId: number) {
       where: { id: pagoId },
       data: {
         montoPagado: pago?.monto || 0,
-        estado: 'PAGADO',
+        estado: EstadoPago.PAGADO,
         fechaPago: new Date()
       }
     })
@@ -173,7 +174,7 @@ export async function enviarComprobantePago(data: { pagoId: number, comprobante:
       data: {
         comprobante,
         metodoPago,
-        estado: 'EN_REVISION'
+        estado: EstadoPago.EN_REVISION
       },
       include: { residente: { include: { user: true } } }
     })

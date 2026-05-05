@@ -30,7 +30,7 @@ function getPagoLogic(entry: any, today: Date) {
     const pPagado = [...relevantPagos].reverse().find(p => p.estado === 'PAGADO')
     
     const p = pVencido || pPendiente || pPagado || relevantPagos[0]
-    if (!p) return { p: null }
+    if (!p) return { p: null, statusVisual: null, isHealthy: false, pendiente: 0 }
 
     const fechaVencimiento = new Date(p.fechaVencimiento || p.createdAt)
     const fechaVencimientoSinHora = new Date(fechaVencimiento)
@@ -211,11 +211,8 @@ export default async function PagosPage({ searchParams }: {
     // Filtering logic
     if (filter === 'debtors') {
         residentesList = residentesList.filter((r: any) => (r.totalMonto - r.totalPagado) > 0)
-    }
-
-    // Filtering logic
-    if (filter === 'debtors') {
-        residentesList = residentesList.filter((r: any) => (r.totalMonto - r.totalPagado) > 0)
+    } else if (filter === 'revision') {
+        residentesList = residentesList.filter((r: any) => r.pagos.some((p: any) => p.estado === 'EN_REVISION'))
     }
 
     // Ordenar por fecha (más antigua primero). Residentes sin pagos pendientes van al final.
@@ -303,7 +300,7 @@ export default async function PagosPage({ searchParams }: {
                         <p className="text-lg md:text-3xl font-black text-[#072E1F] tracking-tighter">S/ {stats.v2.toLocaleString('es-MX')}</p>
                     </div>
                 </Link>
-                <div className="bg-white rounded-3xl p-4 md:p-8 border border-gray-100 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-6 col-span-2 md:col-span-1 group">
+                <Link href="/modules/pagos?filter=revision#revision-section" className={`bg-white rounded-3xl p-4 md:p-8 border shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-6 col-span-2 md:col-span-1 group hover:-translate-y-1 transition-all ${filter === 'revision' ? 'border-red-500 ring-4 ring-red-50' : 'border-gray-100'}`}>
                     <div className={`w-10 h-10 md:w-16 md:h-16 rounded-2xl flex items-center justify-center border transition-all ${stats.v3 > 0 ? 'bg-red-50 text-red-500 border-red-100 animate-pulse' : 'bg-gray-50 text-gray-300 border-gray-100'}`}>
                         <Bell size={24} className="md:hidden" />
                         <Bell size={32} className="hidden md:block" />
@@ -314,7 +311,7 @@ export default async function PagosPage({ searchParams }: {
                             {stats.v3 === '—' ? stats.v3 : typeof stats.v3 === 'number' ? stats.v3 : new Date(stats.v3).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
                         </p>
                     </div>
-                </div>
+                </Link>
             </div>
 
             {isAdmin && (
@@ -474,7 +471,7 @@ export default async function PagosPage({ searchParams }: {
 
             {/* Bottom Grid: Review Section (Admin Only) */}
             {isAdmin && (
-                <div className="grid grid-cols-1 gap-8">
+                <div id="revision-section" className="grid grid-cols-1 gap-8 scroll-mt-10">
                     <RevisionVouchers vouchers={vouchersPendientes} />
                 </div>
             )}
@@ -515,28 +512,30 @@ export default async function PagosPage({ searchParams }: {
                                     Historial de Pagos Realizados
                                     <span className="h-px bg-gray-100 flex-1"></span>
                                 </h3>
-                                <div className="space-y-4">
-                                    {pagosRaw.filter(p => p.estado === 'PAGADO').sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {pagosRaw.filter(p => p.estado === 'PAGADO')
+                                    .sort((a, b) => new Date(b.fechaPago || b.updatedAt || b.createdAt).getTime() - new Date(a.fechaPago || a.updatedAt || a.createdAt).getTime())
                                     .map((item, idx) => (
-                                        <div key={`${item.id}-${idx}`} className="bg-white rounded-3xl p-5 flex items-center justify-between border border-gray-100 shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-[#1D9E75]/10 flex items-center justify-center text-[#1D9E75] shrink-0 border border-[#1D9E75]/20">
-                                                    <CheckCircle size={24} strokeWidth={2.5} />
+                                        <div key={`${item.id}-${idx}`} className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all active:scale-[0.98] flex flex-col justify-between gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-[#1D9E75]/10 flex items-center justify-center text-[#1D9E75] shrink-0 border border-[#1D9E75]/20">
+                                                    <CheckCircle size={20} strokeWidth={3} />
                                                 </div>
-                                                <div>
-                                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.1em] mb-0.5">
+                                                <div className="min-w-0">
+                                                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest truncate">
                                                         {item.concepto}
                                                     </p>
-                                                    <p className="text-xl font-black text-[#072E1F] tracking-tighter">
+                                                    <p className="text-lg font-black text-[#072E1F] tracking-tighter">
                                                         S/ {item.monto.toLocaleString('es-MX')}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="text-right flex flex-col items-end">
-                                                <div className="px-2 py-0.5 bg-green-50 text-[#1D9E75] rounded-md text-[8px] font-black uppercase tracking-widest mb-2 border border-green-100">
+                                            <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                                                <div className="px-2 py-0.5 bg-green-50 text-[#1D9E75] rounded-md text-[7px] font-black uppercase tracking-widest border border-green-100">
                                                     Éxito
                                                 </div>
-                                                <p className="text-[10px] font-bold text-gray-400">
+                                                <p className="text-[9px] font-bold text-gray-400 flex items-center gap-1">
+                                                    <CalendarIcon size={10} className="text-[#1D9E75]" />
                                                     {item.fechaPago ? new Date(item.fechaPago).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) : new Date(item.updatedAt || item.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}
                                                 </p>
                                             </div>

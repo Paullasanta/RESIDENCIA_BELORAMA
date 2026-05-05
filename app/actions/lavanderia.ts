@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { EstadoTurno } from '@prisma/client'
+import { EstadoTurno, TipoReserva, DiaSemana } from '@prisma/client'
 import { checkAuth, checkResidenciaAccess } from '@/lib/auth-utils'
 import { createNotification, notifyAdmins } from './notificaciones'
 
@@ -45,10 +45,11 @@ export async function reservarTurnoLavanderia(turnoId: number, residenteId: numb
           data: {
             residenteId,
             estado: EstadoTurno.OCUPADO,
-            tipoReserva: 'EXTRA'
+            tipoReserva: TipoReserva.EXTRA
           }
         }),
-        prisma.historialLavanderia.create({
+        // Usamos una forma más segura de acceder por si el cliente está desincronizado
+        (prisma as any).historialLavanderia.create({
           data: {
             residenteId,
             accion: 'RESERVA_DIRECTA',
@@ -67,10 +68,10 @@ export async function reservarTurnoLavanderia(turnoId: number, residenteId: numb
           data: {
             residenteId,
             estado: EstadoTurno.SOLICITADO,
-            tipoReserva: 'SOLICITUD'
+            tipoReserva: TipoReserva.SOLICITUD
           }
         }),
-        prisma.historialLavanderia.create({
+        (prisma as any).historialLavanderia.create({
           data: {
             residenteId,
             accion: 'SOLICITUD',
@@ -91,6 +92,7 @@ export async function reservarTurnoLavanderia(turnoId: number, residenteId: numb
       return { success: true, message: 'Solicitud enviada al administrador' }
     }
   } catch (error: any) {
+    console.error("Error en reservarTurnoLavanderia:", error)
     return { success: false, error: error.message || 'Error al procesar la reserva' }
   }
 }
@@ -103,7 +105,7 @@ export async function cambiarTurnoLavanderia(turnoActualId: number, turnoNuevoId
         await liberarTurnoLavanderia(turnoActualId)
 
         // Luego intentamos reservar el nuevo
-        return reservarTurnoLavanderia(turnoNuevoId, residenteId)
+        return reservarTurnoLavanderia(turnoNuevoId, Number(residenteId))
     } catch (error: any) {
         return { success: false, error: error.message || 'Error al cambiar el turno' }
     }
@@ -117,32 +119,31 @@ export async function aprobarTurnoSolicitado(turnoId: number) {
             where: { id: turnoId },
             data: { 
                 estado: EstadoTurno.OCUPADO,
-                tipoReserva: 'EXTRA' // Al aprobar una solicitud, se convierte en reserva extra
+                tipoReserva: TipoReserva.EXTRA
             },
             include: { residente: true }
         })
 
         if (turno.residente) {
-            await Promise.all([
-                createNotification(
-                    turno.residente.userId,
-                    'Turno Aprobado',
-                    `Tu solicitud para el turno del ${turno.dia} ha sido aprobada.`,
-                    'INFO',
-                    '/modules/lavanderia'
-                ),
-                prisma.historialLavanderia.create({
-                    data: {
-                        residenteId: turno.residenteId!,
-                        accion: 'APROBACION',
-                        detalle: `Aprobación de turno: ${turno.dia} ${turno.horaInicio}`
-                    }
-                })
-            ])
+            await createNotification(
+                turno.residente.userId,
+                'Turno Aprobado',
+                `Tu solicitud para el turno del ${turno.dia} ha sido aprobada.`,
+                'INFO',
+                '/modules/lavanderia'
+            );
+
+            await (prisma as any).historialLavanderia.create({
+                data: {
+                    residenteId: turno.residenteId!,
+                    accion: 'APROBACION',
+                    detalle: `Aprobación de turno: ${turno.dia} ${turno.horaInicio}`
+                }
+            });
         }
 
         revalidatePath('/modules/lavanderia')
-        return { success: true }
+        return { success: true, message: 'Turno aprobado correctamente' }
     } catch (error: any) {
         return { success: false, error: error.message || 'Error al aprobar el turno' }
     }
@@ -202,10 +203,10 @@ export async function liberarTurnoLavanderia(turnoId: number) {
             data: {
                 residenteId: nuevoResidenteId,
                 estado: nuevoEstado,
-                tipoReserva: 'BASE'
+                tipoReserva: TipoReserva.BASE
             }
         }),
-        prisma.historialLavanderia.create({
+        (prisma as any).historialLavanderia.create({
             data: {
                 residenteId: turno.residenteId,
                 accion: esCancelacion ? 'CANCELACION_SOLICITUD' : 'LIBERACION',
@@ -270,21 +271,30 @@ export async function generateBulkShifts(lavadoraId: number, residenciaId: numbe
 
         if (startMins >= endMins) throw new Error("La hora de inicio debe ser menor a la hora de fin")
 
+        const lId = Number(lavadoraId)
+        const rId = Number(residenciaId)
+
         await prisma.$transaction(async (tx) => {
             // 0. Obtener turnos fijos para estos días
             let fixedShifts: any[] = []
             try {
+                // Intentamos acceso normal
                 fixedShifts = await (tx as any).turnoFijo.findMany({
-                    where: { lavadoraId, dia: { in: dias as any } }
+                    where: { lavadoraId: lId, dia: { in: dias as any } }
                 })
             } catch (e) {
-                fixedShifts = await tx.$queryRaw`SELECT * FROM "TurnoFijo" WHERE "lavadoraId" = ${lavadoraId} AND "dia"::text IN (${dias.join(',')})`
+                // Fallback con tipos más seguros
+                fixedShifts = await tx.$queryRawUnsafe(
+                    `SELECT * FROM "TurnoFijo" WHERE "lavadoraId" = $1 AND "dia"::text = ANY($2)`,
+                    lId,
+                    dias
+                )
             }
 
             // 1. Obtener todos los turnos que no son libres en los días seleccionados
             const preservedShifts = await tx.turnoLavanderia.findMany({
                 where: {
-                    lavadoraId,
+                    lavadoraId: lId,
                     dia: { in: dias as any },
                     estado: { not: 'LIBRE' }
                 }
@@ -293,12 +303,12 @@ export async function generateBulkShifts(lavadoraId: number, residenciaId: numbe
             // 2. Borrar ABSOLUTAMENTE TODO para esos días y esa lavadora
             await tx.turnoLavanderia.deleteMany({
                 where: {
-                    lavadoraId,
+                    lavadoraId: lId,
                     dia: { in: dias as any }
                 }
             })
 
-            // 3. Re-insertar los preservados (limpiando posibles espacios en blanco)
+            // 3. Re-insertar los preservados
             if (preservedShifts.length > 0) {
                 await tx.turnoLavanderia.createMany({
                     data: preservedShifts.map(s => ({
@@ -308,7 +318,8 @@ export async function generateBulkShifts(lavadoraId: number, residenciaId: numbe
                         horaInicio: s.horaInicio.trim(),
                         horaFin: s.horaFin.trim(),
                         residenteId: s.residenteId,
-                        estado: s.estado as EstadoTurno
+                        estado: s.estado,
+                        tipoReserva: s.tipoReserva || TipoReserva.BASE
                     }))
                 })
             }
@@ -323,7 +334,6 @@ export async function generateBulkShifts(lavadoraId: number, residenciaId: numbe
                     const inicioStr = formatTime(slotInicio)
                     const finStr = formatTime(slotFin)
 
-                    // Verificar solapamiento con los preservados de ESTE día
                     const hasOverlap = preservedShifts.some(ex => {
                         if (ex.dia !== dia) return false
                         const exInicio = parseTime(ex.horaInicio.trim())
@@ -332,18 +342,22 @@ export async function generateBulkShifts(lavadoraId: number, residenciaId: numbe
                     })
 
                     if (!hasOverlap) {
-                        // VERIFICAR SI HAY UN TURNO FIJO PARA ESTE HORARIO
-                        const fixed = (fixedShifts as any[]).find((fs: any) => fs.dia === dia && fs.horaInicio === inicioStr)
+                        // El objeto fixed de $queryRaw podría tener nombres con guiones o minúsculas
+                        const fixed = fixedShifts.find((fs: any) => {
+                            const fsDia = fs.dia || fs.Dia
+                            const fsInicio = (fs.horaInicio || fs.horainicio || '').trim()
+                            return fsDia === dia && fsInicio === inicioStr
+                        })
 
                         newShifts.push({
-                            lavadoraId,
-                            residenciaId,
-                            dia: dia as any,
+                            lavadoraId: lId,
+                            residenciaId: rId,
+                            dia: dia as DiaSemana,
                             horaInicio: inicioStr,
                             horaFin: finStr,
-                            residenteId: fixed ? fixed.residenteId : null,
+                            residenteId: fixed ? (fixed.residenteId || fixed.residenteid) : null,
                             estado: fixed ? EstadoTurno.OCUPADO : EstadoTurno.LIBRE,
-                            tipoReserva: 'BASE' // Por defecto al generar son BASE
+                            tipoReserva: TipoReserva.BASE
                         })
                     }
                     current += intervaloMin
@@ -396,7 +410,7 @@ export async function clearAllShifts(lavadoraId: number, residenciaId: number) {
                     data: { 
                         residenteId: fs.residenteId, 
                         estado: EstadoTurno.OCUPADO,
-                        tipoReserva: 'BASE'
+                        tipoReserva: TipoReserva.BASE
                     }
                 })
             }

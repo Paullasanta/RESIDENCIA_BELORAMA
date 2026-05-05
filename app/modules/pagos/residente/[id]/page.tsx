@@ -1,9 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { StatusBadge } from '@/components/shared/StatusBadge'
 import { notFound } from 'next/navigation'
-import { Calendar, User, ArrowLeft, CheckCircle, Clock, History } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Clock, History } from 'lucide-react'
 import Link from 'next/link'
+import { PagoItemAdmin } from '@/components/admin/PagoItemAdmin'
 
 export default async function DetallePagosResidentePage({ params }: { params: Promise<{ id: string }> }) {
   const { id: idStr } = await params
@@ -114,7 +114,7 @@ export default async function DetallePagosResidentePage({ params }: { params: Pr
                               </div>
                               <div className="divide-y divide-gray-50">
                                   {grouped[key].map((pago) => (
-                                      <PagoItem key={pago.id} pago={pago} />
+                                      <PagoItemAdmin key={pago.id} pago={pago} />
                                   ))}
                               </div>
                           </div>
@@ -136,7 +136,7 @@ export default async function DetallePagosResidentePage({ params }: { params: Pr
               </div>
               <div className="divide-y divide-gray-50 max-h-96 overflow-y-auto">
                   {pagosHistoricos.map(pago => (
-                      <PagoItem key={pago.id} pago={pago} isHistorical />
+                      <PagoItemAdmin key={pago.id} pago={pago} isHistorical />
                   ))}
               </div>
           </div>
@@ -145,35 +145,4 @@ export default async function DetallePagosResidentePage({ params }: { params: Pr
   )
 }
 
-function PagoItem({ pago, isHistorical = false }: { pago: any, isHistorical?: boolean }) {
-    const dObj = pago.fechaVencimiento ? new Date(pago.fechaVencimiento) : null
-    const day = dObj ? dObj.getUTCDate() : '—'
-    const monthShort = dObj ? dObj.toLocaleDateString('es-MX', { month: 'short', timeZone: 'UTC' }).replace('.', '') : '—'
 
-    return (
-        <div className={`p-4 sm:p-8 flex items-center justify-between hover:bg-gray-50/30 transition-colors ${isHistorical ? 'py-3 sm:py-4' : ''}`}>
-            <div className="flex items-center gap-3 sm:gap-6 min-w-0">
-                <div className={`w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center font-black border shrink-0 ${
-                pago.estado === 'PAGADO' ? 'bg-green-50 text-green-600 border-green-100' : 
-                pago.estado === 'EN_REVISION' ? 'bg-blue-50 text-blue-600 border-blue-100' : 
-                pago.estado === 'RECHAZADO' ? 'bg-red-50 text-red-300 border-red-100' :
-                'bg-gray-50 text-gray-400 border-gray-100'
-                }`}>
-                    <span className="text-[8px] sm:text-[10px] uppercase leading-none mb-0.5 sm:mb-1 opacity-60">{monthShort}</span>
-                    <span className="text-sm sm:text-lg leading-none">{day}</span>
-                </div>
-                <div className="min-w-0">
-                    <p className={`text-sm sm:text-lg font-black text-[#072E1F] leading-tight mb-1 truncate ${isHistorical ? 'text-xs text-gray-400' : ''}`}>{pago.concepto}</p>
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                        <span className={isHistorical ? 'text-gray-300' : 'text-[#1D9E75] font-black'}>S/ {pago.monto.toLocaleString('es-MX')}</span>
-                        <span className="hidden sm:inline">•</span>
-                        <span className="truncate">Vence: {dObj ? dObj.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : 'N/A'}</span>
-                    </div>
-                </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-4 ml-2 shrink-0">
-                <StatusBadge status={pago.estado as any} />
-            </div>
-        </div>
-    )
-}

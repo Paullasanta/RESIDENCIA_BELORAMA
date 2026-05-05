@@ -16,6 +16,14 @@ export function PagoForm({ residentes }: PagoFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [tipoPago, setTipoPago] = useState('')
   const [numCuotas, setNumCuotas] = useState('1')
+  const [monto, setMonto] = useState('0')
+
+  const handleNumericInput = (val: string) => {
+    let filtered = val.replace(/[^0-9.]/g, '');
+    const parts = filtered.split('.');
+    if (parts.length > 2) filtered = parts[0] + '.' + parts.slice(1).join('');
+    return filtered;
+  }
 
   useEffect(() => {
     if (tipoPago === 'Garantía') {
@@ -44,7 +52,7 @@ export function PagoForm({ residentes }: PagoFormProps) {
 
     const data = {
       residenteId: formData.get('residenteId'),
-      monto: formData.get('monto'),
+      monto: Number(monto),
       concepto,
       numCuotas: cuotas,
     }
@@ -121,9 +129,11 @@ export function PagoForm({ residentes }: PagoFormProps) {
             <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-black text-lg group-focus-within:text-[#1D9E75] transition-colors">$</span>
             <input
               name="monto"
-              type="number"
-              step="0.01"
+              type="text"
               required
+              value={monto}
+              onChange={(e) => setMonto(handleNumericInput(e.target.value))}
+              inputMode="decimal"
               className="w-full pl-10 pr-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-900 text-lg"
               placeholder="0.00"
             />

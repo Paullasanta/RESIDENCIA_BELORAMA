@@ -2,7 +2,11 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+<<<<<<< HEAD
 import bcrypt from 'bcryptjs'
+=======
+import { EstadoHabitacion, EstadoPago, EstadoProducto } from '@prisma/client'
+>>>>>>> 706fa9525ee3cf82d77c3f2f805d46c56caf5115
 
 /**
  * Parsea un string 'YYYY-MM-DD' como mediodia UTC (12:00:00Z).
@@ -32,7 +36,7 @@ export async function getResidenciasConHabitaciones() {
   return await prisma.residencia.findMany({
     include: {
       habitaciones: {
-        where: { estado: 'LIBRE' },
+        where: { estado: EstadoHabitacion.LIBRE },
         orderBy: { numero: 'asc' }
       }
     },
@@ -169,7 +173,7 @@ export async function createResidente(data: any) {
       if (habitacionId) {
         await tx.habitacion.update({
           where: { id: habitacionId },
-          data: { estado: 'OCUPADO' }
+          data: { estado: EstadoHabitacion.OCUPADO }
         })
       }
 
@@ -208,7 +212,7 @@ export async function createResidente(data: any) {
             mesCorrespondiente: mesString,
             fechaVencimiento: fechaVencimiento,
             monto: montoMensual,
-            estado: (isFirstPayment && pagoConfirmado) ? 'EN_REVISION' : (fechaVencimiento < now ? 'VENCIDO' : 'PENDIENTE'),
+            estado: (isFirstPayment && pagoConfirmado) ? EstadoPago.EN_REVISION : (fechaVencimiento < now ? EstadoPago.VENCIDO : EstadoPago.PENDIENTE),
             comprobante: (isFirstPayment && pagoConfirmado) ? comprobanteUrl : null
           };
         });
@@ -251,7 +255,7 @@ export async function createResidente(data: any) {
             monto: montoCuota,
             montoPagado: 0,
             fechaVencimiento: fechaVencimiento,
-            estado: ((isFirstPayment && pagoConfirmado) ? 'EN_REVISION' : defaultStatus) as any,
+            estado: (isFirstPayment && pagoConfirmado) ? EstadoPago.EN_REVISION : defaultStatus as any,
             comprobante: (isFirstPayment && pagoConfirmado) ? comprobanteUrl : null
           }
         });
@@ -359,13 +363,13 @@ export async function updateResidente(id: number, data: any) {
         if (currentResidente.habitacionId) {
           await tx.habitacion.update({
             where: { id: currentResidente.habitacionId },
-            data: { estado: 'LIBRE' }
+            data: { estado: EstadoHabitacion.LIBRE }
           })
         }
         if (habitacionId) {
           await tx.habitacion.update({
             where: { id: habitacionId },
-            data: { estado: 'OCUPADO' }
+            data: { estado: EstadoHabitacion.OCUPADO }
           })
         }
       }
@@ -399,7 +403,7 @@ export async function updateResidente(id: number, data: any) {
               { concepto: { contains: 'Mes', mode: 'insensitive' } },
               { concepto: { contains: 'Alquiler', mode: 'insensitive' } },
             ],
-            estado: { in: ['PENDIENTE', 'RECHAZADO', 'VENCIDO', 'CRITICO'] }
+            estado: { in: [EstadoPago.PENDIENTE, EstadoPago.RECHAZADO, EstadoPago.VENCIDO, EstadoPago.CRITICO] }
           },
           data: { monto: parsedMontoMensual }
         })
@@ -411,24 +415,24 @@ export async function updateResidente(id: number, data: any) {
           where: { 
             residenteId: id, 
             concepto: { contains: 'Garantía', mode: 'insensitive' },
-            estado: { not: 'RECHAZADO' },
+            estado: { not: EstadoPago.RECHAZADO },
             fechaVencimiento: { gte: currentResidente.fechaIngreso }
           },
           orderBy: { fechaVencimiento: 'asc' }
         })
 
         const newTotalCuotas = data.cuotasGarantia ? Number(data.cuotasGarantia) : existingGarantias.length
-        
-        // Si hay una intención explícita de cambiar cuotas o monto, o si los números no coinciden
-        if (data.cuotasGarantia || data.montoGarantia) {
-          const hasAmountChanged = Math.abs(parsedMontoGarantia - (currentResidente.montoGarantia || 0)) > 0.01
-          const hasCuotasChanged = newTotalCuotas !== existingGarantias.length
-          
-          if (hasCuotasChanged || hasAmountChanged) {
+
+        // Solo recalcular si el admin realmente cambió el monto o el número de cuotas
+        // Comparamos contra los valores guardados en BD para evitar falsos positivos
+        const hasAmountChanged = Math.abs(parsedMontoGarantia - (currentResidente.montoGarantia || 0)) > 0.01
+        const hasCuotasChanged = newTotalCuotas !== existingGarantias.length
+
+        if (hasAmountChanged || hasCuotasChanged) {
           // Identificar pagos que NO podemos tocar (finalizados o en revisión)
-          const finalizados = existingGarantias.filter(p => p.estado === 'PAGADO' || p.estado === 'EN_REVISION')
+          const finalizados = existingGarantias.filter(p => p.estado === EstadoPago.PAGADO || p.estado === EstadoPago.EN_REVISION)
           // Identificar pagos que SÍ podemos modificar o eliminar
-          const modificables = existingGarantias.filter(p => p.estado !== 'PAGADO' && p.estado !== 'EN_REVISION')
+          const modificables = existingGarantias.filter(p => p.estado !== EstadoPago.PAGADO && p.estado !== EstadoPago.EN_REVISION)
           
           const montoComprometido = finalizados.reduce((sum, p) => sum + p.monto, 0)
           const montoRestante = Math.max(0, parsedMontoGarantia - montoComprometido)
@@ -467,10 +471,10 @@ export async function updateResidente(id: number, data: any) {
                   residenteId: id,
                   concepto: `Garantía (Cuota ${installmentNum}/${newTotalCuotas})`,
                   monto: i === numCuotasRestantes - 1 
-                    ? Number((montoRestante - (montoPorCuota * (numCuotasRestantes - 1))).toFixed(2)) // Ajuste para el último para evitar errores de redondeo
+                    ? Number((montoRestante - (montoPorCuota * (numCuotasRestantes - 1))).toFixed(2))
                     : montoPorCuota,
                   fechaVencimiento: fechaVenc,
-                  estado: 'PENDIENTE' as any
+                  estado: EstadoPago.PENDIENTE
                 })
               }
               if (pagosToCreate.length > 0) {
@@ -490,9 +494,8 @@ export async function updateResidente(id: number, data: any) {
           }
         }
       }
-    }
 
-    // 5. Sincronizar meses si cambiaron las fechas
+      // 5. Sincronizar meses si cambiaron las fechas
       const newFechaIngreso = residente.fechaIngreso;
       const newFechaFinal = residente.fechaFinal;
       const newDiaPago = residente.diaPago;
@@ -525,7 +528,7 @@ export async function updateResidente(id: number, data: any) {
             mesCorrespondiente: exp.mesCorrespondiente,
             fechaVencimiento: exp.fechaVencimiento,
             monto: newMontoMensual,
-            estado: 'PENDIENTE' as any,
+            estado: EstadoPago.PENDIENTE,
           }));
           
         if (pagosToCreate.length > 0) {
@@ -535,7 +538,7 @@ export async function updateResidente(id: number, data: any) {
         const expectedMesesStrings = expectedMeses.map(exp => exp.mesCorrespondiente);
         const pagosToDelete = existingPagos.filter(p => 
           p.mesCorrespondiente && !expectedMesesStrings.includes(p.mesCorrespondiente) && 
-          p.estado !== 'PAGADO' && p.estado !== 'EN_REVISION'
+          p.estado !== EstadoPago.PAGADO && p.estado !== EstadoPago.EN_REVISION
         );
 
         if (pagosToDelete.length > 0) {
@@ -559,7 +562,7 @@ export async function updateResidente(id: number, data: any) {
             { concepto: { contains: 'Mes', mode: 'insensitive' } },
             { concepto: { contains: 'Alquiler', mode: 'insensitive' } }
           ],
-          estado: { in: ['PENDIENTE', 'RECHAZADO', 'VENCIDO'] }
+          estado: { in: [EstadoPago.PENDIENTE, EstadoPago.RECHAZADO, EstadoPago.VENCIDO] }
         }
       })
 
@@ -575,13 +578,13 @@ export async function updateResidente(id: number, data: any) {
         }
 
         const newFecha = calcFechaVencimiento(year, month, newDiaPago);
-        const newStatus = newFecha < now ? 'VENCIDO' : 'PENDIENTE';
+        const newStatus = newFecha < now ? EstadoPago.VENCIDO : EstadoPago.PENDIENTE;
 
         await tx.pago.update({
           where: { id: p.id },
           data: {
             fechaVencimiento: newFecha,
-            estado: (p.estado === 'PENDIENTE' || p.estado === 'VENCIDO') ? newStatus : p.estado
+            estado: (p.estado === EstadoPago.PENDIENTE || p.estado === EstadoPago.VENCIDO) ? newStatus : p.estado
           }
         })
       }
@@ -591,7 +594,7 @@ export async function updateResidente(id: number, data: any) {
         where: {
           residenteId: id,
           concepto: { contains: 'Garantía', mode: 'insensitive' },
-          estado: { in: ['PENDIENTE', 'EN_REVISION', 'RECHAZADO', 'VENCIDO'] }
+          estado: { in: [EstadoPago.PENDIENTE, EstadoPago.EN_REVISION, EstadoPago.RECHAZADO, EstadoPago.VENCIDO] }
         }
       })
 
@@ -605,13 +608,13 @@ export async function updateResidente(id: number, data: any) {
             base.getUTCMonth() + i,
             newDiaPago
           )
-          const gStatus = newFecha < now ? 'VENCIDO' : 'PENDIENTE'
+          const gStatus = newFecha < now ? EstadoPago.VENCIDO : EstadoPago.PENDIENTE
           
           await tx.pago.update({
             where: { id: g.id },
             data: {
               fechaVencimiento: newFecha,
-              estado: (g.estado === 'PENDIENTE' || g.estado === 'VENCIDO') ? gStatus : g.estado
+              estado: (g.estado === EstadoPago.PENDIENTE || g.estado === EstadoPago.VENCIDO) ? gStatus : g.estado
             }
           })
         }
@@ -645,7 +648,7 @@ export async function deleteResidente(id: number) {
       if (res.habitacionId) {
         await tx.habitacion.update({
           where: { id: res.habitacionId },
-          data: { estado: 'LIBRE' }
+          data: { estado: EstadoHabitacion.LIBRE }
         })
       }
 
@@ -661,7 +664,7 @@ export async function deleteResidente(id: number) {
       // 3. Liberar turnos de lavandería
       await tx.turnoLavanderia.updateMany({
         where: { residenteId: id },
-        data: { residenteId: null, estado: 'LIBRE' }
+        data: { residenteId: null, estado: EstadoHabitacion.LIBRE }
       })
 
       // 4. Limpiar turnos fijos
@@ -672,7 +675,7 @@ export async function deleteResidente(id: number) {
       // 5. Desactivar productos en marketplace
       await tx.productoMarketplace.updateMany({
         where: { residenteId: id },
-        data: { estado: 'RECHAZADO' }
+        data: { estado: EstadoProducto.RECHAZADO }
       })
 
       // Nota: Mantenemos pagos, tickets de mantenimiento, asistencias y el usuario

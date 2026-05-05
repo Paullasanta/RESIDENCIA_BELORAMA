@@ -10,6 +10,19 @@ export function ReservaModal({ habitacion, onClose }: { habitacion: any, onClose
     const [error, setError] = useState<string | null>(null)
     const router = useRouter()
 
+    const [dni, setDni] = useState('')
+    const [montoMensual, setMontoMensual] = useState(habitacion.montoMensual?.toString() || '0')
+    const [montoGarantia, setMontoGarantia] = useState(habitacion.montoGarantia?.toString() || '0')
+    const [telefono, setTelefono] = useState('')
+
+    const handleNumericInput = (val: string, type: 'int' | 'float') => {
+        if (type === 'int') return val.replace(/[^0-9]/g, '');
+        let filtered = val.replace(/[^0-9.]/g, '');
+        const parts = filtered.split('.');
+        if (parts.length > 2) filtered = parts[0] + '.' + parts.slice(1).join('');
+        return filtered;
+    }
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setLoading(true)
@@ -20,6 +33,10 @@ export function ReservaModal({ habitacion, onClose }: { habitacion: any, onClose
         
         const res = await createReserva({
             ...data,
+            dni,
+            montoMensual: Number(montoMensual),
+            montoGarantia: Number(montoGarantia),
+            telefono,
             habitacionId: habitacion.id
         })
 
@@ -83,7 +100,15 @@ export function ReservaModal({ habitacion, onClose }: { habitacion: any, onClose
                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">DNI / Documento</label>
                              <div className="relative">
                                 <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                                <input name="dni" required className="w-full pl-12 pr-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" />
+                                <input 
+                                    name="dni" 
+                                    value={dni}
+                                    onChange={(e) => setDni(handleNumericInput(e.target.value, 'int').slice(0, 8))}
+                                    required 
+                                    inputMode="numeric"
+                                    maxLength={8}
+                                    className="w-full pl-12 pr-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" 
+                                 />
                              </div>
                         </div>
 
@@ -94,12 +119,26 @@ export function ReservaModal({ habitacion, onClose }: { habitacion: any, onClose
 
                         <div className="space-y-2">
                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Monto Mensual</label>
-                             <input name="montoMensual" type="number" step="0.01" defaultValue={habitacion.montoMensual || 0} className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" />
+                             <input 
+                                name="montoMensual" 
+                                type="text" 
+                                value={montoMensual}
+                                onChange={(e) => setMontoMensual(handleNumericInput(e.target.value, 'float'))}
+                                inputMode="decimal"
+                                className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" 
+                             />
                         </div>
 
                         <div className="space-y-2">
                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Garantía Total</label>
-                             <input name="montoGarantia" type="number" step="0.01" defaultValue={habitacion.montoGarantia || 0} className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" />
+                             <input 
+                                name="montoGarantia" 
+                                type="text" 
+                                value={montoGarantia}
+                                onChange={(e) => setMontoGarantia(handleNumericInput(e.target.value, 'float'))}
+                                inputMode="decimal"
+                                className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" 
+                             />
                         </div>
 
                         <div className="md:col-span-2 space-y-2">
@@ -114,7 +153,14 @@ export function ReservaModal({ habitacion, onClose }: { habitacion: any, onClose
                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Teléfono</label>
                              <div className="relative">
                                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                                <input name="telefono" className="w-full pl-12 pr-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" />
+                                <input 
+                                    name="telefono" 
+                                    value={telefono}
+                                    onChange={(e) => setTelefono(handleNumericInput(e.target.value, 'int').slice(0, 9))}
+                                    inputMode="numeric"
+                                    maxLength={9}
+                                    className="w-full pl-12 pr-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" 
+                                 />
                              </div>
                         </div>
 

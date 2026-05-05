@@ -129,7 +129,7 @@ export default async function DashboardPage() {
         <div className="space-y-10 animate-in fade-in zoom-in-95 duration-500">
             <PageHeader
                 title={`¡Bienvenido, ${nombre}!`}
-                description={profile?.habitacion ? `Residente en ${profile.habitacion.residencia.nombre} — Hab. ${profile.habitacion.numero}` : 'Bienvenido a Belorama.'}
+                description={profile?.habitacion ? `Residente en ${profile.habitacion.residencia.nombre} — Hab. ${profile.habitacion.numero}` : 'Bienvenido a Grow Residencial.'}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

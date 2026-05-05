@@ -50,6 +50,13 @@ export function ReactivateResidenteModal({ id, nombre, isOpen, onClose, defaultM
         }
     }, [isOpen, mode, defaultMontoMensual, defaultMontoGarantia])
 
+    const handleNumericInput = (val: string) => {
+        let filtered = val.replace(/[^0-9.]/g, '');
+        const parts = filtered.split('.');
+        if (parts.length > 2) filtered = parts[0] + '.' + parts.slice(1).join('');
+        return filtered;
+    }
+
     useEffect(() => {
         if (formData.fechaIngreso) {
             const day = new Date(formData.fechaIngreso).getUTCDate().toString()
@@ -197,10 +204,11 @@ export function ReactivateResidenteModal({ id, nombre, isOpen, onClose, defaultM
                                     <div className="relative">
                                         <DollarSign size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                                         <input 
-                                            type="number"
+                                            type="text"
                                             required
                                             value={formData.montoMensual}
-                                            onChange={(e) => setFormData({...formData, montoMensual: e.target.value})}
+                                            onChange={(e) => setFormData({...formData, montoMensual: handleNumericInput(e.target.value)})}
+                                            inputMode="decimal"
                                             placeholder="0.00"
                                             className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:outline-none"
                                         />
@@ -211,10 +219,11 @@ export function ReactivateResidenteModal({ id, nombre, isOpen, onClose, defaultM
                                     <div className="relative">
                                         <DollarSign size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                                         <input 
-                                            type="number"
+                                            type="text"
                                             required
                                             value={formData.montoGarantia}
-                                            onChange={(e) => setFormData({...formData, montoGarantia: e.target.value})}
+                                            onChange={(e) => setFormData({...formData, montoGarantia: handleNumericInput(e.target.value)})}
+                                            inputMode="decimal"
                                             placeholder="0.00"
                                             className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:outline-none"
                                         />

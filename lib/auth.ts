@@ -50,12 +50,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     }
                 })
 
+<<<<<<< HEAD
                 if (!user) return null
 
                 // Verificamos la contraseña usando bcrypt
                 const passwordMatch = await bcrypt.compare(credentials.password as string, user.password)
                 
                 if (!passwordMatch) {
+=======
+                // En Grow Residencial usamos contraseñas en texto plano según tu configuración
+                if (!user || user.password !== credentials.password) {
+>>>>>>> 706fa9525ee3cf82d77c3f2f805d46c56caf5115
                     return null
                 }
 
@@ -74,6 +79,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
         })
     ],
+    session: {
+        strategy: 'jwt',
+        maxAge: 24 * 60 * 60, // 24 horas de duración máxima de sesión
+    },
     callbacks: {
         async jwt({ token, user, trigger, session }) {
             if (user) {
@@ -92,14 +101,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             noStore()
             if (!token || !token.id) return session
             
-            // Verificación mínima para no sobrecargar el servidor
-            if (token && session.user) {
-                ;(session.user as any).id = Number(token.id)
-                session.user.rol = token.rol as string
-                session.user.nombre = token.nombre as string
-                session.user.permisos = token.permisos as string[]
-                ;(session.user as any).residenciaId = token.residenciaId as number | null
+            // Verificación de estado activo en tiempo real
+            // Esto permite botar al usuario si el admin lo inactiva o lo elimina
+            try {
+                const userStatus = await prisma.user.findUnique({
+                    where: { id: Number(token.id) },
+                    select: { 
+                        residente: { select: { activo: true } } 
+                    }
+                })
+
+                // Si el usuario ya no existe (hard delete) o el residente está inactivo (soft delete)
+                if (!userStatus || (userStatus.residente && userStatus.residente.activo === false)) {
+                    return null as any
+                }
+
+                if (token && session.user) {
+                    ;(session.user as any).id = Number(token.id)
+                    session.user.rol = token.rol as string
+                    session.user.nombre = token.nombre as string
+                    session.user.permisos = token.permisos as string[]
+                    ;(session.user as any).residenciaId = token.residenciaId as number | null
+                }
+            } catch (error) {
+                console.error("Error verificando sesión:", error)
             }
+            
             return session
         }
     },

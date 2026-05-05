@@ -11,6 +11,14 @@ export function ProductoForm() {
   const [error, setError] = useState<string | null>(null)
   const [fotos, setFotos] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
+  const [precio, setPrecio] = useState('0')
+
+  const handleNumericInput = (val: string) => {
+    let filtered = val.replace(/[^0-9.]/g, '');
+    const parts = filtered.split('.');
+    if (parts.length > 2) filtered = parts[0] + '.' + parts.slice(1).join('');
+    return filtered;
+  }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -57,7 +65,7 @@ export function ProductoForm() {
 
     const data = {
       titulo: formData.get('titulo'),
-      precio: formData.get('precio'),
+      precio: Number(precio),
       descripcion: formData.get('descripcion'),
       fotos: fotos
     }
@@ -99,9 +107,11 @@ export function ProductoForm() {
             <span className="absolute left-6 inset-y-0 flex items-center text-gray-300 font-black group-focus-within/input:text-[#1D9E75] transition-colors">$</span>
             <input
               name="precio"
-              type="number"
-              step="0.01"
+              type="text"
               required
+              value={precio}
+              onChange={(e) => setPrecio(handleNumericInput(e.target.value))}
+              inputMode="decimal"
               className="w-full pl-12 pr-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
               placeholder="0.00"
             />

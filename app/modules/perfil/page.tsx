@@ -45,7 +45,7 @@ export default function PerfilPage() {
         <div className="max-w-5xl mx-auto space-y-10 pb-20">
             <PageHeader 
                 title="Gestión de Perfil" 
-                description="Personaliza tu información y seguridad en Belorama"
+                description="Personaliza tu información y seguridad en Grow Residencial"
             />
 
             {message && (

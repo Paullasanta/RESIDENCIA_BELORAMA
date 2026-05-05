@@ -200,9 +200,12 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
               <input
                 name="dni"
                 value={dni}
-                onChange={(e) => setDni(e.target.value.replace(/[^0-9]/g, ''))}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  if (val.length <= 8) setDni(val);
+                }}
                 required
-                pattern="[0-9]*"
+                maxLength={8}
                 inputMode="numeric"
                 className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
                 placeholder="Ej. 74582104"
@@ -250,14 +253,17 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
               <input
                 name="telefono"
                 value={telefono}
-                onChange={(e) => setTelefono(e.target.value.replace(/[^0-9]/g, ''))}
-                pattern="[0-9]{9}"
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  if (val.length <= 9) setTelefono(val);
+                }}
+
                 maxLength={9}
                 inputMode="numeric"
                 className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
                 placeholder="Ej. 999888777"
               />
-              <p className="text-[9px] text-gray-400 font-bold uppercase mt-1 ml-1 tracking-tighter">* Exactamente 9 números</p>
+              <p className="text-[9px] text-gray-400 font-bold uppercase mt-1 ml-1 tracking-tighter">* Máximo 9 números</p>
             </div>
 
             <div className="space-y-2">
@@ -421,14 +427,20 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
             <span className="absolute left-5 inset-y-0 flex items-center text-gray-300 font-black group-focus-within/input:text-[#1D9E75] transition-colors">$</span>
             <input
               name="montoMensual"
-              type="number"
-              step="0.01"
+              type="text"
+
               required
               value={montoMensualInput || ''}
-              onChange={(e) => setMontoMensualInput(e.target.value === '' ? 0 : Number(e.target.value))}
-              className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              onChange={(e) => {
+                let val = e.target.value.replace(/[^0-9.]/g, '');
+                const parts = val.split('.');
+                if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+                setMontoMensualInput(val === '' ? 0 : Number(val));
+              }}
+              className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
+              inputMode="decimal"
               placeholder="0.00"
-              onWheel={(e) => (e.target as HTMLElement).blur()}
+
             />
           </div>
         </div>
@@ -439,14 +451,20 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
             <span className="absolute left-5 inset-y-0 flex items-center text-gray-300 font-black group-focus-within/input:text-[#1D9E75] transition-colors">$</span>
             <input
               name="montoGarantia"
-              type="number"
-              step="0.01"
+              type="text"
+
               required
               value={montoGarantiaInput || ''}
-              onChange={(e) => setMontoGarantiaInput(e.target.value === '' ? 0 : Number(e.target.value))}
-              className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              onChange={(e) => {
+                let val = e.target.value.replace(/[^0-9.]/g, '');
+                const parts = val.split('.');
+                if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+                setMontoGarantiaInput(val === '' ? 0 : Number(val));
+              }}
+              className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
+              inputMode="decimal"
               placeholder="0.00"
-              onWheel={(e) => (e.target as HTMLElement).blur()}
+
             />
           </div>
         </div>
@@ -621,7 +639,11 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
               <input
                 name="emergenciaTelefono"
                 value={emergenciaTelefono}
-                onChange={(e) => setEmergenciaTelefono(e.target.value.replace(/[^0-9]/g, ''))}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setEmergenciaTelefono(val);
+                }}
+                inputMode="numeric"
                 className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
                 placeholder="Ej. 999 888 777"
               />

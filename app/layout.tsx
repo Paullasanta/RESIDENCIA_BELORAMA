@@ -6,7 +6,7 @@ import { Providers } from '@/components/ui/Providers'
 const font = DM_Sans({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Belorama',
+  title: 'Grow Residencial',
   description: 'Sistema de gestión de residencias',
 }
 

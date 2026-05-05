@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { EstadoHabitacion } from '@prisma/client'
 import { createResidente } from './residentes'
 
 export async function createReserva(data: any) {
@@ -67,7 +68,7 @@ export async function createReserva(data: any) {
       // 3. Cambiar estado de la habitación
       await tx.habitacion.update({
         where: { id: parseInt(habitacionId) },
-        data: { estado: 'RESERVADO' }
+        data: { estado: EstadoHabitacion.RESERVADO }
       })
 
       return reserva
@@ -92,7 +93,7 @@ export async function cancelReserva(reservaId: number) {
       // 2. Liberar habitación
       await tx.habitacion.update({
         where: { id: reserva.habitacionId },
-        data: { estado: 'LIBRE' }
+        data: { estado: EstadoHabitacion.LIBRE }
       })
     })
 
@@ -135,7 +136,7 @@ export async function confirmReserva(reservaId: number) {
             nombre: reserva.nombre,
             apellidoPaterno: reserva.apellidoPaterno,
             apellidoMaterno: reserva.apellidoMaterno,
-            email: reserva.email || `${reserva.dni}@belorama.com`,
+            email: reserva.email || `${reserva.dni}@growresidencial.com`,
             password: reserva.dni, // El DNI será su contraseña inicial
             roleId: 2, // Rol de residente
           }
@@ -157,7 +158,7 @@ export async function confirmReserva(reservaId: number) {
       // 4. Actualizar habitación a OCUPADO
       await tx.habitacion.update({
         where: { id: reserva.habitacionId },
-        data: { estado: 'OCUPADO' }
+        data: { estado: EstadoHabitacion.OCUPADO }
       })
 
       // 5. Marcar reserva como CONFIRMADA
