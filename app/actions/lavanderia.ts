@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { EstadoTurno } from '@prisma/client'
+import { EstadoTurno, TipoReserva, DiaSemana } from '@prisma/client'
 import { checkAuth, checkResidenciaAccess } from '@/lib/auth-utils'
 import { createNotification, notifyAdmins } from './notificaciones'
 
@@ -45,7 +45,7 @@ export async function reservarTurnoLavanderia(turnoId: number, residenteId: numb
           data: {
             residenteId,
             estado: EstadoTurno.OCUPADO,
-            tipoReserva: 'EXTRA'
+            tipoReserva: TipoReserva.EXTRA
           }
         }),
         // Usamos una forma más segura de acceder por si el cliente está desincronizado
@@ -68,7 +68,7 @@ export async function reservarTurnoLavanderia(turnoId: number, residenteId: numb
           data: {
             residenteId,
             estado: EstadoTurno.SOLICITADO,
-            tipoReserva: 'SOLICITUD'
+            tipoReserva: TipoReserva.SOLICITUD
           }
         }),
         (prisma as any).historialLavanderia.create({
@@ -119,7 +119,7 @@ export async function aprobarTurnoSolicitado(turnoId: number) {
             where: { id: turnoId },
             data: { 
                 estado: EstadoTurno.OCUPADO,
-                tipoReserva: 'EXTRA'
+                tipoReserva: TipoReserva.EXTRA
             },
             include: { residente: true }
         })
@@ -203,7 +203,7 @@ export async function liberarTurnoLavanderia(turnoId: number) {
             data: {
                 residenteId: nuevoResidenteId,
                 estado: nuevoEstado,
-                tipoReserva: 'BASE'
+                tipoReserva: TipoReserva.BASE
             }
         }),
         (prisma as any).historialLavanderia.create({
@@ -319,7 +319,7 @@ export async function generateBulkShifts(lavadoraId: number, residenciaId: numbe
                         horaFin: s.horaFin.trim(),
                         residenteId: s.residenteId,
                         estado: s.estado,
-                        tipoReserva: s.tipoReserva || 'BASE'
+                        tipoReserva: s.tipoReserva || TipoReserva.BASE
                     }))
                 })
             }
@@ -352,12 +352,12 @@ export async function generateBulkShifts(lavadoraId: number, residenciaId: numbe
                         newShifts.push({
                             lavadoraId: lId,
                             residenciaId: rId,
-                            dia: dia as any,
+                            dia: dia as DiaSemana,
                             horaInicio: inicioStr,
                             horaFin: finStr,
                             residenteId: fixed ? (fixed.residenteId || fixed.residenteid) : null,
                             estado: fixed ? EstadoTurno.OCUPADO : EstadoTurno.LIBRE,
-                            tipoReserva: 'BASE'
+                            tipoReserva: TipoReserva.BASE
                         })
                     }
                     current += intervaloMin
@@ -410,7 +410,7 @@ export async function clearAllShifts(lavadoraId: number, residenciaId: number) {
                     data: { 
                         residenteId: fs.residenteId, 
                         estado: EstadoTurno.OCUPADO,
-                        tipoReserva: 'BASE'
+                        tipoReserva: TipoReserva.BASE
                     }
                 })
             }

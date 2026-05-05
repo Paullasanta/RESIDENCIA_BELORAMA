@@ -67,7 +67,7 @@ export async function createReserva(data: any) {
       // 3. Cambiar estado de la habitación
       await tx.habitacion.update({
         where: { id: parseInt(habitacionId) },
-        data: { estado: 'RESERVADO' }
+        data: { estado: EstadoHabitacion.RESERVADO }
       })
 
       return reserva
@@ -92,7 +92,7 @@ export async function cancelReserva(reservaId: number) {
       // 2. Liberar habitación
       await tx.habitacion.update({
         where: { id: reserva.habitacionId },
-        data: { estado: 'LIBRE' }
+        data: { estado: EstadoHabitacion.LIBRE }
       })
     })
 
@@ -157,7 +157,7 @@ export async function confirmReserva(reservaId: number) {
       // 4. Actualizar habitación a OCUPADO
       await tx.habitacion.update({
         where: { id: reserva.habitacionId },
-        data: { estado: 'OCUPADO' }
+        data: { estado: EstadoHabitacion.OCUPADO }
       })
 
       // 5. Marcar reserva como CONFIRMADA
