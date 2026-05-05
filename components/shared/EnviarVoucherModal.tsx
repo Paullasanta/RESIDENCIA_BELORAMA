@@ -37,6 +37,9 @@ export default function EnviarVoucherModal({ pagoId, concepto, isOpen, onClose }
             // 1. Upload to API
             const formData = new FormData()
             formData.append('file', file)
+            formData.append('folder', 'comprobantes')
+            formData.append('prefix', 'vp')
+            formData.append('dni', (session?.user as any)?.dni || '00000000')
             
             const uploadRes = await fetch('/api/upload', {
                 method: 'POST',

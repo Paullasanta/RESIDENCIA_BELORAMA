@@ -127,6 +127,9 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
       if (pagoConfirmado && comprobanteFile) {
         const uploadFormData = new FormData()
         uploadFormData.append('file', comprobanteFile)
+        uploadFormData.append('folder', 'comprobantes')
+        uploadFormData.append('prefix', 'vp')
+        uploadFormData.append('dni', dni)
 
         const uploadRes = await fetch('/api/upload', {
           method: 'POST',

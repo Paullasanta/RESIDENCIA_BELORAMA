@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -12,6 +12,11 @@ export default function LoginPage() {
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -40,8 +45,10 @@ export default function LoginPage() {
         router.refresh()
     }
 
+    if (!mounted) return <div className="min-h-screen bg-[#072E1F]" />
+
     return (
-        <div className="min-h-screen flex w-full bg-[#072E1F] sm:bg-[#F4F6F4]">
+        <div className="min-h-screen flex w-full bg-[#072E1F] sm:bg-[#F4F6F4]" suppressHydrationWarning>
             {/* Mitad Izquierda Formulario (Left Side) */}
             <div className="flex flex-col flex-1 shadow-none sm:shadow-2xl overflow-hidden bg-white z-10 w-full sm:rounded-r-[2.5rem] lg:w-5/12 xl:w-1/3 relative shrink-0">
 

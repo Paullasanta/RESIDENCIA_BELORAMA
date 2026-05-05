@@ -183,32 +183,30 @@ export async function assignResidenteToHabitacion(residenteId: number, habitacio
   }
 }
 
-import { writeFile, unlink, mkdir } from 'fs/promises'
+import { unlink } from 'fs/promises'
 import path from 'path'
+import { saveUploadedFile } from '@/lib/upload-service'
 
 export async function uploadHabitacionFotos(habitacionId: number, residenciaId: number, formData: FormData) {
   try {
     const files = formData.getAll('fotos') as File[]
     if (files.length === 0) return { success: false, error: 'No se encontraron archivos' }
 
+    // Obtener el DNI del primer residente activo de la habitación
+    const habData = await prisma.habitacion.findUnique({
+      where: { id: habitacionId },
+      include: { residentes: { where: { activo: true }, include: { user: true } } }
+    })
+    
+    const dni = habData?.residentes[0]?.user.dni || '00000000'
     const savedUrls: string[] = []
 
     for (const file of files) {
-      const buffer = Buffer.from(await file.arrayBuffer())
-      const filename = `${Date.now()}_${file.name.replace(/\\s+/g, '_')}`
-      // Asegurar que el directorio existe con permisos de lectura (755)
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'habitaciones')
-      await mkdir(uploadDir, { recursive: true, mode: 0o755 })
-
-      const filepath = path.join(uploadDir, filename)
-      
-      await writeFile(filepath, buffer, { mode: 0o644 })
-      console.log('📁 Foto guardada en:', filepath)
-      savedUrls.push(`/uploads/habitaciones/${filename}`)
+      const { url } = await saveUploadedFile(file, 'hb', dni, 'habitaciones')
+      savedUrls.push(url)
     }
 
-    const hab = await prisma.habitacion.findUnique({ where: { id: habitacionId } })
-    const nuevasFotos = [...(hab?.fotos || []), ...savedUrls]
+    const nuevasFotos = [...(habData?.fotos || []), ...savedUrls]
 
     await prisma.habitacion.update({
       where: { id: habitacionId },

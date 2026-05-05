@@ -28,6 +28,9 @@ export function AvisoForm({ residencias }: AvisoFormProps) {
       for (const file of Array.from(files)) {
         const formData = new FormData()
         formData.append('file', file)
+        formData.append('folder', 'avisos')
+        formData.append('prefix', 'av')
+        formData.append('dni', (session?.user as any)?.dni || '00000000')
 
         const response = await fetch('/api/upload', {
           method: 'POST',

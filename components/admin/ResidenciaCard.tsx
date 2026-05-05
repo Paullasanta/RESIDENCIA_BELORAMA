@@ -26,6 +26,7 @@ export function ResidenciaCard({ res }: ResidenciaCardProps) {
         <div 
             onClick={handleClick}
             className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-[#1D9E75]/30 cursor-pointer select-none ring-offset-2 focus-within:ring-2 focus-within:ring-[#1D9E75]"
+            suppressHydrationWarning
         >
             {/* Header */}
             <div className="p-6 border-b border-gray-50 bg-white group-hover:bg-green-50/10 transition-colors">
