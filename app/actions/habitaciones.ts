@@ -183,7 +183,7 @@ export async function assignResidenteToHabitacion(residenteId: number, habitacio
   }
 }
 
-import { writeFile, unlink } from 'fs/promises'
+import { writeFile, unlink, mkdir } from 'fs/promises'
 import path from 'path'
 
 export async function uploadHabitacionFotos(habitacionId: number, residenciaId: number, formData: FormData) {
@@ -203,6 +203,7 @@ export async function uploadHabitacionFotos(habitacionId: number, residenciaId: 
       const filepath = path.join(uploadDir, filename)
       
       await writeFile(filepath, buffer, { mode: 0o644 })
+      console.log('📁 Foto guardada en:', filepath)
       savedUrls.push(`/uploads/habitaciones/${filename}`)
     }
 

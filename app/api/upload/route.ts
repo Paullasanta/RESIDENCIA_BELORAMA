@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
     await (await import('fs/promises')).mkdir(uploadDir, { recursive: true, mode: 0o755 })
 
     await writeFile(filePath, buffer, { mode: 0o644 })
+    console.log('📁 Archivo guardado en:', filePath)
 
     return NextResponse.json({ 
         url: `/uploads/${fileName}`,
