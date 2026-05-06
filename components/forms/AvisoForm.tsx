@@ -2,18 +2,21 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { createAviso } from '@/app/actions/avisos'
+import { useSession } from 'next-auth/react'
+import { createAviso, updateAviso } from '@/app/actions/avisos'
 import { Loader2, Save, X, Megaphone, MapPin, AlertTriangle, Image as ImageIcon, Plus, Trash2, Calendar } from 'lucide-react'
 
 interface AvisoFormProps {
   residencias: any[]
+  initialData?: any
 }
 
-export function AvisoForm({ residencias }: AvisoFormProps) {
+export function AvisoForm({ residencias, initialData }: AvisoFormProps) {
   const router = useRouter()
+  const { data: session } = useSession()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [fotos, setFotos] = useState<string[]>([])
+  const [fotos, setFotos] = useState<string[]>(initialData?.fotos || [])
   const [uploading, setUploading] = useState(false)
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,7 +68,12 @@ export function AvisoForm({ residencias }: AvisoFormProps) {
     }
 
     startTransition(async () => {
-      const result = await createAviso(data)
+      let result;
+      if (initialData?.id) {
+          result = await updateAviso(initialData.id, data)
+      } else {
+          result = await createAviso(data)
+      }
       if (result.success) {
         router.push('/modules/avisos')
         router.refresh()
@@ -92,6 +100,7 @@ export function AvisoForm({ residencias }: AvisoFormProps) {
           <input
             name="titulo"
             required
+            defaultValue={initialData?.titulo || ''}
             className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 placeholder:text-gray-300"
             placeholder="Ej. Mantenimiento de Agua, Nueva Normativa..."
           />
@@ -103,6 +112,7 @@ export function AvisoForm({ residencias }: AvisoFormProps) {
             name="contenido"
             required
             rows={5}
+            defaultValue={initialData?.contenido || ''}
             className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-medium text-gray-700 placeholder:text-gray-300 resize-none"
             placeholder="Escribe aquí el mensaje detallado para los residentes..."
           />
@@ -150,6 +160,7 @@ export function AvisoForm({ residencias }: AvisoFormProps) {
                 <input
                     type="date"
                     name="fechaInicio"
+                    defaultValue={initialData?.fechaInicio ? new Date(initialData.fechaInicio).toISOString().split('T')[0] : ''}
                     className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
                 />
             </div>
@@ -160,6 +171,7 @@ export function AvisoForm({ residencias }: AvisoFormProps) {
                 <input
                     type="date"
                     name="fechaFin"
+                    defaultValue={initialData?.fechaFin ? new Date(initialData.fechaFin).toISOString().split('T')[0] : ''}
                     className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
                 />
             </div>
@@ -173,6 +185,7 @@ export function AvisoForm({ residencias }: AvisoFormProps) {
                 <select
                     name="prioridad"
                     required
+                    defaultValue={initialData?.prioridad || 'NORMAL'}
                     className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 appearance-none cursor-pointer"
                 >
                     <option value="NORMAL">Normal</option>
@@ -187,6 +200,7 @@ export function AvisoForm({ residencias }: AvisoFormProps) {
                 </label>
                 <select
                     name="residenciaId"
+                    defaultValue={initialData?.residenciaId || ''}
                     className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 appearance-none cursor-pointer"
                 >
                     <option value="">Todas las Residencias (Global)</option>
@@ -216,7 +230,7 @@ export function AvisoForm({ residencias }: AvisoFormProps) {
           ) : (
             <Save size={18} />
           )}
-          Publicar Comunicado
+          {initialData ? 'Guardar Cambios' : 'Publicar Comunicado'}
         </button>
       </div>
     </form>

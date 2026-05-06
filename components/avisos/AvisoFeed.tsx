@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Calendar, MapPin, Trash2, Megaphone, AlertTriangle, Bell, ChevronLeft, ChevronRight, User } from 'lucide-react'
+import { Calendar, MapPin, Trash2, Megaphone, AlertTriangle, Bell, ChevronLeft, ChevronRight, User, Edit2 } from 'lucide-react'
+import Link from 'next/link'
 import { deleteAviso } from '@/app/actions/avisos'
 import { Reactions } from './Reactions'
 
@@ -104,16 +105,24 @@ export function AvisoFeed({ avisos, isAdmin, currentUserEmail }: { avisos: any[]
                             />
 
                             {isAdmin && (
-                                <button 
-                                    onClick={async () => {
-                                        if (confirm('¿Eliminar este comunicado?')) {
-                                            await deleteAviso(aviso.id)
-                                        }
-                                    }}
-                                    className="p-3 rounded-2xl bg-gray-50 text-red-300 hover:text-red-500 hover:bg-red-50 border border-gray-100 transition-all"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <Link 
+                                        href={`/modules/avisos/${aviso.id}/editar`}
+                                        className="p-3 rounded-2xl bg-gray-50 text-blue-300 hover:text-blue-600 hover:bg-blue-50 border border-gray-100 transition-all"
+                                    >
+                                        <Edit2 size={18} />
+                                    </Link>
+                                    <button 
+                                        onClick={async () => {
+                                            if (confirm('¿Eliminar este comunicado?')) {
+                                                await deleteAviso(aviso.id)
+                                            }
+                                        }}
+                                        className="p-3 rounded-2xl bg-gray-50 text-red-300 hover:text-red-500 hover:bg-red-50 border border-gray-100 transition-all"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>

@@ -3,6 +3,7 @@
 import { useState, useRef, useTransition, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Upload, X, Loader2, Check, CreditCard, Smartphone, Banknote } from 'lucide-react'
 import { enviarComprobantePago } from '@/app/actions/pagos'
 
@@ -15,6 +16,7 @@ interface EnviarVoucherModalProps {
 
 export default function EnviarVoucherModal({ pagoId, concepto, isOpen, onClose }: EnviarVoucherModalProps) {
     const router = useRouter()
+    const { data: session } = useSession()
     const [isPending, startTransition] = useTransition()
     const [file, setFile] = useState<File | null>(null)
     const [uploading, setUploading] = useState(false)

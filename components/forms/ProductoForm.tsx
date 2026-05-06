@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { createProducto } from '@/app/actions/marketplace'
 import { Loader2, Save, X, DollarSign, Image as ImageIcon, Plus, Trash2 } from 'lucide-react'
 
 export function ProductoForm() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [fotos, setFotos] = useState<string[]>([])

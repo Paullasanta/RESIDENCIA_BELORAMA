@@ -90,10 +90,29 @@ export async function moderarProducto(id: number, estado: 'APROBADO' | 'RECHAZAD
   }
 }
 
+import { unlink } from 'fs/promises'
+import path from 'path'
+
 export async function eliminarProducto(id: number) {
   try {
     const session = await auth()
     if (!session) throw new Error('No autorizado')
+
+    // Find the product to get its photos before deleting
+    const producto = await prisma.productoMarketplace.findUnique({
+      where: { id },
+      select: { fotos: true }
+    })
+
+    if (producto && producto.fotos.length > 0) {
+      for (const foto of producto.fotos) {
+        const filename = foto.split('/').pop()
+        if (filename) {
+          const filepath = path.join(process.cwd(), 'public', 'uploads', 'productos', filename)
+          try { await unlink(filepath) } catch (e) { /* file might strictly not exist anymore */ }
+        }
+      }
+    }
 
     await prisma.productoMarketplace.delete({
       where: { id }
@@ -124,9 +143,23 @@ export async function marcarVendido(id: number) {
         throw new Error('No tienes permiso para marcar este producto como vendido')
     }
 
+    // Al marcar como vendido, eliminamos las fotos físicamente para ahorrar espacio
+    if (producto.fotos && producto.fotos.length > 0) {
+      for (const foto of producto.fotos) {
+        const filename = foto.split('/').pop()
+        if (filename) {
+          const filepath = path.join(process.cwd(), 'public', 'uploads', 'productos', filename)
+          try { await unlink(filepath) } catch (e) { /* ignora si ya no existe */ }
+        }
+      }
+    }
+
     await prisma.productoMarketplace.update({
       where: { id },
-      data: { estado: 'VENDIDO' as any }
+      data: { 
+          estado: 'VENDIDO' as any,
+          fotos: [] // Vaciamos el array para que la UI no intente cargar imágenes borradas
+      }
     })
     
     revalidatePath('/modules/marketplace')
