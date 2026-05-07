@@ -8,10 +8,15 @@ import { StaffManager } from '@/components/admin/StaffManager'
 import { RolesManager } from '@/components/admin/RolesManager'
 import { getStaff } from '@/app/actions/usuarios'
 import { getRoles } from '@/app/actions/roles'
+import { SystemTechnical } from '@/components/admin/SystemTechnical'
 
 export default async function ConfiguracionPage() {
     const session = await auth()
-    if (session?.user.rol !== 'ADMIN') {
+    const rol = session?.user.rol
+    const isSuperAdmin = rol === 'SUPER_ADMIN'
+    const isAdmin = rol === 'ADMIN'
+
+    if (!isAdmin && !isSuperAdmin) {
         redirect('/modules/dashboard')
     }
 
@@ -45,6 +50,7 @@ export default async function ConfiguracionPage() {
             />
 
             <ConfigTabs
+                isSuperAdmin={isSuperAdmin}
                 sistema={<ConfigForm initialConfig={initialConfig} />}
                 personal={
                     <StaffManager
@@ -59,6 +65,7 @@ export default async function ConfiguracionPage() {
                         allPermissions={allPermissions}
                     />
                 }
+                tecnico={<SystemTechnical />}
             />
         </div>
     )

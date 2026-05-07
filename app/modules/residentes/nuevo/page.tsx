@@ -13,7 +13,7 @@ export default async function NuevoResidentePage({ searchParams }: { searchParam
 
     // Obtener residencias para el selector (respetando aislamiento)
     const residencias = await prisma.residencia.findMany({
-        where: (rol === 'ADMIN' && !residenciaId) ? {} : { id: residenciaId || -1 },
+        where: (['ADMIN', 'SUPER_ADMIN'].includes(rol) && !residenciaId) ? {} : { id: residenciaId || -1 },
         include: {
             habitaciones: {
                 where: { estado: 'LIBRE' }

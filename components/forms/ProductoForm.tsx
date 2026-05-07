@@ -72,6 +72,7 @@ export function ProductoForm() {
       titulo: formData.get('titulo'),
       precio: Number(precio),
       descripcion: formData.get('descripcion'),
+      categoria: formData.get('categoria'),
       fotos: fotos
     }
 
@@ -121,6 +122,21 @@ export function ProductoForm() {
               placeholder="0.00"
             />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Categoría</label>
+          <select
+            name="categoria"
+            required
+            className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 appearance-none cursor-pointer"
+          >
+            <option value="Otros">Otros</option>
+            <option value="Hogar">Hogar</option>
+            <option value="Servicios">Servicios</option>
+            <option value="Alimentos">Alimentos</option>
+            <option value="Salud">Salud</option>
+          </select>
         </div>
 
         <div className="space-y-2 col-span-full">

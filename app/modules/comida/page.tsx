@@ -21,8 +21,9 @@ export default async function ComidaPage() {
     if (!session) return null
 
     const { rol, permisos, residenciaId: sessionResId } = session.user
-    const canManage = rol === 'ADMIN' || rol === 'COCINERO' || permisos?.includes('COMIDAS_POST')
-    const isGlobalAdmin = rol === 'ADMIN' && !sessionResId
+    const isAnyAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(rol)
+    const canManage = isAnyAdmin || rol === 'COCINERO' || permisos?.includes('COMIDAS_POST')
+    const isGlobalAdmin = isAnyAdmin && !sessionResId
 
     let residenciaId: number | null = sessionResId || null
     let residenteId: number | null = null

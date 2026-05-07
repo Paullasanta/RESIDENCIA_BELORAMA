@@ -8,7 +8,7 @@ export default async function AuthSuccessPage() {
         redirect('/auth/login')
     }
 
-    if (session.user.rol === 'ADMIN') redirect('/modules/dashboard')
+    if (['ADMIN', 'SUPER_ADMIN'].includes(session.user.rol)) redirect('/modules/dashboard')
     if (session.user.rol === 'RESIDENTE') redirect('/modules/marketplace')
     if (session.user.rol === 'COCINERO') redirect('/modules/comida')
     

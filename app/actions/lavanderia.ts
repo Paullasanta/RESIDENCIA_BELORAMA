@@ -36,7 +36,7 @@ export async function reservarTurnoLavanderia(turnoId: number, residenteId: numb
     // REGLA ESTRICTA: Solo 1 turno directo. 
     // Si ya tiene su BASE (1), cualquier EXTRA (2) pasa a ser SOLICITUD.
     // O si es ADMIN, siempre es directo.
-    const esDirecto = (turno.estado === EstadoTurno.LIBRE && turnosOcupados < 1) || user.rol === 'ADMIN'
+    const esDirecto = (turno.estado === EstadoTurno.LIBRE && turnosOcupados < 1) || ['ADMIN', 'SUPER_ADMIN'].includes(user.rol)
 
     if (esDirecto) {
       await prisma.$transaction([

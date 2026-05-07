@@ -13,7 +13,7 @@ export default async function ResidenciasPage({ searchParams }: {
 }) {
     const session = await auth()
     const { residenciaId, rol } = session!.user
-    const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
+    const isGlobalAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(rol) && !residenciaId
     const params = await searchParams
     const page = parseInt(params.page || '1')
     const limit = parseInt(params.limit || '10')

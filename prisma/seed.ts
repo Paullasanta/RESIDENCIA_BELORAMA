@@ -1,22 +1,28 @@
-import { PrismaClient, DiaSemana, EstadoTurno, TipoMenu } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 async function main() {
-    console.log('🌱 Iniciando seed...')
+    console.log('🌱 Iniciando seed para entorno de producción/servidor...')
     
     // Limpiar BD en orden de dependencias
     await prisma.asistenciaComida.deleteMany()
     await prisma.menuResidencia.deleteMany()
     await prisma.menu.deleteMany()
+    await prisma.historialLavanderia.deleteMany()
+    await prisma.turnoFijo.deleteMany()
     await prisma.turnoLavanderia.deleteMany()
     await prisma.lavadora.deleteMany()
-
     await prisma.pago.deleteMany()
     await prisma.productoMarketplace.deleteMany()
     await prisma.publicacionHabitacion.deleteMany()
     await prisma.egreso.deleteMany()
+    await prisma.reserva.deleteMany()
+    await prisma.ticketMantenimiento.deleteMany()
+    await prisma.reaccion.deleteMany()
+    await prisma.aviso.deleteMany()
+    await prisma.notificacion.deleteMany()
     await prisma.residente.deleteMany()
     await prisma.habitacion.deleteMany()
     await prisma.residencia.deleteMany()
@@ -25,7 +31,7 @@ async function main() {
     await prisma.user.deleteMany()
     await prisma.role.deleteMany()
 
-    console.log('🧹 Base de datos limpiada')
+    console.log('🧹 Base de datos limpiada (tablas vacías)')
 
     // 1. Crear Permisos Básicos
     const permissionsData = [
@@ -39,6 +45,9 @@ async function main() {
         { key: 'LAVANDERIA_USER', description: 'Uso básico de lavandería' },
         { key: 'COMIDAS_POST', description: 'Publicar menús' },
         { key: 'COMIDAS_VIEW', description: 'Ver menús y marcar asistencia' },
+        { key: 'SYSTEM_CONFIG', description: 'Configuración técnica del sistema' },
+        { key: 'AUDIT_LOGS', description: 'Ver registros de actividad y auditoría' },
+        { key: 'STORAGE_MANAGER', description: 'Gestionar rutas de imágenes y archivos' },
     ]
 
     const createdPerms = await Promise.all(
@@ -48,12 +57,24 @@ async function main() {
     console.log(`🔑 ${createdPerms.length} permisos creados`)
 
     // 2. Crear Roles
+    const roleSuperAdmin = await prisma.role.create({
+        data: {
+            name: 'SUPER_ADMIN',
+            description: 'Desarrollador/Administrador total de la base de datos y archivos',
+            permissions: {
+                create: createdPerms.map(p => ({ permissionId: p.id }))
+            }
+        }
+    })
+
     const roleAdmin = await prisma.role.create({
         data: {
             name: 'ADMIN',
-            description: 'Administrador del sistema con todos los permisos',
+            description: 'Administrador operativo del sistema',
             permissions: {
-                create: createdPerms.map(p => ({ permissionId: p.id }))
+                create: createdPerms
+                    .filter(p => !['SYSTEM_CONFIG', 'AUDIT_LOGS', 'STORAGE_MANAGER'].includes(p.key))
+                    .map(p => ({ permissionId: p.id }))
             }
         }
     })
@@ -84,150 +105,32 @@ async function main() {
 
     console.log('🎭 Roles creados (ADMIN, RESIDENTE, COCINERO)')
 
-    // 3. Crear Usuarios Iniciales
-    const hashedPasswordAdmin = await bcrypt.hash('admin123', 10)
-    const adminUser = await prisma.user.create({
+    // 3. Crear el Administrador Inicial
+    // 3. Crear el Administrador Maestro (Ustedes - Super Admin)
+    const hashedPasswordSuper = await bcrypt.hash('Gr@wR2026@04', 10)
+    await prisma.user.create({
         data: {
-            nombre: 'Admin Grow Residencial',
-            email: 'admin@growresidencial.com',
+            nombre: 'Super Admin Belorama',
+            email: 'admin@belorama.com',
+            password: hashedPasswordSuper,
+            roleId: roleSuperAdmin.id,
+        }
+    })
+
+    // 4. Crear un Administrador Operativo (Opcional - Para uso diario)
+    const hashedPasswordAdmin = await bcrypt.hash('BeloramaAdmin2026', 10)
+    await prisma.user.create({
+        data: {
+            nombre: 'Gestor Operativo',
+            email: 'gestion@belorama.com',
             password: hashedPasswordAdmin,
             roleId: roleAdmin.id,
         }
     })
 
-    const hashedPasswordCocinero = await bcrypt.hash('cocina123', 10)
-    const cocineroUser = await prisma.user.create({
-        data: {
-            nombre: 'Carlos Cocinero',
-            email: 'cocinero@growresidencial.com',
-            password: hashedPasswordCocinero,
-            roleId: roleCocinero.id,
-        }
-    })
-
-    // Crear Residencias
-    const res1 = await prisma.residencia.create({
-        data: {
-            nombre: 'Residencia Norte',
-            direccion: 'Av. Norte 123',
-            descripcion: 'Residencia moderna cerca del campus',
-            capacidad: 20,
-        }
-    })
-
-    const res2 = await prisma.residencia.create({
-        data: {
-            nombre: 'Residencia Sur',
-            direccion: 'Av. Sur 456',
-            descripcion: 'Residencia tranquila con jardín',
-            capacidad: 15,
-        }
-    })
-
-    // Crear Habitaciones
-    const habitaciones1 = await Promise.all(
-        Array.from({ length: 5 }, (_, i) =>
-            prisma.habitacion.create({
-                data: {
-                    residenciaId: res1.id,
-                    numero: `10${i + 1}`,
-                    piso: 1,
-                    capacidad: 2,
-                    estado: i >= 3 ? 'LIBRE' : 'OCUPADO',
-                }
-            })
-        )
-    )
-
-    const habitaciones2 = await Promise.all(
-        Array.from({ length: 5 }, (_, i) =>
-            prisma.habitacion.create({
-                data: {
-                    residenciaId: res2.id,
-                    numero: `20${i + 1}`,
-                    piso: 2,
-                    capacidad: 2,
-                    estado: i >= 2 ? 'LIBRE' : 'OCUPADO',
-                }
-            })
-        )
-    )
-
-    // Crear Residentes
-    const residentesList = [
-        { nombre: 'Ana García', email: 'ana@growresidencial.com', habIdx: 0, resId: res1.id },
-        { nombre: 'Luis Pérez', email: 'luis@growresidencial.com', habIdx: 1, resId: res1.id },
-        { nombre: 'María López', email: 'maria@growresidencial.com', habIdx: 2, resId: res1.id },
-        { nombre: 'Jorge Díaz', email: 'jorge@growresidencial.com', habIdx: 0, resId: res2.id },
-        { nombre: 'Sofia Ruiz', email: 'sofia@growresidencial.com', habIdx: 1, resId: res2.id },
-    ]
-
-    const residentes = await Promise.all(
-        residentesList.map(async (r, i) => {
-            const hab = i < 3 ? habitaciones1[r.habIdx] : habitaciones2[r.habIdx]
-            const hashedPasswordRes = await bcrypt.hash('res123', 10)
-            const user = await prisma.user.create({
-                data: {
-                    nombre: r.nombre,
-                    email: r.email,
-                    password: hashedPasswordRes,
-                    roleId: roleResidente.id,
-                    residenciaId: r.resId,
-                }
-            })
-            return prisma.residente.create({
-                data: {
-                    userId: user.id,
-                    habitacionId: hab.id,
-                }
-            })
-        })
-    )
-
-    // Crear Lavadoras y Turnos
-    const dias = [DiaSemana.LUNES, DiaSemana.MARTES, DiaSemana.MIERCOLES]
-
-    for (const residencia of [res1, res2]) {
-        const lav1 = await prisma.lavadora.create({
-            data: { residenciaId: residencia.id, nombre: 'Lavadora A' }
-        })
-
-        for (const dia of dias) {
-            await prisma.turnoLavanderia.create({
-                data: {
-                    lavadoraId: lav1.id,
-                    residenciaId: residencia.id,
-                    dia,
-                    horaInicio: '08:00',
-                    horaFin: '10:00',
-                    estado: EstadoTurno.LIBRE,
-                }
-            })
-        }
-    }
-
-    // Crear Pagos de ejemplo
-    await prisma.pago.create({
-        data: {
-            residenteId: residentes[0].id,
-            monto: 500,
-            montoPagado: 500,
-            estado: 'PAGADO',
-        }
-    })
-
-    // Crear Egresos
-    await prisma.egreso.create({
-        data: {
-            adminId: adminUser.id,
-            concepto: 'Limpieza mensual',
-            monto: 150,
-            categoria: 'Mantenimiento',
-            residenciaId: res1.id,
-        }
-    })
-
-    console.log('✅ Seed completado con éxito')
+    console.log('👤 Super Admin creado: admin@belorama.com (Acceso total)')
+    console.log('👤 Admin Operativo creado: gestion@belorama.com')
+    console.log('✅ Seed completado con éxito. Todo el resto de la base de datos está limpia para producción.')
 }
 
 main()

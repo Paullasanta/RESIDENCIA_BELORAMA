@@ -1,21 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { Settings, Users, ShieldCheck, LayoutGrid } from 'lucide-react'
+import { Settings, Users, ShieldCheck, LayoutGrid, Database } from 'lucide-react'
 
 interface ConfigTabsProps {
     sistema: React.ReactNode
     personal: React.ReactNode
     roles: React.ReactNode
+    tecnico?: React.ReactNode
+    isSuperAdmin?: boolean
 }
 
-export function ConfigTabs({ sistema, personal, roles }: ConfigTabsProps) {
-    const [activeTab, setActiveTab] = useState<'SISTEMA' | 'PERSONAL' | 'ROLES'>('SISTEMA')
+export function ConfigTabs({ sistema, personal, roles, tecnico, isSuperAdmin }: ConfigTabsProps) {
+    const [activeTab, setActiveTab] = useState<'SISTEMA' | 'PERSONAL' | 'ROLES' | 'TECNICO'>(isSuperAdmin ? 'TECNICO' : 'SISTEMA')
 
     const tabs = [
         { id: 'SISTEMA', label: 'Identidad', icon: <LayoutGrid size={18} />, desc: 'Branding y logo' },
         { id: 'PERSONAL', label: 'El Equipo', icon: <Users size={18} />, desc: 'Gestión de staff' },
         { id: 'ROLES', label: 'Seguridad', icon: <ShieldCheck size={18} />, desc: 'Roles y permisos' },
+        ...(isSuperAdmin ? [{ id: 'TECNICO', label: 'Técnico', icon: <Database size={18} />, desc: 'Root CPanel' }] : []),
     ]
 
     return (
@@ -60,6 +63,7 @@ export function ConfigTabs({ sistema, personal, roles }: ConfigTabsProps) {
                 {activeTab === 'SISTEMA' && <div key="sistema">{sistema}</div>}
                 {activeTab === 'PERSONAL' && <div key="personal">{personal}</div>}
                 {activeTab === 'ROLES' && <div key="roles">{roles}</div>}
+                {activeTab === 'TECNICO' && <div key="tecnico">{tecnico}</div>}
             </div>
         </div>
     )

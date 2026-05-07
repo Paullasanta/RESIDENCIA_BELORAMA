@@ -30,8 +30,9 @@ export async function createProducto(data: any) {
         descripcion: data.descripcion,
         precio: Number(data.precio),
         fotos: data.fotos || [],
+        categoria: data.categoria || "Otros",
         residenteId: residenteId || null,
-        estado: rol === 'ADMIN' ? 'APROBADO' : 'PENDIENTE'
+        estado: ['ADMIN', 'SUPER_ADMIN', 'SUPER_ADMIN'].includes(rol) ? 'APROBADO' : 'PENDIENTE'
       }
     })
 

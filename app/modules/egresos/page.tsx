@@ -8,7 +8,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 export default async function EgresosPage() {
     const session = await auth()
     const { residenciaId, rol } = session!.user
-    const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
+    const isGlobalAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(rol) && !residenciaId
 
     const egresos = await prisma.egreso.findMany({
         where: isGlobalAdmin ? {} : { residenciaId: residenciaId || -1 },

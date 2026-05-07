@@ -31,7 +31,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     const systemName = systemNameConfig?.valor || 'Grow Residencial'
 
     // Permisos Helpers
-    const hasPerm = (p: string) => permisos?.includes(p) || rol === 'ADMIN'
+    const isAnyAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(rol)
+    const hasPerm = (p: string) => permisos?.includes(p) || isAnyAdmin
 
     // Configuración universal de navegación agnóstica al rol
     const navItems = [
@@ -44,18 +45,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
         { href: '/modules/marketplace',   label: 'Marketplace',       icon: <ShoppingBag size={18} />,     show: true },
         { href: '/modules/mantenimiento', label: 'Mantenimiento',     icon: <Wrench size={18} />,          show: true },
         { href: '/modules/egresos',       label: 'Gastos Residentes', icon: <DollarSign size={18} />,      show: hasPerm('MANAGE_EGRESOS') },
-        { href: '/modules/reportes',      label: 'Reportes y Analítica',icon: <BarChart3 size={18} />,     show: rol === 'ADMIN' },
+        { href: '/modules/reportes',      label: 'Reportes y Analítica',icon: <BarChart3 size={18} />,     show: isAnyAdmin },
         { href: '/modules/avisos',        label: 'Avisos',            icon: <Megaphone size={18} />,       show: true },
         { href: '/modules/perfil',        label: 'Mi Perfil',         icon: <Users size={18} />,           show: true },
-        { href: '/modules/configuracion', label: 'Configuración',     icon: <Settings size={18} />,        show: hasPerm('ADMIN_SETTINGS') || rol === 'ADMIN' },
+        { href: '/modules/configuracion', label: 'Configuración',     icon: <Settings size={18} />,        show: hasPerm('ADMIN_SETTINGS') || isAnyAdmin },
     ]
 
     // Estilos dinámicos según el rol principal
     const theme = {
+        SUPER_ADMIN: { title: `${systemName} Root`, logo: 'bg-[#000000] text-white' },
         ADMIN: { title: `${systemName} Admin`, logo: 'bg-[#1D9E75] text-white' },
         COCINERO: { title: 'Cocina Central', logo: 'bg-[#085041] text-white' },
         RESIDENTE: { title: 'Mi Residencia', logo: 'bg-[#EF9F27] text-black' }
-    }[rol as 'ADMIN' | 'COCINERO' | 'RESIDENTE'] || { title: systemName, logo: 'bg-[#072E1F] text-white' }
+    }[rol as 'SUPER_ADMIN' | 'ADMIN' | 'COCINERO' | 'RESIDENTE'] || { title: systemName, logo: 'bg-[#072E1F] text-white' }
     return (
         <div className="flex bg-[#F8FAF8] min-h-screen text-gray-900 font-sans">
             <SessionGuard />

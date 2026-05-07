@@ -39,7 +39,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ p
   const getDashboardUrl = () => {
     if (!session) return '/auth/login'
     const { rol } = session.user
-    if (rol === 'ADMIN') return '/modules/dashboard'
+    if (['ADMIN', 'SUPER_ADMIN'].includes(rol)) return '/modules/dashboard'
     if (rol === 'RESIDENTE') return '/modules/dashboard'
     if (rol === 'COCINERO') return '/modules/comida'
     return '/modules/dashboard'

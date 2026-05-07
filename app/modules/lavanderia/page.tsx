@@ -16,13 +16,14 @@ const DIA_LABEL: Record<string, string> = {
 export default async function LavanderiaPage({ searchParams }: { searchParams: Promise<any> }) {
     const session = await auth()
     const { rol, permisos, residenciaId: sessionResId } = session!.user
-    const canManage = rol === 'ADMIN' || permisos?.includes('MANAGE_LAVANDERIA')
+    const isAnyAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(rol)
+    const canManage = isAnyAdmin || permisos?.includes('MANAGE_LAVANDERIA')
     
     // Obtener parámetro de búsqueda para filtro de admin
     const searchParamsObj = await (searchParams as any)
     const filterResidenciaId = searchParamsObj?.residenciaId ? parseInt(searchParamsObj.residenciaId) : null
 
-    const isGlobal = (rol === 'ADMIN' || rol === 'COCINERO') && !sessionResId;
+    const isGlobal = (isAnyAdmin || rol === 'COCINERO') && !sessionResId;
 
     // Aislamiento: Prioridad de residencia
     let residenciaId: number | null = filterResidenciaId || sessionResId || null

@@ -18,7 +18,7 @@ export default async function ResidentesPage({ searchParams }: { searchParams: P
     // Aislamiento: Si no es Admin Global (sin sede), filtrar por su residenciaId
     const whereClause = {
         activo: !showInactive,
-        ...((rol === 'ADMIN' && !residenciaId) ? {} : {
+        ...((['ADMIN', 'SUPER_ADMIN'].includes(rol) && !residenciaId) ? {} : {
             user: { residenciaId: residenciaId || -1 }
         })
     }
@@ -27,7 +27,7 @@ export default async function ResidentesPage({ searchParams }: { searchParams: P
     
     // Traer residencias para el explorador
     const residencias = await prisma.residencia.findMany({
-        where: (rol === 'ADMIN' && !residenciaId) ? {} : { id: residenciaId || -1 },
+        where: (['ADMIN', 'SUPER_ADMIN'].includes(rol) && !residenciaId) ? {} : { id: residenciaId || -1 },
         include: {
             habitaciones: {
                 include: { 

@@ -18,7 +18,7 @@ import { AvisoFeed } from '@/components/avisos/AvisoFeed'
 export default async function AvisosPage() {
     const session = await auth()
     const { rol } = session!.user
-    const isAdmin = rol === 'ADMIN'
+    const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(rol)
 
     // Si es residente, obtener su residencia
     let myResidenciaId: number | null = null

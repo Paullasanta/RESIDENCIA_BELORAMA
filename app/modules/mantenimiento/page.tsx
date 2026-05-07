@@ -10,7 +10,7 @@ import { TicketActions } from '@/components/mantenimiento/TicketActions'
 export default async function MantenimientoPage() {
     const session = await auth()
     const { rol, residenciaId } = session!.user
-    const isAdmin = rol === 'ADMIN'
+    const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(rol)
 
     // Aislamiento: Filtrar por residenciaId si no es global admin
     const whereClause: any = {}

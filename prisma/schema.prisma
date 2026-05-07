@@ -257,6 +257,7 @@ model ProductoMarketplace {
   descripcion String?
   precio      Float
   fotos       String[]
+  categoria   String?        @default("Otros")
   estado      EstadoProducto @default(PENDIENTE)
   createdAt   DateTime       @default(now())
   residente   Residente?     @relation(fields: [residenteId], references: [id])

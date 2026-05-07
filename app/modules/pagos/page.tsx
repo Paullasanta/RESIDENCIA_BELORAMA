@@ -64,8 +64,9 @@ export default async function PagosPage({ searchParams }: {
 }) {
     const session = await auth()
     const { rol, permisos, residenciaId, nombre } = session!.user
-    const isAdmin = rol === 'ADMIN' || permisos?.includes('MANAGE_PAYMENTS')
-    const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
+    const isAnyAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(rol)
+    const isAdmin = isAnyAdmin || permisos?.includes('MANAGE_PAYMENTS')
+    const isGlobalAdmin = isAnyAdmin && !residenciaId
     const params = await searchParams
     const { filter, month, year, fromMonth, fromYear, toMonth, toYear, q, resId } = params
     const page = parseInt(params.page || '1')

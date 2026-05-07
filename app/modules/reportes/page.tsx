@@ -7,7 +7,7 @@ import { DollarSign, ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-rea
 export default async function ReportesPage() {
     const session = await auth()
     const { rol, residenciaId } = session!.user
-    const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
+    const isGlobalAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(rol) && !residenciaId
 
     // Aislamiento de datos
     const whereResidencia = isGlobalAdmin ? {} : { residenciaId: residenciaId || -1 }
@@ -74,34 +74,34 @@ export default async function ReportesPage() {
             />
 
             {/* Resumen Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col gap-4">
-                    <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center">
-                        <ArrowUpRight size={24} />
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+                <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col gap-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-green-50 text-green-600 rounded-xl md:rounded-2xl flex items-center justify-center">
+                        <ArrowUpRight size={20} className="md:w-6 md:h-6" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Ingresos (6m)</p>
-                        <p className="text-3xl font-black text-[#072E1F] tracking-tight">${totalIngresos.toLocaleString()}</p>
+                        <p className="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Ingresos (6m)</p>
+                        <p className="text-xl md:text-3xl font-black text-[#072E1F] tracking-tight">${totalIngresos.toLocaleString()}</p>
                     </div>
                 </div>
 
-                <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col gap-4">
-                    <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center">
-                        <ArrowDownRight size={24} />
+                <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col gap-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-red-50 text-red-600 rounded-xl md:rounded-2xl flex items-center justify-center">
+                        <ArrowDownRight size={20} className="md:w-6 md:h-6" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Egresos (6m)</p>
-                        <p className="text-3xl font-black text-[#072E1F] tracking-tight">${totalEgresos.toLocaleString()}</p>
+                        <p className="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Egresos (6m)</p>
+                        <p className="text-xl md:text-3xl font-black text-[#072E1F] tracking-tight">${totalEgresos.toLocaleString()}</p>
                     </div>
                 </div>
 
-                <div className="bg-[#072E1F] p-8 rounded-[2.5rem] text-white shadow-2xl shadow-[#072E1F]/20 flex flex-col gap-4">
-                    <div className="w-12 h-12 bg-white/10 text-[#1D9E75] rounded-2xl flex items-center justify-center">
-                        <TrendingUp size={24} />
+                <div className="col-span-2 lg:col-span-1 bg-[#072E1F] p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] text-white shadow-2xl shadow-[#072E1F]/20 flex flex-col gap-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-white/10 text-[#1D9E75] rounded-xl md:rounded-2xl flex items-center justify-center">
+                        <TrendingUp size={20} className="md:w-6 md:h-6" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Balance Neto</p>
-                        <p className="text-3xl font-black tracking-tight">${balanceTotal.toLocaleString()}</p>
+                        <p className="text-[9px] md:text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">Balance Neto</p>
+                        <p className="text-xl md:text-3xl font-black tracking-tight">${balanceTotal.toLocaleString()}</p>
                     </div>
                 </div>
             </div>

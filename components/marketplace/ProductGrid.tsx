@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ShoppingBag, ChevronRight } from 'lucide-react'
+import { ShoppingBag, ChevronRight, MapPin, Sparkles, Search, Sofa, Hammer, Utensils, Heart, Sparkle } from 'lucide-react'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ModeracionButtons } from '@/components/admin/ModeracionButtons'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -22,6 +22,7 @@ interface ProductProps {
     } | null
     createdAt: Date | string
     estado: string
+    categoria?: string | null
 }
 
 interface ProductGridProps {
@@ -34,9 +35,69 @@ interface ProductGridProps {
 
 export function ProductGrid({ pendientes, aprobados, misProductos, canModerate, sessionUserEmail }: ProductGridProps) {
     const [selectedProduct, setSelectedProduct] = useState<ProductProps | null>(null)
+    const [search, setSearch] = useState('')
+    const [category, setCategory] = useState<string | null>(null)
+
+    const filterFn = (p: ProductProps) => {
+        const matchesSearch = p.titulo.toLowerCase().includes(search.toLowerCase()) || 
+                             p.descripcion?.toLowerCase().includes(search.toLowerCase())
+        const matchesCategory = !category || p.categoria === category
+        return matchesSearch && matchesCategory
+    }
+
+    const filteredAprobados = aprobados.filter(filterFn)
 
     return (
-        <div className="space-y-16">
+        <div className="space-y-12">
+            {/* Search and Categories UI moved here for functionality */}
+            <div className="space-y-8">
+                {/* Search Bar */}
+                <div className="relative group">
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#1D9E75] transition-colors" size={20} />
+                    <input 
+                        type="text" 
+                        placeholder="Buscar productos o servicios..." 
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full bg-white border-2 border-gray-50 rounded-2xl py-5 pl-14 pr-6 text-sm font-bold focus:border-[#1D9E75] transition-all outline-none shadow-sm placeholder:text-gray-300"
+                    />
+                </div>
+
+                {/* Categorías Horizontales */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                        <h2 className="text-sm font-black text-[#072E1F] uppercase tracking-widest">Explorar categorías</h2>
+                        <button 
+                            onClick={() => setCategory(null)}
+                            className={`text-[10px] font-black uppercase hover:underline ${!category ? 'text-[#1D9E75]' : 'text-gray-400'}`}
+                        >
+                            Ver todas
+                        </button>
+                    </div>
+                    <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-2 px-2">
+                        {[
+                            { label: 'Hogar', id: 'Hogar', icon: <Sofa size={22} />, color: 'bg-green-50 text-green-600' },
+                            { label: 'Servicios', id: 'Servicios', icon: <Hammer size={22} />, color: 'bg-blue-50 text-blue-600' },
+                            { label: 'Alimentos', id: 'Alimentos', icon: <Utensils size={22} />, color: 'bg-orange-50 text-orange-600' },
+                            { label: 'Salud', id: 'Salud', icon: <Heart size={22} />, color: 'bg-rose-50 text-rose-600' },
+                            { label: 'Otros', id: 'Otros', icon: <Sparkle size={22} />, color: 'bg-purple-50 text-purple-600' },
+                        ].map((cat, i) => (
+                            <button 
+                                key={i} 
+                                onClick={() => setCategory(cat.id === category ? null : cat.id)}
+                                className={`flex flex-col items-center gap-2 min-w-[80px] group transition-all ${category === cat.id ? 'scale-105' : 'opacity-60 grayscale-[0.5]'}`}
+                            >
+                                <div className={`w-16 h-16 rounded-2xl ${cat.color} flex items-center justify-center shadow-sm group-hover:scale-110 group-active:scale-95 transition-all ${category === cat.id ? 'ring-2 ring-offset-2 ring-[#1D9E75]' : ''}`}>
+                                    {cat.icon}
+                                </div>
+                                <span className={`text-[10px] font-black uppercase tracking-tighter ${category === cat.id ? 'text-[#1D9E75]' : 'text-gray-500'}`}>
+                                    {cat.label}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
             {/* Modal de Detalle */}
             {selectedProduct && (
                 <ProductDetailModal 
@@ -93,58 +154,52 @@ export function ProductGrid({ pendientes, aprobados, misProductos, canModerate, 
                     </h2>
                     <div className="h-px bg-gray-100 flex-1 mx-8 hidden sm:block" />
                     <span className="text-[10px] font-black text-[#1D9E75] bg-green-50 px-4 py-2 rounded-2xl border border-green-100 uppercase tracking-widest shrink-0">
-                        {aprobados.length} ARTÍCULOS
+                        {filteredAprobados.length} ARTÍCULOS
                     </span>
                 </div>
 
-                {aprobados.length === 0 ? (
+                {filteredAprobados.length === 0 ? (
                     <EmptyState
                         icon={<ShoppingBag size={64} className="text-gray-100" />}
                         title="Vaya, no hay nada por aquí..."
                         description="Vuelve más tarde o sé el primero en subir algo para vender."
                     />
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
-                        {aprobados.map(p => (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-8">
+                        {filteredAprobados.map(p => (
                             <div 
                                 key={p.id} 
                                 onClick={() => setSelectedProduct(p)}
-                                className="group bg-white rounded-[3rem] shadow-2xl shadow-gray-100/50 border border-transparent hover:border-[#1D9E75]/20 overflow-hidden hover:shadow-3xl hover:-translate-y-3 transition-all duration-700 flex flex-col cursor-pointer"
+                                className="group bg-white rounded-[2rem] shadow-sm border border-gray-100/50 hover:border-[#1D9E75]/30 overflow-hidden hover:shadow-xl transition-all duration-500 flex flex-col cursor-pointer"
                             >
-                                <div className="h-60 bg-gray-50 flex items-center justify-center relative overflow-hidden">
+                                <div className="aspect-square bg-gray-50 flex items-center justify-center relative overflow-hidden">
                                      {p.fotos.length > 0 ? (
-                                         <img src={p.fotos[0]} alt={p.titulo} className="w-full h-full object-cover group-hover:scale-115 transition-transform duration-1000" />
+                                         <img src={p.fotos[0]} alt={p.titulo} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                      ) : (
-                                         <ShoppingBag size={48} className="text-gray-200 group-hover:rotate-12 transition-transform" />
+                                         <ShoppingBag size={32} className="text-gray-200" />
                                      )}
-                                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                                     <div className="absolute top-6 right-6 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
-                                         <div className="bg-white/95 backdrop-blur px-5 py-2.5 rounded-2xl text-[10px] font-black shadow-2xl uppercase tracking-[0.2em] text-[#1D9E75] border border-green-50">
-                                             Ver Detalles
-                                         </div>
-                                     </div>
-                                     <div className="absolute bottom-6 left-6">
-                                         <span className="bg-white text-[#072E1F] px-6 py-3 rounded-2xl text-lg font-black shadow-2xl border border-gray-50">
+                                     <div className="absolute top-3 left-3">
+                                         <span className="bg-white/90 backdrop-blur text-[#072E1F] px-3 py-1.5 rounded-xl text-xs font-black shadow-sm border border-white/20">
                                              ${p.precio.toLocaleString('es-MX')}
                                          </span>
                                      </div>
                                 </div>
-                                <div className="p-10 flex flex-col flex-1">
-                                    <h3 className="text-xl font-black text-[#072E1F] group-hover:text-[#1D9E75] transition-colors line-clamp-1 mb-3">
+                                <div className="p-4 flex flex-col flex-1 space-y-1">
+                                    <h3 className="text-xs font-black text-[#072E1F] group-hover:text-[#1D9E75] transition-colors line-clamp-1 uppercase tracking-tight">
                                         {p.titulo}
                                     </h3>
-                                    <p className="text-xs font-bold text-gray-400 line-clamp-2 leading-relaxed mb-8 flex-1">
-                                        {p.descripcion || "Sin descripción disponible."}
-                                    </p>
-                                    
-                                    <div className="mt-auto flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-2xl bg-green-50 text-[#1D9E75] flex items-center justify-center font-black text-[10px] border border-green-100">
-                                                {p.residente?.user.nombre.charAt(0) || 'A'}
-                                            </div>
-                                            <span className="text-[10px] font-black text-[#072E1F] uppercase tracking-widest">{p.residente?.user.nombre.split(' ')[0] || 'Admin'}</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <MapPin size={10} className="text-gray-300" />
+                                        <span className="text-[9px] font-bold text-gray-400 truncate">
+                                            {p.residente?.user.nombre || 'Administración'}
+                                        </span>
+                                    </div>
+                                    <div className="pt-2 flex items-center justify-between">
+                                        <div className="flex items-center gap-1">
+                                            <Sparkles size={10} className="text-amber-400 fill-amber-400" />
+                                            <span className="text-[9px] font-black text-[#1D9E75]">NUEVO</span>
                                         </div>
-                                        <ChevronRight size={20} className="text-gray-200 group-hover:text-[#1D9E75] group-hover:translate-x-1 transition-all" />
+                                        <ChevronRight size={14} className="text-gray-200 group-hover:text-[#1D9E75] group-hover:translate-x-0.5 transition-all" />
                                     </div>
                                 </div>
                             </div>

@@ -11,7 +11,8 @@ import { DashboardCriticalDebts } from '@/components/admin/DashboardCriticalDebt
 export default async function DashboardPage() {
     const session = await auth()
     const { rol, nombre, email, residenciaId } = session!.user
-    const isGlobalAdmin = rol === 'ADMIN' && !residenciaId
+    const isAnyAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(rol)
+    const isGlobalAdmin = isAnyAdmin && !residenciaId
 
     // Auto-marcar pagos vencidos — usar UTC para no adelantar el vencimiento en timezones negativas
     const today = new Date()
@@ -25,7 +26,7 @@ export default async function DashboardPage() {
         data: { estado: 'VENCIDO' }
     })
 
-    if (rol === 'ADMIN') {
+    if (isAnyAdmin) {
         const whereResidenteResidencia = isGlobalAdmin ? {} : { user: { residenciaId: residenciaId || -1 } }
         const wherePagoResidencia = isGlobalAdmin ? {} : { residente: { user: { residenciaId: residenciaId || -1 } } }
 
