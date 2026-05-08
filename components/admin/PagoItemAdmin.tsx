@@ -1,12 +1,33 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
+import { payPagoManual } from '@/app/actions/pagos'
+import { useRouter } from 'next/navigation'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import VoucherPreviewModal from '@/components/shared/VoucherPreviewModal'
 import { Eye } from 'lucide-react'
 
 export function PagoItemAdmin({ pago, isHistorical = false }: { pago: any; isHistorical?: boolean }) {
+    const { data: session } = useSession()
+    const router = useRouter()
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+    const [loading, setLoading] = useState(false)
+
+    const isSuperAdmin = session?.user.rol === 'SUPER_ADMIN'
+    const canPayManual = isSuperAdmin && pago.estado !== 'PAGADO'
+
+    const handleManualPay = async () => {
+        if (!confirm('¿Estás seguro de marcar este pago como PAGADO manualmente?')) return
+        setLoading(true)
+        const res = await payPagoManual(pago.id)
+        if (res.success) {
+            router.refresh()
+        } else {
+            alert(res.error)
+        }
+        setLoading(false)
+    }
 
     const dObj = pago.fechaVencimiento ? new Date(pago.fechaVencimiento) : null
     const day = dObj ? dObj.getUTCDate() : '—'
@@ -90,6 +111,15 @@ export function PagoItemAdmin({ pago, isHistorical = false }: { pago: any; isHis
                             className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#1D9E75]/10 text-[#1D9E75] border border-[#1D9E75]/20 hover:bg-[#1D9E75] hover:text-white hover:shadow-lg hover:shadow-[#1D9E75]/20 transition-all active:scale-90"
                         >
                             <Eye size={16} strokeWidth={2.5} />
+                        </button>
+                    )}
+                    {canPayManual && (
+                        <button
+                            onClick={handleManualPay}
+                            disabled={loading}
+                            className="px-4 py-1.5 bg-[#EF9F27] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-md shadow-orange-200 disabled:opacity-50"
+                        >
+                            {loading ? '...' : 'Pagar'}
                         </button>
                     )}
                     <StatusBadge status={pago.estado as any} />

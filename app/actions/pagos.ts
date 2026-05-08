@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { EstadoPago } from '@prisma/client'
+import { auth } from '@/lib/auth'
 import { checkAuth, checkResidenciaAccess } from '@/lib/auth-utils'
 import { createNotification, notifyAdmins } from './notificaciones'
 
@@ -235,3 +236,47 @@ export async function sendPaymentReminder(residenteId: number) {
     return { success: false, error: error.message || 'Error al enviar recordatorio' }
   }
 }
+
+export async function payPagoManual(pagoId: number) {
+    try {
+        const session = await auth()
+        if (session?.user.rol !== 'SUPER_ADMIN') {
+            throw new Error('Solo el Super Admin puede realizar esta acción')
+        }
+
+        const pago = await prisma.pago.findUnique({ 
+            where: { id: pagoId },
+            include: { residente: { include: { user: true } } }
+        })
+
+        if (!pago) throw new Error('Pago no encontrado')
+
+        await prisma.pago.update({
+            where: { id: pagoId },
+            data: {
+                montoPagado: pago.monto,
+                estado: EstadoPago.PAGADO,
+                fechaPago: new Date(),
+                comprobante: '/uploads/Pagado.png',
+                metodoPago: 'MANUAL_ADMIN'
+            }
+        })
+
+        // Notificación al residente
+        await createNotification(
+            pago.residente.userId,
+            'Pago Registrado Manualmente',
+            `La administración ha marcado como pagado tu concepto de ${pago.concepto}.`,
+            'PAGO',
+            '/modules/pagos'
+        )
+
+        revalidatePath('/modules/pagos')
+        revalidatePath(`/modules/pagos/residente/${pago.residenteId}`)
+        return { success: true }
+    } catch (error: any) {
+        console.error('Error in payPagoManual:', error)
+        return { success: false, error: error.message || 'Error al registrar pago manual' }
+    }
+}
+
