@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useSession } from 'next-auth/react'
 import { Plus, User, Edit2, Trash2, Mail, Shield, Building, Save, X, Loader2, Users, Eye, EyeOff, Phone } from 'lucide-react'
 import { upsertUsuario, eliminarUsuario } from '@/app/actions/usuarios'
 
@@ -15,8 +16,10 @@ interface StaffMember {
 }
 
 export function StaffManager({ staff, roles, residencias }: { staff: StaffMember[], roles: any[], residencias: any[] }) {
+    const { data: session } = useSession()
     const [isPending, startTransition] = useTransition()
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [editingMember, setEditingMember] = useState<StaffMember | null>(null)
     const [showPassword, setShowPassword] = useState(false)
     const [telefono, setTelefono] = useState('+51 ')
     const [error, setError] = useState<string | null>(null)
@@ -118,12 +121,15 @@ export function StaffManager({ staff, roles, residencias }: { staff: StaffMember
                                         >
                                             <Edit2 size={16} />
                                         </button>
-                                        <button 
-                                            onClick={() => handleDelete(member.id)}
-                                            className="p-3 bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:border-red-100 transition-all rounded-xl shadow-sm"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
+                                        
+                                        {member.role.name !== 'ADMIN' && member.role.name !== 'SUPER_ADMIN' && member.id !== Number(session?.user?.id) && (
+                                            <button 
+                                                onClick={() => handleDelete(member.id)}
+                                                className="p-3 bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:border-red-100 transition-all rounded-xl shadow-sm"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
                                     </div>
                                 </td>
                             </tr>
@@ -137,7 +143,9 @@ export function StaffManager({ staff, roles, residencias }: { staff: StaffMember
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6 animate-in fade-in duration-300">
                     <div className="absolute inset-0 bg-[#072E1F]/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
                     <form 
+                        key={editingMember?.id || 'new'}
                         action={handleSave} 
+                        autoComplete="off"
                         className="relative w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl p-12 space-y-8 animate-in zoom-in-95 duration-500"
                     >
                         <div className="flex items-center justify-between">
@@ -188,6 +196,7 @@ export function StaffManager({ staff, roles, residencias }: { staff: StaffMember
                                         name="password" 
                                         required={!editingMember} 
                                         type={showPassword ? "text" : "password"} 
+                                        autoComplete="new-password"
                                         placeholder={editingMember ? 'Dejar vacío para no cambiar' : '••••••••'} 
                                         className="w-full px-6 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-[#1D9E75] outline-none font-bold text-gray-700 transition-all" 
                                     />

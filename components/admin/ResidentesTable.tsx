@@ -330,7 +330,7 @@ export function ResidentesTable({ residentes, isInactiveView = false, userRole }
                                                             <HardDeleteResidenteButton id={r.id} nombre={r.user.nombre} />
                                                         )}
                                                         {r.activo ? (
-                                                            isSuperAdmin && <DeleteResidenteButton id={r.id} nombre={r.user.nombre} />
+                                                            <DeleteResidenteButton id={r.id} nombre={r.user.nombre} />
                                                         ) : (
                                                             <ReactivateResidenteButton 
                                                                 id={r.id} 

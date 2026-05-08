@@ -16,12 +16,25 @@ export function ConfigForm({ initialConfig }: ConfigFormProps) {
 
     async function handleSubmit(formData: FormData) {
         setSuccess(false)
+        setError(null)
+        
         const data = {
             SYSTEM_NAME: formData.get('SYSTEM_NAME') as string,
             SUPPORT_EMAIL: formData.get('SUPPORT_EMAIL') as string,
             FOOTER_TEXT: formData.get('FOOTER_TEXT') as string,
             CELULAR_CONTACTO: (formData.get('CELULAR_CONTACTO') as string).replace(/\s/g, ''),
             WHATSAPP_CONTACTO: (formData.get('WHATSAPP_CONTACTO') as string).replace(/\s/g, ''),
+        }
+
+        // Validación básica
+        if (!data.SYSTEM_NAME || !data.SUPPORT_EMAIL || !data.FOOTER_TEXT) {
+            setError('Todos los campos son obligatorios')
+            return
+        }
+
+        if (data.CELULAR_CONTACTO.length < 12 || data.WHATSAPP_CONTACTO.length < 12) {
+            setError('Debes ingresar un número de contacto válido (9 dígitos)')
+            return
         }
 
         if (!window.confirm('¿Estás seguro de que deseas guardar estos cambios en la configuración del sistema?')) {
@@ -85,6 +98,7 @@ export function ConfigForm({ initialConfig }: ConfigFormProps) {
                                 <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Celular de Contacto</label>
                                 <input
                                     name="CELULAR_CONTACTO"
+                                    required
                                     defaultValue={initialConfig.CELULAR_CONTACTO || '+51 '}
                                     placeholder="+51 999 999 999"
                                     onChange={(e) => {
@@ -102,6 +116,7 @@ export function ConfigForm({ initialConfig }: ConfigFormProps) {
                                 <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">WhatsApp de Contacto</label>
                                 <input
                                     name="WHATSAPP_CONTACTO"
+                                    required
                                     defaultValue={initialConfig.WHATSAPP_CONTACTO || '+51 '}
                                     placeholder="+51 999 999 999"
                                     onChange={(e) => {
@@ -119,6 +134,7 @@ export function ConfigForm({ initialConfig }: ConfigFormProps) {
                                 <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Texto del Pie de Página</label>
                                 <input
                                     name="FOOTER_TEXT"
+                                    required
                                     defaultValue={initialConfig.FOOTER_TEXT}
                                     className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-medium text-gray-400"
                                     placeholder="© 2024 Grow Residencial - Todos los derechos reservados."
@@ -126,8 +142,11 @@ export function ConfigForm({ initialConfig }: ConfigFormProps) {
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-6 border-t border-gray-50">
-                            {success && <p className="text-sm font-black text-green-500 animate-bounce">✓ Guardado correctamente</p>}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between pt-6 border-t border-gray-50 gap-4">
+                            <div className="flex flex-col gap-1">
+                                {success && <p className="text-sm font-black text-green-500 animate-in fade-in slide-in-from-left-2">✓ Guardado correctamente</p>}
+                                {error && <p className="text-sm font-black text-red-500 animate-in fade-in slide-in-from-left-2">⚠ {error}</p>}
+                            </div>
                             <button
                                 type="submit"
                                 disabled={isPending}

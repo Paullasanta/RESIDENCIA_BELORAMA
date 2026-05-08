@@ -8,7 +8,7 @@ export function DeleteResidenteButton({ id, nombre }: { id: number, nombre: stri
   const [isPending, startTransition] = useTransition()
 
   async function handleDelete() {
-    if (confirm(`¿Estás seguro de que deseas eliminar a ${nombre}? Esta acción no se puede deshacer.`)) {
+    if (confirm(`¿Estás seguro de que deseas inactivar a ${nombre}? Se liberará su habitación y pasará a la lista de inactivos.`)) {
       startTransition(async () => {
         const result = await deleteResidente(id)
         if (!result.success) {
@@ -23,7 +23,7 @@ export function DeleteResidenteButton({ id, nombre }: { id: number, nombre: stri
       onClick={handleDelete}
       disabled={isPending}
       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-      title="Eliminar residente"
+      title="Inactivar residente"
     >
       {isPending ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
     </button>

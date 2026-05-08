@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { createProducto } from '@/app/actions/marketplace'
@@ -10,16 +10,40 @@ export function ProductoForm() {
   const router = useRouter()
   const { data: session } = useSession()
   const [isPending, startTransition] = useTransition()
+  
+  // Estados Controlados
+  const [titulo, setTitulo] = useState('')
+  const [precio, setPrecio] = useState('0')
+  const [categoria, setCategoria] = useState('Otros')
+  const [descripcion, setDescripcion] = useState('')
+  const [whatsapp, setWhatsapp] = useState('+51 ')
+  const [telefono, setTelefono] = useState('+51 ')
+  
   const [error, setError] = useState<string | null>(null)
   const [fotos, setFotos] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
-  const [precio, setPrecio] = useState('0')
+
+  // Inicializar con teléfono del usuario cuando la sesión esté lista
+  useEffect(() => {
+    if (session?.user?.telefono) {
+      const formatted = '+51 ' + session.user.telefono.replace(/^\+51\s?/, '');
+      setWhatsapp(prev => prev === '+51 ' ? formatted : prev);
+      setTelefono(prev => prev === '+51 ' ? formatted : prev);
+    }
+  }, [session])
 
   const handleNumericInput = (val: string) => {
     let filtered = val.replace(/[^0-9.]/g, '');
     const parts = filtered.split('.');
     if (parts.length > 2) filtered = parts[0] + '.' + parts.slice(1).join('');
     return filtered;
+  }
+
+  const handlePhoneInput = (val: string, setter: (v: string) => void) => {
+    let current = val;
+    if (!current.startsWith('+51 ')) current = '+51 ' + current.replace(/^\+51\s?/, '');
+    const clean = current.replace(/^\+51\s?/, '').replace(/[^0-9]/g, '');
+    if (clean.length <= 9) setter('+51 ' + clean);
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,19 +86,35 @@ export function ProductoForm() {
     setFotos(prev => prev.filter((_, i) => i !== index))
   }
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
     if (fotos.length === 0) {
       setError('Debes subir al menos una foto del producto.')
       return
     }
 
+    const cleanWhatsapp = whatsapp.replace(/^\+51\s?/, '').trim();
+    const cleanTelefono = telefono.replace(/^\+51\s?/, '').trim();
+
+    if (!cleanWhatsapp && !cleanTelefono) {
+        setError('Debes proporcionar al menos un medio de contacto (WhatsApp o Teléfono).');
+        return;
+    }
+
+    if (!titulo.trim()) {
+        setError('El título es obligatorio.');
+        return;
+    }
+
     const data = {
-      titulo: formData.get('titulo'),
+      titulo,
       precio: Number(precio),
-      descripcion: formData.get('descripcion'),
-      categoria: formData.get('categoria'),
-      telefonoContacto: formData.get('telefonoContacto'),
-      whatsappContacto: formData.get('whatsappContacto'),
+      descripcion,
+      categoria,
+      telefonoContacto: cleanTelefono ? telefono : null,
+      whatsappContacto: cleanWhatsapp ? whatsapp : null,
       fotos: fotos
     }
 
@@ -90,9 +130,9 @@ export function ProductoForm() {
   }
 
   return (
-    <form action={handleSubmit} className="space-y-8 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-2xl shadow-gray-200/50 max-w-4xl mx-auto">
+    <form onSubmit={handleSubmit} className="space-y-8 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-2xl shadow-gray-200/50 max-w-4xl mx-auto">
       {error && (
-        <div className="p-5 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-bold flex items-center gap-3">
+        <div className="p-5 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-bold flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
            <span className="w-2 h-2 bg-red-500 rounded-full" />
            {error}
         </div>
@@ -104,6 +144,8 @@ export function ProductoForm() {
           <input
             name="titulo"
             required
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
             className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 placeholder:text-gray-300"
             placeholder="Ej. Silla de oficina ergonómica"
           />
@@ -131,6 +173,8 @@ export function ProductoForm() {
           <select
             name="categoria"
             required
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
             className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 appearance-none cursor-pointer"
           >
             <option value="Otros">Otros</option>
@@ -145,16 +189,9 @@ export function ProductoForm() {
             <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">WhatsApp de Contacto</label>
             <input
                 name="whatsappContacto"
-                required
                 placeholder="+51 999 888 777"
-                defaultValue="+51 "
-                onChange={(e) => {
-                    let val = e.target.value;
-                    if (!val.startsWith('+51 ')) val = '+51 ' + val.replace(/^\+51\s?/, '');
-                    const clean = val.replace(/^\+51\s?/, '').replace(/[^0-9]/g, '');
-                    if (clean.length <= 9) e.target.value = '+51 ' + clean;
-                    else e.target.value = val.substring(0, val.length - 1);
-                }}
+                value={whatsapp}
+                onChange={(e) => handlePhoneInput(e.target.value, setWhatsapp)}
                 className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 placeholder:text-gray-300"
             />
         </div>
@@ -164,14 +201,8 @@ export function ProductoForm() {
             <input
                 name="telefonoContacto"
                 placeholder="+51 999 888 777"
-                defaultValue="+51 "
-                onChange={(e) => {
-                    let val = e.target.value;
-                    if (!val.startsWith('+51 ')) val = '+51 ' + val.replace(/^\+51\s?/, '');
-                    const clean = val.replace(/^\+51\s?/, '').replace(/[^0-9]/g, '');
-                    if (clean.length <= 9) e.target.value = '+51 ' + clean;
-                    else e.target.value = val.substring(0, val.length - 1);
-                }}
+                value={telefono}
+                onChange={(e) => handlePhoneInput(e.target.value, setTelefono)}
                 className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 placeholder:text-gray-300"
             />
         </div>
@@ -181,6 +212,8 @@ export function ProductoForm() {
           <textarea
             name="descripcion"
             rows={4}
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
             className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-medium text-gray-700 placeholder:text-gray-300 resize-none"
             placeholder="Describe el estado del producto, tiempo de uso, etc."
           />

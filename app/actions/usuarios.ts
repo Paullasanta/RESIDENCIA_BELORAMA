@@ -106,6 +106,9 @@ export async function eliminarUsuario(id: number) {
     const me = await prisma.user.findUnique({ where: { email: session.user.email! } })
     if (me?.id === id) throw new Error('No puedes eliminarte a ti mismo')
 
+    // Si tiene un perfil de residente asociado (como los cocineros para lavandería), lo eliminamos primero
+    await prisma.residente.deleteMany({ where: { userId: id } })
+
     await prisma.user.delete({
       where: { id }
     })
