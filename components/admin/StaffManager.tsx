@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Plus, User, Edit2, Trash2, Mail, Shield, Building, Save, X, Loader2, Users } from 'lucide-react'
+import { Plus, User, Edit2, Trash2, Mail, Shield, Building, Save, X, Loader2, Users, Eye, EyeOff, Phone } from 'lucide-react'
 import { upsertUsuario, eliminarUsuario } from '@/app/actions/usuarios'
 
 interface StaffMember {
@@ -11,12 +11,14 @@ interface StaffMember {
     role: { id: number, name: string }
     residencia?: { nombre: string } | null
     residenciaId?: number | null
+    telefono?: string | null
 }
 
 export function StaffManager({ staff, roles, residencias }: { staff: StaffMember[], roles: any[], residencias: any[] }) {
     const [isPending, startTransition] = useTransition()
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const [editingMember, setEditingMember] = useState<StaffMember | null>(null)
+    const [showPassword, setShowPassword] = useState(false)
+    const [telefono, setTelefono] = useState('+51 ')
     const [error, setError] = useState<string | null>(null)
 
     const handleSave = async (formData: FormData) => {
@@ -26,6 +28,7 @@ export function StaffManager({ staff, roles, residencias }: { staff: StaffMember
             nombre: formData.get('nombre'),
             email: formData.get('email'),
             password: formData.get('password'),
+            telefono: telefono,
             roleId: formData.get('roleId'),
             residenciaId: formData.get('residenciaId')
         }
@@ -61,7 +64,7 @@ export function StaffManager({ staff, roles, residencias }: { staff: StaffMember
                     </div>
                 </div>
                 <button
-                    onClick={() => { setEditingMember(null); setIsModalOpen(true); }}
+                    onClick={() => { setEditingMember(null); setTelefono('+51 '); setIsModalOpen(true); }}
                     className="flex items-center gap-3 bg-[#1D9E75] text-white px-8 py-4 rounded-2xl font-black hover:bg-[#085041] transition-all shadow-xl shadow-[#1D9E75]/20"
                 >
                     <Plus size={18} />
@@ -110,7 +113,7 @@ export function StaffManager({ staff, roles, residencias }: { staff: StaffMember
                                 <td className="px-10 py-6 text-right">
                                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button 
-                                            onClick={() => { setEditingMember(member); setIsModalOpen(true); }}
+                                            onClick={() => { setEditingMember(member); setTelefono(member.telefono || '+51 '); setIsModalOpen(true); }}
                                             className="p-3 bg-white border border-gray-100 text-gray-400 hover:text-indigo-600 hover:border-indigo-100 transition-all rounded-xl shadow-sm"
                                         >
                                             <Edit2 size={16} />
@@ -161,9 +164,41 @@ export function StaffManager({ staff, roles, residencias }: { staff: StaffMember
                                 <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Email Acceso</label>
                                 <input name="email" defaultValue={editingMember?.email} required type="email" className="w-full px-6 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-[#1D9E75] outline-none font-bold text-gray-500 transition-all" />
                             </div>
+                             <div className="space-y-2">
+                                <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Teléfono</label>
+                                <div className="relative">
+                                    <input
+                                        value={telefono}
+                                        onChange={(e) => {
+                                            let val = e.target.value;
+                                            if (!val.startsWith('+51 ')) val = '+51 ' + val.replace(/^\+51\s?/, '');
+                                            const numbersOnly = val.replace(/^\+51\s?/, '').replace(/[^0-9]/g, '');
+                                            if (numbersOnly.length <= 9) setTelefono('+51 ' + numbersOnly);
+                                        }}
+                                        className="w-full pl-12 pr-6 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-[#1D9E75] outline-none font-bold text-gray-700 transition-all"
+                                        placeholder="+51 999 888 777"
+                                    />
+                                    <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
+                                </div>
+                            </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Contraseña {editingMember && '(Opcional)'}</label>
-                                <input name="password" required={!editingMember} type="password" placeholder={editingMember ? 'Dejar vacío para no cambiar' : '••••••••'} className="w-full px-6 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-[#1D9E75] outline-none font-bold text-gray-700 transition-all" />
+                                <div className="relative">
+                                    <input 
+                                        name="password" 
+                                        required={!editingMember} 
+                                        type={showPassword ? "text" : "password"} 
+                                        placeholder={editingMember ? 'Dejar vacío para no cambiar' : '••••••••'} 
+                                        className="w-full px-6 py-4 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-[#1D9E75] outline-none font-bold text-gray-700 transition-all" 
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-[#1D9E75] transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">Asignar Rol</label>

@@ -85,18 +85,32 @@ export function ConfigForm({ initialConfig }: ConfigFormProps) {
                                 <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Celular de Contacto</label>
                                 <input
                                     name="CELULAR_CONTACTO"
-                                    defaultValue={initialConfig.CELULAR_CONTACTO}
+                                    defaultValue={initialConfig.CELULAR_CONTACTO || '+51 '}
                                     placeholder="+51 999 999 999"
+                                    onChange={(e) => {
+                                        let val = e.target.value;
+                                        if (!val.startsWith('+51 ')) val = '+51 ' + val.replace(/^\+51\s?/, '');
+                                        const clean = val.replace(/^\+51\s?/, '').replace(/[^0-9]/g, '');
+                                        if (clean.length <= 9) e.target.value = '+51 ' + clean;
+                                        else e.target.value = val.substring(0, val.length - 1);
+                                    }}
                                     className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700"
                                 />
                             </div>
-
+ 
                             <div className="space-y-2">
                                 <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">WhatsApp de Contacto</label>
                                 <input
                                     name="WHATSAPP_CONTACTO"
-                                    defaultValue={initialConfig.WHATSAPP_CONTACTO}
-                                    placeholder="51999999999"
+                                    defaultValue={initialConfig.WHATSAPP_CONTACTO || '+51 '}
+                                    placeholder="+51 999 999 999"
+                                    onChange={(e) => {
+                                        let val = e.target.value;
+                                        if (!val.startsWith('+51 ')) val = '+51 ' + val.replace(/^\+51\s?/, '');
+                                        const clean = val.replace(/^\+51\s?/, '').replace(/[^0-9]/g, '');
+                                        if (clean.length <= 9) e.target.value = '+51 ' + clean;
+                                        else e.target.value = val.substring(0, val.length - 1);
+                                    }}
                                     className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700"
                                 />
                             </div>

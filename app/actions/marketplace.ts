@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { auth } from '@/lib/auth'
 import { createNotification, notifyAdmins } from './notificaciones'
+import { unlink } from 'fs/promises'
+import path from 'path'
 
 export async function createProducto(data: any) {
   try {
@@ -31,8 +33,10 @@ export async function createProducto(data: any) {
         precio: Number(data.precio),
         fotos: data.fotos || [],
         categoria: data.categoria || "Otros",
-        residenteId: residenteId || null,
-        estado: ['ADMIN', 'SUPER_ADMIN', 'SUPER_ADMIN'].includes(rol) ? 'APROBADO' : 'PENDIENTE'
+        residente: residenteId ? { connect: { id: residenteId } } : undefined,
+        telefonoContacto: data.telefonoContacto || null,
+        whatsappContacto: data.whatsappContacto || null,
+        estado: ['ADMIN', 'SUPER_ADMIN'].includes(rol) ? 'APROBADO' : 'PENDIENTE'
       }
     })
 
@@ -63,11 +67,32 @@ export async function createProducto(data: any) {
 export async function moderarProducto(id: number, estado: 'APROBADO' | 'RECHAZADO') {
   try {
     const session = await auth()
-    if (!session || session.user.rol !== 'ADMIN') throw new Error('No autorizado')
+    if (session?.user.rol !== 'ADMIN') throw new Error('No autorizado')
+    
+    // Si se rechaza, eliminamos las fotos físicamente para ahorrar espacio
+    if (estado === 'RECHAZADO') {
+      const current = await prisma.productoMarketplace.findUnique({
+        where: { id },
+        select: { fotos: true }
+      })
+      
+      if (current?.fotos && current.fotos.length > 0) {
+        for (const foto of current.fotos) {
+          const filename = foto.split('/').pop()
+          if (filename) {
+            const filepath = path.join(process.cwd(), 'public', 'uploads', 'productos', filename)
+            try { await unlink(filepath) } catch (e) { /* ignorar si no existe */ }
+          }
+        }
+      }
+    }
 
     const producto = await prisma.productoMarketplace.update({
       where: { id },
-      data: { estado },
+      data: { 
+        estado,
+        fotos: estado === 'RECHAZADO' ? [] : undefined
+      },
       include: { residente: { include: { user: true } } }
     })
 
@@ -90,9 +115,6 @@ export async function moderarProducto(id: number, estado: 'APROBADO' | 'RECHAZAD
     return { success: false, error: 'Error al moderar el producto' }
   }
 }
-
-import { unlink } from 'fs/promises'
-import path from 'path'
 
 export async function eliminarProducto(id: number) {
   try {

@@ -13,7 +13,7 @@ export async function getStaff() {
     const staff = await prisma.user.findMany({
       where: {
         role: {
-          name: { not: 'RESIDENTE' }
+          name: { notIn: ['RESIDENTE', 'SUPER_ADMIN'] }
         }
       },
       include: {
@@ -42,6 +42,7 @@ export async function upsertUsuario(data: any) {
       const updateData: any = {
         nombre: data.nombre,
         email: data.email,
+        telefono: data.telefono || null,
         roleId: Number(data.roleId),
         residenciaId: data.residenciaId ? Number(data.residenciaId) : null,
       }
@@ -49,21 +50,41 @@ export async function upsertUsuario(data: any) {
         updateData.password = await bcrypt.hash(data.password, 10)
       }
 
-      await prisma.user.update({
+      const user = await prisma.user.update({
         where: { id: Number(data.id) },
-        data: updateData
+        data: updateData,
+        include: { role: true }
       })
+
+      if (user.role?.name === 'COCINERO') {
+        await prisma.residente.upsert({
+          where: { userId: user.id },
+          create: { userId: user.id, activo: true },
+          update: { activo: true }
+        })
+      }
     } else {
       // Create
-      await prisma.user.create({
+      const user = await prisma.user.create({
         data: {
           nombre: data.nombre,
           email: data.email,
+          telefono: data.telefono || null,
           password: await bcrypt.hash(data.password || 'belo123', 10),
           roleId: Number(data.roleId),
           residenciaId: data.residenciaId ? Number(data.residenciaId) : null,
-        }
+        },
+        include: { role: true }
       })
+
+      // Si es cocinero, crearle perfil de residente automático para que pueda usar lavandería
+      if (user.role?.name === 'COCINERO') {
+        await prisma.residente.upsert({
+          where: { userId: user.id },
+          create: { userId: user.id, activo: true },
+          update: { activo: true }
+        })
+      }
     }
 
     revalidatePath('/modules/configuracion')

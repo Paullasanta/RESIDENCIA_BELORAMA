@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createResidente, updateResidente, reactivateResidente } from '@/app/actions/residentes'
 import { Button } from '@/components/ui/button'
-import { Loader2, Save, X, Upload, Check } from 'lucide-react'
+import { Loader2, Save, X, Upload, Check, Eye, EyeOff } from 'lucide-react'
 
 interface ResidenteFormProps {
   residencias: any[]
@@ -15,6 +15,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [residenciaId, setResidenciaId] = useState(initialData?.habitacion?.residenciaId?.toString() || initialData?.user?.residenciaId?.toString() || '')
@@ -41,12 +42,12 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
   const [nombre, setNombre] = useState(initialData?.user?.nombre || '')
   const [apellidoPaterno, setApellidoPaterno] = useState(initialData?.user?.apellidoPaterno || '')
   const [apellidoMaterno, setApellidoMaterno] = useState(initialData?.user?.apellidoMaterno || '')
-  const [telefono, setTelefono] = useState(initialData?.user?.telefono || '')
+  const [telefono, setTelefono] = useState(initialData?.user?.telefono || '+51 ')
   const [email, setEmail] = useState(initialData?.user?.email || '')
 
   // Estados de Emergencia
   const [emergenciaNombre, setEmergenciaNombre] = useState(initialData?.user?.emergenciaNombre || '')
-  const [emergenciaTelefono, setEmergenciaTelefono] = useState(initialData?.user?.emergenciaTelefono || '')
+  const [emergenciaTelefono, setEmergenciaTelefono] = useState(initialData?.user?.emergenciaTelefono || '+51 ')
   const [emergenciaParentesco, setEmergenciaParentesco] = useState(initialData?.user?.emergenciaParentesco || '')
   const [fechaNacimiento, setFechaNacimiento] = useState(
     initialData?.user?.fechaNacimiento
@@ -257,14 +258,21 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
                 name="telefono"
                 value={telefono}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  if (val.length <= 9) setTelefono(val);
+                  let val = e.target.value;
+                  // Si el usuario intenta borrar el prefijo, lo mantenemos
+                  if (!val.startsWith('+51 ')) {
+                    val = '+51 ' + val.replace(/^\+51\s?/, '');
+                  }
+                  // Evitar duplicados de +51
+                  const clean = val.replace(/^\+51\s?/, '');
+                  const numbersOnly = clean.replace(/[^0-9]/g, '');
+                  if (numbersOnly.length <= 9) {
+                    setTelefono('+51 ' + numbersOnly);
+                  }
                 }}
-
-                maxLength={9}
                 inputMode="numeric"
                 className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
-                placeholder="Ej. 999888777"
+                placeholder="+51 999888777"
               />
               <p className="text-[9px] text-gray-400 font-bold uppercase mt-1 ml-1 tracking-tighter">* Máximo 9 números</p>
             </div>
@@ -298,12 +306,21 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
                 <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">
                   Contraseña <span className="text-[10px] font-bold text-[#EF9F27] ml-2">(Opcional para cambio)</span>
                 </label>
-                <input
-                  name="password"
-                  type="password"
-                  className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <input
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-[#1D9E75] transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -638,17 +655,24 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Teléfono</label>
+              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Teléfono Emergencia</label>
               <input
                 name="emergenciaTelefono"
                 value={emergenciaTelefono}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  setEmergenciaTelefono(val);
+                  let val = e.target.value;
+                  if (!val.startsWith('+51 ')) {
+                    val = '+51 ' + val.replace(/^\+51\s?/, '');
+                  }
+                  const clean = val.replace(/^\+51\s?/, '');
+                  const numbersOnly = clean.replace(/[^0-9]/g, '');
+                  if (numbersOnly.length <= 9) {
+                    setEmergenciaTelefono('+51 ' + numbersOnly);
+                  }
                 }}
                 inputMode="numeric"
                 className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
-                placeholder="Ej. 999 888 777"
+                placeholder="+51 999888777"
               />
             </div>
 

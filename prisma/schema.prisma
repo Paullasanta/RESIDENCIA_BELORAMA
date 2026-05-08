@@ -251,16 +251,18 @@ model PublicacionHabitacion {
 }
 
 model ProductoMarketplace {
-  id          Int            @id @default(autoincrement())
-  residenteId Int?
-  titulo      String
-  descripcion String?
-  precio      Float
-  fotos       String[]
-  categoria   String?        @default("Otros")
-  estado      EstadoProducto @default(PENDIENTE)
-  createdAt   DateTime       @default(now())
-  residente   Residente?     @relation(fields: [residenteId], references: [id])
+  id               Int            @id @default(autoincrement())
+  residenteId      Int?
+  titulo           String
+  descripcion      String?
+  precio           Float
+  fotos            String[]
+  categoria        String?        @default("Otros")
+  estado           EstadoProducto @default(PENDIENTE)
+  telefonoContacto String?
+  whatsappContacto String?
+  createdAt        DateTime       @default(now())
+  residente        Residente?     @relation(fields: [residenteId], references: [id])
 }
 
 model Egreso {

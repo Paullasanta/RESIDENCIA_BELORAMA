@@ -23,7 +23,7 @@ export default async function ComidaPage() {
     const { rol, permisos, residenciaId: sessionResId } = session.user
     const isAnyAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(rol)
     const canManage = isAnyAdmin || rol === 'COCINERO' || permisos?.includes('COMIDAS_POST')
-    const isGlobalAdmin = isAnyAdmin && !sessionResId
+    const isGlobalAdmin = (isAnyAdmin || rol === 'COCINERO') && !sessionResId
 
     let residenciaId: number | null = sessionResId || null
     let residenteId: number | null = null
@@ -210,7 +210,12 @@ export default async function ComidaPage() {
                                                         <div className={`w-1 h-8 rounded-full shrink-0 ${TIPO_COLOR_BAR[tipo]}`} />
                                                         <div className="min-w-0">
                                                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{TIPO_LABEL[tipo]}</p>
-                                                            <h4 className="font-black text-[#072E1F] text-xs leading-tight line-clamp-2">{menu.nombre}</h4>
+                                                            <h4 
+                                                                className="font-black text-[#072E1F] text-xs leading-tight line-clamp-2 cursor-help"
+                                                                title={menu.descripcion || 'Sin descripción'}
+                                                            >
+                                                                {menu.nombre}
+                                                            </h4>
                                                         </div>
                                                     </div>
                                                     

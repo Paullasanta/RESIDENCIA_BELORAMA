@@ -18,11 +18,14 @@ interface ProductProps {
         user: {
             nombre: string
             email: string
+            telefono: string | null
         }
     } | null
     createdAt: Date | string
     estado: string
     categoria?: string | null
+    telefonoContacto?: string | null
+    whatsappContacto?: string | null
 }
 
 interface ProductGridProps {
@@ -130,7 +133,7 @@ export function ProductGrid({ pendientes, aprobados, misProductos, canModerate, 
                                 <div className="flex-1">
                                     <div className="flex items-start justify-between mb-4">
                                         <h3 className="text-lg font-black text-[#072E1F] group-hover:text-[#1D9E75] transition-colors">{p.titulo}</h3>
-                                        <span className="text-xl font-black text-[#1D9E75]">${p.precio.toLocaleString('es-MX')}</span>
+                                        <span className="text-xl font-black text-[#1D9E75]">S/ {p.precio.toLocaleString('es-PE')}</span>
                                     </div>
                                     <div className="flex items-center gap-2 mb-6 text-xs font-bold text-gray-400 uppercase tracking-widest">
                                         <div className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-[10px]">{p.residente?.user.nombre.charAt(0) || 'A'}</div>
@@ -180,7 +183,7 @@ export function ProductGrid({ pendientes, aprobados, misProductos, canModerate, 
                                      )}
                                      <div className="absolute top-3 left-3">
                                          <span className="bg-white/90 backdrop-blur text-[#072E1F] px-3 py-1.5 rounded-xl text-xs font-black shadow-sm border border-white/20">
-                                             ${p.precio.toLocaleString('es-MX')}
+                                             S/ {p.precio.toLocaleString('es-PE')}
                                          </span>
                                      </div>
                                 </div>
@@ -249,7 +252,7 @@ export function ProductGrid({ pendientes, aprobados, misProductos, canModerate, 
                                             <StatusBadge status={p.estado as any} />
                                         </td>
                                         <td className="px-10 py-8 text-right font-black text-2xl text-[#1D9E75] tracking-tighter">
-                                            ${p.precio.toLocaleString('es-MX')}
+                                            S/ {p.precio.toLocaleString('es-PE')}
                                         </td>
                                     </tr>
                                 ))}

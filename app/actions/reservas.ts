@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { EstadoHabitacion } from '@prisma/client'
-import { createResidente } from './residentes'
+import bcrypt from 'bcryptjs'
 
 export async function createReserva(data: any) {
   try {
@@ -115,8 +115,9 @@ export async function confirmReserva(reservaId: number) {
 
       if (!reserva) throw new Error('Reserva no encontrada')
 
-      // 2. Preparar datos para el residente (usando la lógica existente de createResidente o similar)
-      // Nota: Llamamos a la lógica interna de creación
+      // 2. Obtener el ID del rol de residente
+      const role = await tx.role.findFirst({ where: { name: 'RESIDENTE' } })
+      if (!role) throw new Error('Rol de residente no encontrado')
       
       // Buscamos si el usuario ya existe por DNI o Email
       let user = await tx.user.findFirst({
@@ -129,7 +130,8 @@ export async function confirmReserva(reservaId: number) {
       })
 
       if (!user) {
-        // Crear usuario automático usando su DNI como contraseña inicial
+        // Crear usuario automático usando su DNI hasheado como contraseña inicial
+        const hashedPassword = await bcrypt.hash(reserva.dni, 10)
         user = await tx.user.create({
           data: {
             dni: reserva.dni,
@@ -137,9 +139,17 @@ export async function confirmReserva(reservaId: number) {
             apellidoPaterno: reserva.apellidoPaterno,
             apellidoMaterno: reserva.apellidoMaterno,
             email: reserva.email || `${reserva.dni}@growresidencial.com`,
-            password: reserva.dni, // El DNI será su contraseña inicial
-            roleId: 2, // Rol de residente
+            password: hashedPassword,
+            telefono: reserva.telefono,
+            roleId: role.id,
+            residenciaId: reserva.habitacion.residenciaId,
           }
+        })
+      } else {
+        // Si el usuario ya existe, aseguramos que tenga el rol de residente
+        await tx.user.update({
+          where: { id: user.id },
+          data: { roleId: role.id }
         })
       }
 

@@ -36,7 +36,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     // Configuración universal de navegación agnóstica al rol
     const navItems = [
-        { href: '/modules/dashboard',     label: 'Dashboard',         icon: <LayoutDashboard size={18} />, show: true },
+        { href: '/modules/dashboard',     label: 'Dashboard',         icon: <LayoutDashboard size={18} />, show: rol !== 'COCINERO' },
         { href: '/modules/residencias',   label: 'Residencias',       icon: <Building2 size={18} />,       show: hasPerm('MANAGE_RESIDENCIAS') && rol !== 'RESIDENTE' },
         { href: '/modules/residentes',    label: 'Residentes',        icon: <Users size={18} />,           show: hasPerm('MANAGE_RESIDENTES') },
         { href: '/modules/pagos',         label: 'Cobros y Pagos',    icon: <DollarSign size={18} />,      show: hasPerm('MANAGE_PAYMENTS') || rol === 'RESIDENTE' },
@@ -44,8 +44,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         { href: '/modules/comida',        label: 'Gestión de Comidas',icon: <UtensilsCrossed size={18} />, show: true },
         { href: '/modules/marketplace',   label: 'Marketplace',       icon: <ShoppingBag size={18} />,     show: true },
         { href: '/modules/mantenimiento', label: 'Mantenimiento',     icon: <Wrench size={18} />,          show: true },
-        { href: '/modules/egresos',       label: 'Gastos Residentes', icon: <DollarSign size={18} />,      show: hasPerm('MANAGE_EGRESOS') },
-        { href: '/modules/reportes',      label: 'Reportes y Analítica',icon: <BarChart3 size={18} />,     show: isAnyAdmin },
+        { href: '/modules/egresos',       label: 'Gastos Residentes', icon: <DollarSign size={18} />,      show: false },
+        { href: '/modules/reportes',      label: 'Reportes y Analítica',icon: <BarChart3 size={18} />,     show: false },
         { href: '/modules/avisos',        label: 'Avisos',            icon: <Megaphone size={18} />,       show: true },
         { href: '/modules/perfil',        label: 'Mi Perfil',         icon: <Users size={18} />,           show: true },
         { href: '/modules/configuracion', label: 'Configuración',     icon: <Settings size={18} />,        show: hasPerm('ADMIN_SETTINGS') || isAnyAdmin },

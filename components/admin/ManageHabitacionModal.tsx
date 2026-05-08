@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Settings, X, Edit3, Image as ImageIcon, Users, Trash2, UploadCloud, CheckCircle2 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import {
     updateHabitacion,
     uploadHabitacionFotos,
@@ -18,6 +19,12 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
     const [activeTab, setActiveTab] = useState<'EDITAR' | 'FOTOS' | 'RESIDENTES'>('EDITAR')
     const [loading, setLoading] = useState(false)
     const [showReserva, setShowReserva] = useState(false)
+
+    const { data: session } = useSession()
+    const rol = session?.user?.rol
+    const isSuperAdmin = rol === 'SUPER_ADMIN'
+    const canAssignResidents = isSuperAdmin // Según instrucción, el 'administrador' (ADMIN) no debe ver esto.
+
 
     // Residentes state
     const [residentesLibres, setResidentesLibres] = useState<any[]>([])
@@ -102,8 +109,8 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
                             {[
                                 { id: 'EDITAR', icon: <Edit3 size={16} />, label: 'Propiedades' },
                                 { id: 'FOTOS', icon: <ImageIcon size={16} />, label: 'Fotos Visibles' },
-                                { id: 'RESIDENTES', icon: <Users size={16} />, label: 'Asignar Residentes' },
-                            ].map(tab => (
+                                { id: 'RESIDENTES', icon: <Users size={16} />, label: 'Asignar Residentes', show: canAssignResidents },
+                            ].filter(tab => tab.show !== false).map(tab => (
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id as any)}
@@ -274,7 +281,7 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
                             )}
 
                             {/* TAB: RESIDENTES */}
-                            {activeTab === 'RESIDENTES' && (
+                            {activeTab === 'RESIDENTES' && canAssignResidents && (
                                 <div className="space-y-4">
                                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Selecciona para asignar o desasignar de esta habitación</p>
                                     <div className="space-y-2">

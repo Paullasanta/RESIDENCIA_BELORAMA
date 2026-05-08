@@ -73,6 +73,8 @@ export function ProductoForm() {
       precio: Number(precio),
       descripcion: formData.get('descripcion'),
       categoria: formData.get('categoria'),
+      telefonoContacto: formData.get('telefonoContacto'),
+      whatsappContacto: formData.get('whatsappContacto'),
       fotos: fotos
     }
 
@@ -108,9 +110,9 @@ export function ProductoForm() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Precio ($)</label>
+          <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Precio (S/)</label>
           <div className="relative group/input">
-            <span className="absolute left-6 inset-y-0 flex items-center text-gray-300 font-black group-focus-within/input:text-[#1D9E75] transition-colors">$</span>
+            <span className="absolute left-6 inset-y-0 flex items-center text-gray-300 font-black group-focus-within/input:text-[#1D9E75] transition-colors">S/</span>
             <input
               name="precio"
               type="text"
@@ -137,6 +139,41 @@ export function ProductoForm() {
             <option value="Alimentos">Alimentos</option>
             <option value="Salud">Salud</option>
           </select>
+        </div>
+ 
+        <div className="space-y-2">
+            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">WhatsApp de Contacto</label>
+            <input
+                name="whatsappContacto"
+                required
+                placeholder="+51 999 888 777"
+                defaultValue="+51 "
+                onChange={(e) => {
+                    let val = e.target.value;
+                    if (!val.startsWith('+51 ')) val = '+51 ' + val.replace(/^\+51\s?/, '');
+                    const clean = val.replace(/^\+51\s?/, '').replace(/[^0-9]/g, '');
+                    if (clean.length <= 9) e.target.value = '+51 ' + clean;
+                    else e.target.value = val.substring(0, val.length - 1);
+                }}
+                className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 placeholder:text-gray-300"
+            />
+        </div>
+ 
+        <div className="space-y-2">
+            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Teléfono Alternativo (Opcional)</label>
+            <input
+                name="telefonoContacto"
+                placeholder="+51 999 888 777"
+                defaultValue="+51 "
+                onChange={(e) => {
+                    let val = e.target.value;
+                    if (!val.startsWith('+51 ')) val = '+51 ' + val.replace(/^\+51\s?/, '');
+                    const clean = val.replace(/^\+51\s?/, '').replace(/[^0-9]/g, '');
+                    if (clean.length <= 9) e.target.value = '+51 ' + clean;
+                    else e.target.value = val.substring(0, val.length - 1);
+                }}
+                className="w-full px-6 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700 placeholder:text-gray-300"
+            />
         </div>
 
         <div className="space-y-2 col-span-full">

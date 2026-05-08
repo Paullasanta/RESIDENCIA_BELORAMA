@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Users, Edit2, FileText } from 'lucide-react'
+import { Search, Users, Edit2, FileText, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -15,9 +15,11 @@ import { HardDeleteResidenteButton } from '@/components/shared/HardDeleteResiden
 interface ResidentesTableProps {
     residentes: any[]
     isInactiveView?: boolean
+    userRole?: string
 }
 
-export function ResidentesTable({ residentes, isInactiveView = false }: ResidentesTableProps) {
+export function ResidentesTable({ residentes, isInactiveView = false, userRole }: ResidentesTableProps) {
+    const isSuperAdmin = userRole === 'SUPER_ADMIN'
     const [search, setSearch] = useState('')
 
     const filteredResidentes = residentes.filter((r) => {
@@ -230,12 +232,19 @@ export function ResidentesTable({ residentes, isInactiveView = false }: Resident
                                                 </div>
                                                 <Link 
                                                     href={`/modules/residentes/${r.id}/editar`}
-                                                    className="hover:underline hover:text-[#1D9E75] transition-all"
+                                                    className="hover:underline hover:text-[#1D9E75] transition-all flex items-center gap-2"
                                                 >
-                                                    <p className="font-black text-[#072E1F] text-sm leading-none mb-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] md:max-w-none">
-                                                        {r.user.nombre} {r.user.apellidoPaterno} {r.user.apellidoMaterno}
-                                                    </p>
-                                                    <p className="text-[10px] text-gray-400 font-bold truncate max-w-[120px] md:max-w-none">{r.user.email}</p>
+                                                    <div>
+                                                        <p className="font-black text-[#072E1F] text-sm leading-none mb-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] md:max-w-none">
+                                                            {r.user.nombre} {r.user.apellidoPaterno} {r.user.apellidoMaterno}
+                                                        </p>
+                                                        <p className="text-[10px] text-gray-400 font-bold truncate max-w-[120px] md:max-w-none">{r.user.email}</p>
+                                                    </div>
+                                                    {(r.montoMensual <= 0 || r.montoGarantia <= 0 || !r.fechaFinal) && !isInactiveView && (
+                                                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-50 text-orange-500 animate-pulse" title="Datos incompletos: Faltan definir montos o la fecha de fin de estadía.">
+                                                            <AlertCircle size={14} />
+                                                        </div>
+                                                    )}
                                                 </Link>
                                             </div>
                                         </td>
@@ -317,11 +326,11 @@ export function ResidentesTable({ residentes, isInactiveView = false }: Resident
                                                         <Edit2 size={14} />
                                                     </Link>
                                                 )}
-                                                        {isInactiveView && (
+                                                        {isInactiveView && isSuperAdmin && (
                                                             <HardDeleteResidenteButton id={r.id} nombre={r.user.nombre} />
                                                         )}
                                                         {r.activo ? (
-                                                            <DeleteResidenteButton id={r.id} nombre={r.user.nombre} />
+                                                            isSuperAdmin && <DeleteResidenteButton id={r.id} nombre={r.user.nombre} />
                                                         ) : (
                                                             <ReactivateResidenteButton 
                                                                 id={r.id} 

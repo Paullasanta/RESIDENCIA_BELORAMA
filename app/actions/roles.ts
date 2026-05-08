@@ -9,6 +9,9 @@ import { auth } from '@/lib/auth'
  */
 export async function getRoles() {
   return prisma.role.findMany({
+    where: {
+      name: { not: 'SUPER_ADMIN' }
+    },
     include: {
       permissions: {
         include: { permission: true }

@@ -92,7 +92,7 @@ export default async function ResidentesPage({ searchParams }: { searchParams: P
                     </Link>
                 </div>
 
-                <ResidentesTable residentes={residentes} isInactiveView={showInactive} />
+                <ResidentesTable residentes={residentes} isInactiveView={showInactive} userRole={rol} />
 
                 <GeneralPagination 
                     totalItems={totalItems} 
