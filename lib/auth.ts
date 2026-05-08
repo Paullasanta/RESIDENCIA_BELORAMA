@@ -16,6 +16,7 @@ declare module 'next-auth' {
             permisos: string[]
             residenciaId?: number | null
             dni?: string | null
+            telefono?: string | null
         }
     }
 }
@@ -72,6 +73,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     permisos: user.role?.permissions.map(p => p.permission.key) || [],
                     residenciaId: user.residenciaId,
                     dni: user.dni,
+                    telefono: user.telefono,
                 }
             }
         })
@@ -89,6 +91,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 token.permisos = (user as any).permisos
                 token.residenciaId = (user as any).residenciaId
                 token.dni = (user as any).dni
+                token.telefono = (user as any).telefono
             }
             if (trigger === "update" && session?.user) {
                 if (session.user.nombre) token.nombre = session.user.nombre
@@ -121,6 +124,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     session.user.permisos = token.permisos as string[]
                     ;(session.user as any).residenciaId = token.residenciaId as number | null
                     ;(session.user as any).dni = token.dni as string | null
+                    ;(session.user as any).telefono = token.telefono as string | null
                 }
             } catch (error) {
                 console.error("Error verificando sesión:", error)
