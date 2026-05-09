@@ -38,8 +38,8 @@ export function ExportExcelButton({ data, onPrepareData, filename, sheetName = '
             // 1. Configurar Columnas
             if (columns) {
                 worksheet.columns = columns
-            } else if (data.length > 0) {
-                const keys = Object.keys(data[0])
+            } else if (exportData && exportData.length > 0) {
+                const keys = Object.keys(exportData[0])
                 worksheet.columns = keys.map(key => ({ header: key, key, width: 20 }))
             }
 
@@ -65,7 +65,7 @@ export function ExportExcelButton({ data, onPrepareData, filename, sheetName = '
             headerRow.height = 25
 
             // 3. Agregar Datos
-            worksheet.addRows(data)
+            worksheet.addRows(exportData)
 
             // 4. Estilos de Filas y Celdas
             worksheet.eachRow((row, rowNumber) => {

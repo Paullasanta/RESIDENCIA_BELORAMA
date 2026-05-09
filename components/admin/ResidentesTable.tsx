@@ -153,33 +153,46 @@ export function ResidentesTable({ residentes, residencias, isInactiveView = fals
         }
     }
 
-    const residentesExcelData = filteredResidentes.map((r) => {
-        const fI = new Date(r.fechaIngreso); fI.setUTCHours(12, 0, 0, 0);
-        const pagosPeriodo = r.pagos.filter((p: any) => {
-            const fV = new Date(p.fechaVencimiento || p.createdAt); fV.setUTCHours(12, 0, 0, 0);
-            return fV >= fI;
-        });
-        const pPendiente = [...pagosPeriodo].filter((p: any) => p.estado !== 'PAGADO' && p.estado !== 'RECHAZADO').sort((a: any, b: any) => new Date(a.fechaVencimiento!).getTime() - new Date(b.fechaVencimiento!).getTime())[0];
-        const pShow = pPendiente || [...pagosPeriodo].sort((a: any, b: any) => new Date(b.fechaVencimiento!).getTime() - new Date(a.fechaVencimiento!).getTime())[0];
+    const prepareExcelData = async () => {
+        const result = await getResidentesForExport({
+            q: search,
+            resId: selectedResId,
+            inactive: isInactiveView
+        })
 
-        return {
-            'Nombre Completo': `${r.user.nombre} ${r.user.apellidoPaterno || ''} ${r.user.apellidoMaterno || ''}`,
-            'Email': r.user.email,
-            'Teléfono': r.user.telefono || '—',
-            'DNI': r.user.dni || '—',
-            'Residencia': r.habitacion?.residencia?.nombre || '—',
-            'Habitación': r.habitacion ? `#${r.habitacion.numero}` : '—',
-            'Piso': r.habitacion?.piso || '—',
-            'Monto Mensual': r.montoMensual || 0,
-            'Monto Garantía': r.montoGarantia || 0,
-            'Día de Pago': r.diaPago || 1,
-            'Pago Actual': pShow?.monto || 0,
-            'Estado Actual': pShow?.estado || '—',
-            'Fecha Ingreso': new Date(r.fechaIngreso).toLocaleDateString('es-MX'),
-            'Fecha Fin': r.fechaFinal ? new Date(r.fechaFinal).toLocaleDateString('es-MX') : '—',
-            'Estado': r.activo ? 'ACTIVO' : 'INACTIVO'
+        if (!result.success || !result.data) {
+            alert(result.error || 'Error al obtener datos para Excel')
+            return []
         }
-    })
+
+        return result.data.map((r: any) => {
+            const fI = new Date(r.fechaIngreso); fI.setUTCHours(12, 0, 0, 0);
+            const pagosPeriodo = r.pagos.filter((p: any) => {
+                const fV = new Date(p.fechaVencimiento || p.createdAt); fV.setUTCHours(12, 0, 0, 0);
+                return fV >= fI;
+            });
+            const pPendiente = [...pagosPeriodo].filter((p: any) => p.estado !== 'PAGADO' && p.estado !== 'RECHAZADO').sort((a: any, b: any) => new Date(a.fechaVencimiento!).getTime() - new Date(b.fechaVencimiento!).getTime())[0];
+            const pShow = pPendiente || [...pagosPeriodo].sort((a: any, b: any) => new Date(b.fechaVencimiento!).getTime() - new Date(a.fechaVencimiento!).getTime())[0];
+
+            return {
+                'Nombre Completo': `${r.user.nombre} ${r.user.apellidoPaterno || ''} ${r.user.apellidoMaterno || ''}`,
+                'Email': r.user.email,
+                'Teléfono': r.user.telefono || '—',
+                'DNI': r.user.dni || '—',
+                'Residencia': r.habitacion?.residencia?.nombre || '—',
+                'Habitación': r.habitacion ? `#${r.habitacion.numero}` : '—',
+                'Piso': r.habitacion?.piso || '—',
+                'Monto Mensual': r.montoMensual || 0,
+                'Monto Garantía': r.montoGarantia || 0,
+                'Día de Pago': r.diaPago || 1,
+                'Pago Actual': pShow ? `S/ ${pShow.monto.toLocaleString('es-MX')}` : '—',
+                'Estado Actual': pShow?.estado || '—',
+                'Fecha Ingreso': new Date(r.fechaIngreso).toLocaleDateString('es-MX'),
+                'Fecha Fin': r.fechaFinal ? new Date(r.fechaFinal).toLocaleDateString('es-MX') : '—',
+                'Estado': r.activo ? 'ACTIVO' : 'INACTIVO'
+            }
+        })
+    }
 
     const residentesColumns = [
         { header: 'Nombre Completo', key: 'Nombre Completo', width: 35 },
@@ -239,7 +252,7 @@ export function ResidentesTable({ residentes, residencias, isInactiveView = fals
                     </button>
                     
                     <ExportExcelButton 
-                        data={residentesExcelData}
+                        onPrepareData={prepareExcelData}
                         filename="Reporte_Residentes"
                         sheetName="Residentes"
                         columns={residentesColumns}
