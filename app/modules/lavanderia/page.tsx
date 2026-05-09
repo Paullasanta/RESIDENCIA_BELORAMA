@@ -63,7 +63,7 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
         where: residenciaId ? { residenciaId } : (isGlobal ? {} : { residenciaId: -1 }),
         include: {
             lavadora: true,
-            residente: { include: { user: true } },
+            residente: { include: { user: true, habitacion: true } },
         },
         orderBy: [{ dia: 'asc' }, { horaInicio: 'asc' }],
     })
@@ -76,7 +76,7 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
     
     const residentes = canManage ? await prisma.residente.findMany({
         where: residenciaId ? { user: { residenciaId } } : (isGlobal ? {} : { user: { residenciaId: -1 } }),
-        include: { user: true },
+        include: { user: true, habitacion: true },
         orderBy: { user: { nombre: 'asc' } }
     }) : []
 

@@ -100,7 +100,7 @@ export function LavadoraSection({
                 ))}
             </div>
 
-            {viewMode === 'cards' || true ? ( // Forzamos cards en móvil indirectamente
+            {viewMode === 'cards' ? (
                 <>
                     {/* --- VISTA MÓVIL (Timeline Vertical Premium) --- */}
                     <div className="md:hidden flex flex-col bg-[#F8FAFC] p-4 gap-4 pb-24">
@@ -147,7 +147,9 @@ export function LavadoraSection({
                                                         {t.residente.user.nombre.charAt(0)}
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className="text-xs font-black text-gray-900 leading-none mb-1">{t.residente.user.nombre}</p>
+                                                        <p className="text-xs font-black text-gray-900 leading-none mb-1">
+                                                            {t.residente.user.nombre} {t.residente.habitacion ? `(${t.residente.habitacion.numero})` : ''}
+                                                        </p>
                                                         <div className="flex items-center gap-2">
                                                             <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
                                                                 t.tipoReserva === 'BASE' ? 'bg-gray-200 text-gray-600' : 'bg-green-100 text-[#1D9E75]'
@@ -241,7 +243,9 @@ export function LavadoraSection({
                                                 <div className="flex-1 flex flex-col justify-center">
                                                     {t.residente ? (
                                                         <>
-                                                            <p className="text-[10px] font-bold text-white truncate w-full leading-tight z-10">{t.residente.user.nombre}</p>
+                                                            <p className="text-[10px] font-bold text-white truncate w-full leading-tight z-10">
+                                                                {t.residente.user.nombre} {t.residente.habitacion ? `(${t.residente.habitacion.numero})` : ''}
+                                                            </p>
                                                             <div className="flex items-center gap-1 mt-0.5 z-10">
                                                                 <span className={`text-[7px] font-black uppercase tracking-tighter px-1 rounded-sm ${t.tipoReserva === 'BASE' ? 'bg-white/20 text-white/70' : t.tipoReserva === 'EXTRA' ? 'bg-green-500 text-white' : 'bg-yellow-400 text-yellow-900'}`}>
                                                                     {t.tipoReserva === 'BASE' ? 'TITULAR' : t.tipoReserva}
@@ -305,7 +309,7 @@ export function LavadoraSection({
                                                         'bg-[#fce4ec] text-gray-900'
                                                     }`}>
                                                         <div className="flex flex-col">
-                                                            <span>{isLibre ? 'Disponible' : turno.residente?.user?.nombre}</span>
+                                                            <span>{isLibre ? 'Disponible' : `${turno.residente?.user?.nombre} ${turno.residente?.habitacion ? `(${turno.residente.habitacion.numero})` : ''}`}</span>
                                                             {duenioBase && (
                                                                 <span className={`text-[7px] uppercase font-black mt-0.5 ${
                                                                     isLibre ? 'text-gray-400' : 

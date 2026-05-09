@@ -170,9 +170,12 @@ export function ShiftActions({
                             <button
                                 key={r.id}
                                 onClick={() => handleAction(() => reservarTurnoLavanderia(turno.id, r.id))}
-                                className={`w-full text-left p-2 hover:bg-gray-50 rounded-lg text-[10px] truncate transition-colors ${turno.residenteId === r.id ? 'bg-[#1D9E75]/10 text-[#1D9E75] font-black' : 'font-medium text-gray-700'}`}
+                                className={`w-full text-left p-2 hover:bg-gray-50 rounded-lg text-[10px] transition-colors ${turno.residenteId === r.id ? 'bg-[#1D9E75]/10 text-[#1D9E75] font-black' : 'font-medium text-gray-700'}`}
                             >
-                                {r.user.nombre}
+                                <div className="w-full truncate">
+                                    {r.user.nombre} {r.user.apellidoPaterno || ''} 
+                                    {r.habitacion && <span className="ml-1 text-gray-500 font-bold">({r.habitacion.numero})</span>}
+                                </div>
                             </button>
                         ))}
                         <button
