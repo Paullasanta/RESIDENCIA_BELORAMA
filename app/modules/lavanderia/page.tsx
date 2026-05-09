@@ -133,6 +133,15 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
         })),
     }))
 
+    const residentesConEstado = residentes.map(r => {
+        const hasTurnoFijo = (turnosFijos as any[]).some((tf: any) => tf.residenteId === r.id);
+        const hasTurno = turnos.some(t => t.residenteId === r.id);
+        return {
+            ...r,
+            turnoStatus: hasTurnoFijo ? 'PERMANENTE' : hasTurno ? 'ASIGNADO' : 'NINGUNO'
+        }
+    })
+
     return (
         <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -165,7 +174,7 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
                             lavadora={lavadora}
                             days={days}
                             session={session}
-                            residentes={residentes}
+                            residentes={residentesConEstado}
                             canManage={canManage}
                             currentUserResidenteId={currentUserResidenteId}
                             currentUserId={session!.user.id}

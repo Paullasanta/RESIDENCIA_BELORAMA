@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { reservarTurnoLavanderia, liberarTurnoLavanderia, aprobarTurnoSolicitado, updateTurnoTime, toggleRecurringShift } from '@/app/actions/lavanderia'
+import { reservarTurnoLavanderia, liberarTurnoLavanderia, aprobarTurnoSolicitado, toggleRecurringShift } from '@/app/actions/lavanderia'
 import { Loader2, UserPlus, UserMinus, CheckCircle, Clock, Edit2, X, Star } from 'lucide-react'
 
 export function ShiftActions({ 
@@ -25,15 +25,7 @@ export function ShiftActions({
 }) {
     const [loading, setLoading] = useState(false)
     const [showAssign, setShowAssign] = useState(false)
-    const [showEdit, setShowEdit] = useState(false)
     const [updatingFixed, setUpdatingFixed] = useState(false)
-    
-    // Form state for editing
-    const [editData, setEditData] = useState({
-        dia: turno.dia,
-        horaInicio: turno.horaInicio,
-        horaFin: turno.horaFin
-    })
 
     const esMio = turno.residenteId === currentUserResidenteId && turno.estado === 'OCUPADO'
     const esMiSolicitud = turno.residenteId === currentUserResidenteId && turno.estado === 'SOLICITADO'
@@ -44,7 +36,6 @@ export function ShiftActions({
         setLoading(false)
         if (res.success) {
             setShowAssign(false)
-            setShowEdit(false)
         } else {
             alert(res.error || 'Error en la operación')
         }
@@ -67,23 +58,17 @@ export function ShiftActions({
     }
     
     const handleAprobar = () => handleAction(() => aprobarTurnoSolicitado(turno.id))
-    
-    const handleUpdate = (e: React.FormEvent) => {
-        e.preventDefault()
-        handleAction(() => updateTurnoTime(turno.id, editData))
-    }
 
     // Si es Admin, tiene vista completa de gestión
     if (canManage) {
         return (
             <div className="relative">
                 {/* Backdrop to close menus on click outside */}
-                {(showAssign || showEdit) && (
+                {showAssign && (
                     <div 
                         className="fixed inset-0 z-40 bg-black/5 backdrop-blur-[1px]" 
                         onClick={() => {
                             setShowAssign(false)
-                            setShowEdit(false)
                         }}
                     />
                 )}
@@ -111,13 +96,6 @@ export function ShiftActions({
                             turno.estado === 'SOLICITADO' ? <><CheckCircle size={12} /> Revisar</> :
                             <><UserPlus size={12} /> Asignar</>
                         )}
-                    </button>
-                    <button
-                        onClick={() => setShowEdit(!showEdit)}
-                        className="p-1.5 bg-white/10 text-white hover:bg-white/20 rounded-lg transition-colors border border-white/10"
-                        title="Editar horario"
-                    >
-                        <Edit2 size={12} />
                     </button>
                 </div>
 
@@ -166,73 +144,38 @@ export function ShiftActions({
                             </button>
                         )}
                         <p className="text-[9px] font-bold text-gray-400 px-2 py-1 uppercase tracking-wider">Asignar a:</p>
-                        {residentes.map(r => (
-                            <button
-                                key={r.id}
-                                onClick={() => handleAction(() => reservarTurnoLavanderia(turno.id, r.id))}
-                                className={`w-full text-left p-2 hover:bg-gray-50 rounded-lg text-[10px] transition-colors ${turno.residenteId === r.id ? 'bg-[#1D9E75]/10 text-[#1D9E75] font-black' : 'font-medium text-gray-700'}`}
-                            >
+                        {residentes.map(r => {
+                            const isSelected = turno.residenteId === r.id;
+                            const isPermanente = r.turnoStatus === 'PERMANENTE';
+                            const isAsignado = r.turnoStatus === 'ASIGNADO';
+                            
+                            return (
+                                <button
+                                    key={r.id}
+                                    onClick={() => handleAction(() => reservarTurnoLavanderia(turno.id, r.id))}
+                                    className={`w-full text-left p-2 rounded-lg text-[10px] font-medium transition-colors mb-0.5 ${
+                                        isSelected 
+                                            ? 'bg-[#072E1F] text-white font-black shadow-md' 
+                                            : isPermanente
+                                                ? 'bg-green-400 text-green-950 font-black hover:bg-green-500 shadow-sm'
+                                                : isAsignado
+                                                    ? 'bg-lime-400 text-lime-950 font-black hover:bg-lime-500 shadow-sm'
+                                                    : 'bg-transparent text-gray-700 font-bold hover:bg-gray-100'
+                                    }`}
+                                >
                                 <div className="w-full truncate">
                                     {r.user.nombre} 
                                     {r.habitacion && <span className="ml-1 text-gray-500 font-bold">({r.habitacion.numero})</span>}
                                 </div>
                             </button>
-                        ))}
+                            )
+                        })}
                         <button
                             onClick={() => setShowAssign(false)}
                             className="w-full text-center p-2 text-[9px] font-bold text-gray-400 hover:text-gray-600 mt-1 uppercase tracking-widest border-t border-gray-50"
                         >
                             Cerrar
                         </button>
-                    </div>
-                )}
-
-                {showEdit && (
-                    <div className="absolute bottom-full left-0 right-0 z-50 mb-1 bg-white border border-gray-200 rounded-xl shadow-2xl p-3 w-48">
-                        <form onSubmit={handleUpdate} className="space-y-2">
-                            <div className="flex items-center justify-between mb-1">
-                                <p className="text-[10px] font-black text-gray-900 uppercase">Editar Turno</p>
-                                <button type="button" onClick={() => setShowEdit(false)} className="text-gray-400 hover:text-gray-600">
-                                    <X size={10} />
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="space-y-1">
-                                    <label className="text-[8px] font-bold text-gray-400 uppercase">Inicio</label>
-                                    <input 
-                                        type="time" 
-                                        className="w-full text-[10px] p-1 border rounded"
-                                        value={editData.horaInicio}
-                                        onChange={e => setEditData({...editData, horaInicio: e.target.value})}
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[8px] font-bold text-gray-400 uppercase">Fin</label>
-                                    <input 
-                                        type="time" 
-                                        className="w-full text-[10px] p-1 border rounded"
-                                        value={editData.horaFin}
-                                        onChange={e => setEditData({...editData, horaFin: e.target.value})}
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex gap-2 pt-2">
-                                <button 
-                                    type="button"
-                                    onClick={() => setShowEdit(false)}
-                                    className="flex-1 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold hover:bg-gray-200 transition-colors"
-                                >
-                                    Cancelar
-                                </button>
-                                <button 
-                                    type="submit"
-                                    disabled={loading}
-                                    className="flex-1 py-1.5 bg-[#072E1F] text-white rounded-lg text-[10px] font-bold hover:bg-[#154a34] transition-colors"
-                                >
-                                    {loading ? '...' : 'Guardar'}
-                                </button>
-                            </div>
-                        </form>
                     </div>
                 )}
             </div>

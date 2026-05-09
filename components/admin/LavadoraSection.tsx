@@ -222,7 +222,7 @@ export function LavadoraSection({
                                     {turnosDia.map((t: any) => {
                                         const esMio = t.residente?.user?.email === session?.user.email
                                         return (
-                                            <div key={t.id} className={`group relative rounded-xl p-2 transition-all duration-300 border-2 h-[84px] flex flex-col justify-between ${
+                                            <div key={t.id} className={`group relative rounded-xl p-2 transition-all duration-300 border-2 h-[84px] flex flex-col justify-between hover:z-50 focus-within:z-50 ${
                                                 esMio ? 'bg-[#EF9F27] border-[#EF9F27] shadow shadow-[#EF9F27]/20' :
                                                 t.estado === 'LIBRE' 
                                                     ? 'bg-white border-gray-100 hover:border-[#1D9E75]/50' 
@@ -230,15 +230,15 @@ export function LavadoraSection({
                                                         ? 'bg-yellow-50 border-yellow-200'
                                                         : 'bg-[#072E1F] border-[#072E1F] shadow-sm'
                                             } ${t.duenioBase ? 'ring-1 ring-[#1D9E75]/20' : ''}`}>
-                                                {t.duenioBase && (
-                                                    <div className={`absolute -top-2 -left-1 px-1.5 py-0.5 rounded-full text-[6px] font-black uppercase tracking-widest z-20 shadow-sm border ${
-                                                        t.residente?.user.nombre === t.duenioBase ? 'bg-[#1D9E75] text-white border-[#1D9E75]' : 'bg-white text-[#1D9E75] border-[#1D9E75]'
-                                                    }`}>
-                                                        ⚓ Base: {t.duenioBase}
-                                                    </div>
-                                                )}
-                                                <div className="flex items-start justify-between mb-0.5 gap-1">
-                                                    {esMio && <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-sm whitespace-nowrap md:ml-auto bg-white text-[#EF9F27] z-10">MI TURNO</span>}
+                                                <div className="flex items-start justify-between mb-0.5 gap-1 w-full relative z-10">
+                                                    {t.duenioBase && (
+                                                        <div className={`px-1.5 py-0.5 rounded-sm text-[6px] font-black uppercase tracking-widest truncate ${
+                                                            t.residente?.user.nombre === t.duenioBase ? 'bg-[#1D9E75] text-white' : 'bg-white text-[#1D9E75] border border-[#1D9E75]'
+                                                        }`}>
+                                                            ⚓ Base: {t.duenioBase}
+                                                        </div>
+                                                    )}
+                                                    {esMio && <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-sm whitespace-nowrap ml-auto bg-white text-[#EF9F27]">MI TURNO</span>}
                                                 </div>
                                                 <div className="flex-1 flex flex-col justify-center">
                                                     {t.residente ? (
