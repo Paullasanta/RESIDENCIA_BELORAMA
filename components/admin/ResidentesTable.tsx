@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { Search, Users, Edit2, FileText, AlertCircle } from 'lucide-react'
+import { Search, Users, Edit2, FileText, AlertCircle, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -12,6 +12,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { ExportExcelButton } from '@/components/shared/ExportExcelButton'
 import { HardDeleteResidenteButton } from '@/components/shared/HardDeleteResidenteButton'
+import { getResidentesForExport } from '@/app/actions/residentes'
 
 interface ResidentesTableProps {
     residentes: any[]
@@ -26,6 +27,7 @@ export function ResidentesTable({ residentes, residencias, isInactiveView = fals
     const searchParams = useSearchParams()
     const pathname = usePathname()
     const [search, setSearch] = useState(searchParams.get('q') || '')
+    const [isExporting, setIsExporting] = useState(false)
     const selectedResId = searchParams.get('resId') || ''
 
     useEffect(() => {
@@ -59,71 +61,96 @@ export function ResidentesTable({ residentes, residencias, isInactiveView = fals
 
     const filteredResidentes = residentes
 
-    const handleExportPDF = () => {
-        const doc = new jsPDF()
-        const now = new Date()
-        const dateString = now.toLocaleDateString('es-MX', { 
-            day: '2-digit', 
-            month: 'long', 
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        })
+    const handleExportPDF = async () => {
+        setIsExporting(true)
+        try {
+            const result = await getResidentesForExport({
+                q: search,
+                resId: selectedResId,
+                inactive: isInactiveView
+            })
 
-        doc.setFontSize(22)
-        doc.setTextColor(29, 158, 117)
-        doc.text('GROW RESIDENCIAL', 14, 20)
-        
-        doc.setFontSize(16)
-        doc.setTextColor(7, 46, 31)
-        doc.text('Reporte de Residentes', 14, 30)
-        
-        doc.setFontSize(10)
-        doc.setTextColor(150, 150, 150)
-        doc.text(`Generado el: ${dateString}`, 14, 38)
+            if (!result.success || !result.data) {
+                alert(result.error || 'Error al obtener datos para el PDF')
+                return
+            }
 
-        const tableRows = filteredResidentes.map((r) => {
-            const fI = new Date(r.fechaIngreso); fI.setUTCHours(12, 0, 0, 0);
-            const pagosPeriodo = r.pagos.filter((p: any) => {
-                const fV = new Date(p.fechaVencimiento || p.createdAt); fV.setUTCHours(12, 0, 0, 0);
-                return fV >= fI;
-            });
-            const pPendiente = [...pagosPeriodo].filter((p: any) => p.estado !== 'PAGADO' && p.estado !== 'RECHAZADO').sort((a: any, b: any) => new Date(a.fechaVencimiento!).getTime() - new Date(b.fechaVencimiento!).getTime())[0];
-            const pShow = pPendiente || [...pagosPeriodo].sort((a: any, b: any) => new Date(b.fechaVencimiento!).getTime() - new Date(a.fechaVencimiento!).getTime())[0];
+            const dataToExport = result.data
 
-            return [
-                `${r.user.nombre} ${r.user.apellidoPaterno || ''} ${r.user.apellidoMaterno || ''}`,
-                r.user.email,
-                r.habitacion ? `Hab. ${r.habitacion.numero} (Piso ${r.habitacion.piso})` : 'Sin asignar',
-                r.habitacion?.residencia?.nombre || '—',
-                pShow ? `$${pShow.monto.toLocaleString('es-MX')}` : '—',
-                pShow?.estado || '—',
-                new Date(r.fechaIngreso).toLocaleDateString('es-MX'),
-                r.fechaFinal ? new Date(r.fechaFinal).toLocaleDateString('es-MX') : '—'
-            ]
-        })
+            const doc = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4'
+            })
+            const now = new Date()
+            const dateString = now.toLocaleDateString('es-MX', { 
+                day: '2-digit', 
+                month: 'long', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
 
-        autoTable(doc, {
-            startY: 45,
-            head: [['Nombre', 'Email', 'Habitación', 'Residencia', 'Pago', 'Estado', 'Fecha Inicio', 'Fecha Fin']],
-            body: tableRows,
-            headStyles: { 
-                fillColor: [29, 158, 117],
-                textColor: [255, 255, 255],
-                fontSize: 10,
-                fontStyle: 'bold'
-            },
-            alternateRowStyles: {
-                fillColor: [248, 250, 248]
-            },
-            styles: {
-                fontSize: 9,
-                cellPadding: 4
-            },
-            margin: { top: 45 }
-        })
+            doc.setFontSize(22)
+            doc.setTextColor(29, 158, 117)
+            doc.text('GROW RESIDENCIAL', 14, 20)
+            
+            doc.setFontSize(16)
+            doc.setTextColor(7, 46, 31)
+            doc.text('Reporte de Residentes', 14, 30)
+            
+            doc.setFontSize(10)
+            doc.setTextColor(150, 150, 150)
+            doc.text(`Generado el: ${dateString}`, 14, 38)
 
-        window.open(doc.output('bloburl'), '_blank')
+            const tableRows = dataToExport.map((r: any) => {
+                const fI = new Date(r.fechaIngreso); fI.setUTCHours(12, 0, 0, 0);
+                const pagosPeriodo = r.pagos.filter((p: any) => {
+                    const fV = new Date(p.fechaVencimiento || p.createdAt); fV.setUTCHours(12, 0, 0, 0);
+                    return fV >= fI;
+                });
+                const pPendiente = [...pagosPeriodo].filter((p: any) => p.estado !== 'PAGADO' && p.estado !== 'RECHAZADO').sort((a: any, b: any) => new Date(a.fechaVencimiento!).getTime() - new Date(b.fechaVencimiento!).getTime())[0];
+                const pShow = pPendiente || [...pagosPeriodo].sort((a: any, b: any) => new Date(b.fechaVencimiento!).getTime() - new Date(a.fechaVencimiento!).getTime())[0];
+
+                return [
+                    `${r.user.nombre} ${r.user.apellidoPaterno || ''} ${r.user.apellidoMaterno || ''}`,
+                    r.user.email,
+                    r.habitacion ? `Hab. ${r.habitacion.numero} (Piso ${r.habitacion.piso})` : 'Sin asignar',
+                    r.habitacion?.residencia?.nombre || '—',
+                    pShow ? `S/ ${pShow.monto.toLocaleString('es-MX')}` : '—',
+                    pShow?.estado || '—',
+                    new Date(r.fechaIngreso).toLocaleDateString('es-MX'),
+                    r.fechaFinal ? new Date(r.fechaFinal).toLocaleDateString('es-MX') : '—'
+                ]
+            })
+
+            autoTable(doc, {
+                startY: 45,
+                head: [['Nombre', 'Email', 'Habitación', 'Residencia', 'Pago', 'Estado', 'Fecha Inicio', 'Fecha Fin']],
+                body: tableRows,
+                headStyles: { 
+                    fillColor: [29, 158, 117],
+                    textColor: [255, 255, 255],
+                    fontSize: 10,
+                    fontStyle: 'bold'
+                },
+                alternateRowStyles: {
+                    fillColor: [248, 250, 248]
+                },
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 3
+                },
+                margin: { top: 45 }
+            })
+
+            window.open(doc.output('bloburl'), '_blank')
+        } catch (error) {
+            console.error('Error exporting PDF:', error)
+            alert('Error al generar el PDF')
+        } finally {
+            setIsExporting(false)
+        }
     }
 
     const residentesExcelData = filteredResidentes.map((r) => {
@@ -201,30 +228,13 @@ export function ResidentesTable({ residentes, residencias, isInactiveView = fals
                     </select>
                 </div>
 
-                <div className="w-full lg:w-48">
-                    <select
-                        value={searchParams.get('limit') || '10'}
-                        onChange={(e) => {
-                            const params = new URLSearchParams(searchParams.toString())
-                            params.set('limit', e.target.value)
-                            params.set('page', '1')
-                            router.push(`${pathname}?${params.toString()}`)
-                        }}
-                        className="w-full px-5 py-3 bg-white border border-gray-100 rounded-[1.25rem] shadow-sm focus:ring-4 focus:ring-[#1D9E75]/5 focus:border-[#1D9E75] outline-none transition-all font-bold text-xs uppercase tracking-widest text-gray-500 appearance-none cursor-pointer"
-                    >
-                        <option value="10">10 por página</option>
-                        <option value="20">20 por página</option>
-                        <option value="50">50 por página</option>
-                    </select>
-                </div>
-
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 no-scrollbar">
                     <button 
                         onClick={handleExportPDF}
-                        disabled={filteredResidentes.length === 0}
+                        disabled={isExporting}
                         className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-100 rounded-xl text-[10px] font-black text-gray-400 hover:text-[#1D9E75] hover:border-[#1D9E75] transition-all shadow-sm disabled:opacity-50 group whitespace-nowrap"
                     >
-                        <FileText size={14} />
+                        {isExporting ? <Loader2 className="animate-spin" size={14} /> : <FileText size={14} />}
                         PDF
                     </button>
                     

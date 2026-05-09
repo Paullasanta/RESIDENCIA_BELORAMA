@@ -6,21 +6,32 @@ import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 
 interface ExportExcelButtonProps {
-    data: any[]
+    data?: any[]
+    onPrepareData?: () => Promise<any[]>
     filename: string
     sheetName?: string
     // exceljs usa un formato un poco diferente para columnas
     columns?: { header: string, key: string, width: number }[]
 }
 
-export function ExportExcelButton({ data, filename, sheetName = 'Datos', columns }: ExportExcelButtonProps) {
+export function ExportExcelButton({ data, onPrepareData, filename, sheetName = 'Datos', columns }: ExportExcelButtonProps) {
     const [loading, setLoading] = useState(false)
 
     const handleExport = async () => {
-        if (!data || data.length === 0) return
         setLoading(true)
         
         try {
+            let exportData = data
+            
+            if (onPrepareData) {
+                exportData = await onPrepareData()
+            }
+
+            if (!exportData || exportData.length === 0) {
+                setLoading(false)
+                return
+            }
+
             const workbook = new ExcelJS.Workbook()
             const worksheet = workbook.addWorksheet(sheetName)
 
@@ -99,7 +110,7 @@ export function ExportExcelButton({ data, filename, sheetName = 'Datos', columns
     return (
         <button 
             onClick={handleExport}
-            disabled={loading || !data || data.length === 0}
+            disabled={loading || (!data && !onPrepareData)}
             className="flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-100 rounded-xl text-[10px] font-black text-gray-400 hover:text-[#1D9E75] hover:border-[#1D9E75] transition-all shadow-sm disabled:opacity-50"
         >
             {loading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}

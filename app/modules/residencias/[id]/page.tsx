@@ -29,19 +29,26 @@ export default async function ResidenciaDetallePage({ params, searchParams }: { 
         }
     }
     
-    // Obtener total para paginación y stats
-    const totalHabitaciones = await prisma.habitacion.count({ where: { residenciaId: id } })
-    const libresCount = await prisma.habitacion.count({ where: { residenciaId: id, estado: 'LIBRE' } })
-    const ocupadasCount = await prisma.habitacion.count({ where: { residenciaId: id, estado: 'OCUPADO' } })
-    const reservadasCount = await prisma.habitacion.count({ where: { residenciaId: id, estado: 'RESERVADO' } })
+    // 1. Obtener todas las habitaciones (solo ID y número) para ordenar numéricamente en memoria
+    const allHabitaciones = await prisma.habitacion.findMany({
+        where: { residenciaId: id },
+        select: { id: true, numero: true }
+    })
 
+    // 2. Ordenamiento natural (numérico) global
+    const sortedHabitaciones = allHabitaciones.sort((a, b) => 
+        a.numero.localeCompare(b.numero, undefined, { numeric: true })
+    )
+
+    const totalHabitaciones = sortedHabitaciones.length
+    const pageIds = sortedHabitaciones.slice(skip, skip + limit).map(h => h.id)
+
+    // 3. Obtener la data completa de la residencia y las habitaciones de la página actual
     const residencia = await prisma.residencia.findUnique({
         where: { id },
         include: {
             habitaciones: {
-                orderBy: { numero: 'asc' },
-                skip,
-                take: limit,
+                where: { id: { in: pageIds } },
                 include: {
                     residentes: {
                         where: { activo: true },
@@ -59,6 +66,16 @@ export default async function ResidenciaDetallePage({ params, searchParams }: { 
     })
 
     if (!residencia) notFound()
+
+    // 4. Re-ordenar el slice del paso 3 para asegurar que mantenga el orden natural
+    residencia.habitaciones.sort((a, b) => 
+        a.numero.localeCompare(b.numero, undefined, { numeric: true })
+    )
+
+    // 5. Stats globales
+    const libresCount = await prisma.habitacion.count({ where: { residenciaId: id, estado: 'LIBRE' } })
+    const ocupadasCount = await prisma.habitacion.count({ where: { residenciaId: id, estado: 'OCUPADO' } })
+    const reservadasCount = await prisma.habitacion.count({ where: { residenciaId: id, estado: 'RESERVADO' } })
 
     const stats = {
         total: totalHabitaciones,

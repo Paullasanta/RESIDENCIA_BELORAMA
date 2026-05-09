@@ -929,3 +929,55 @@ export async function hardDeleteResidente(id: number) {
     return { success: false, error: error.message || 'Error al eliminar registro completo' }
   }
 }
+export async function getResidentesForExport(filters: { q?: string, resId?: string, inactive?: boolean }) {
+  try {
+    const { q, resId, inactive } = filters
+    const whereClause: any = {
+      activo: !inactive,
+      user: {
+        role: { name: { not: 'COCINERO' } }
+      }
+    }
+
+    if (q) {
+      whereClause.user.OR = [
+        { nombre: { contains: q, mode: 'insensitive' } },
+        { apellidoPaterno: { contains: q, mode: 'insensitive' } },
+        { apellidoMaterno: { contains: q, mode: 'insensitive' } },
+        { email: { contains: q, mode: 'insensitive' } },
+        { dni: { contains: q, mode: 'insensitive' } },
+      ]
+    }
+
+    if (resId) {
+      whereClause.OR = [
+        { habitacion: { residenciaId: parseInt(resId) } },
+        { user: { residenciaId: parseInt(resId) } }
+      ]
+    }
+
+    const residentes = await prisma.residente.findMany({
+      where: whereClause,
+      include: {
+        user: { 
+          include: { 
+            residencia: true,
+            role: true
+          } 
+        },
+        habitacion: { 
+          include: { 
+            residencia: true 
+          } 
+        },
+        pagos: true
+      },
+      orderBy: { user: { nombre: 'asc' } }
+    })
+
+    return { success: true, data: residentes }
+  } catch (error) {
+    console.error('Error fetching export data:', error)
+    return { success: false, error: 'Error al obtener datos para exportación' }
+  }
+}
