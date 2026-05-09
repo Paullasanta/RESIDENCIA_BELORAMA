@@ -8,13 +8,19 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { AddHabitacionButton } from '@/components/admin/AddHabitacionButton'
 import { ManageHabitacionModal } from '@/components/admin/ManageHabitacionModal'
 
+import { GeneralPagination } from '@/components/shared/GeneralPagination'
+
 export const dynamic = 'force-dynamic'
 
-export default async function ResidenciaDetallePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ResidenciaDetallePage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ page?: string }> }) {
     const session = await auth()
     const { residenciaId, rol } = session!.user
     const { id: idStr } = await params
     const id = parseInt(idStr)
+    const { page: pageParam } = await searchParams
+    const page = parseInt(pageParam || '1')
+    const limit = 10
+    const skip = (page - 1) * limit
 
     // Protección: Si no es Admin Global, debe coincidir con su residenciaId
     if (rol !== 'ADMIN' || residenciaId) {
@@ -23,11 +29,19 @@ export default async function ResidenciaDetallePage({ params }: { params: Promis
         }
     }
     
+    // Obtener total para paginación y stats
+    const totalHabitaciones = await prisma.habitacion.count({ where: { residenciaId: id } })
+    const libresCount = await prisma.habitacion.count({ where: { residenciaId: id, estado: 'LIBRE' } })
+    const ocupadasCount = await prisma.habitacion.count({ where: { residenciaId: id, estado: 'OCUPADO' } })
+    const reservadasCount = await prisma.habitacion.count({ where: { residenciaId: id, estado: 'RESERVADO' } })
+
     const residencia = await prisma.residencia.findUnique({
         where: { id },
         include: {
             habitaciones: {
                 orderBy: { numero: 'asc' },
+                skip,
+                take: limit,
                 include: {
                     residentes: {
                         where: { activo: true },
@@ -47,11 +61,10 @@ export default async function ResidenciaDetallePage({ params }: { params: Promis
     if (!residencia) notFound()
 
     const stats = {
-        total: residencia.habitaciones.length,
-        libres: residencia.habitaciones.filter(h => h.estado === 'LIBRE').length,
-        ocupadas: residencia.habitaciones.filter(h => h.estado === 'OCUPADO').length,
-        reservadas: residencia.habitaciones.filter(h => h.estado === 'RESERVADO').length,
-        porLiberar: residencia.habitaciones.filter(h => h.estado === 'POR_LIBERARSE').length
+        total: totalHabitaciones,
+        libres: libresCount,
+        ocupadas: ocupadasCount,
+        reservadas: reservadasCount
     }
 
     return (
@@ -119,7 +132,7 @@ export default async function ResidenciaDetallePage({ params }: { params: Promis
                             {residencia.habitaciones.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="px-8 py-20 text-center text-gray-400 font-medium">
-                                        No hay habitaciones registradas. Empieza importando un CSV o agregando una manualmente.
+                                        No hay habitaciones registradas.
                                     </td>
                                 </tr>
                             ) : (
@@ -174,6 +187,15 @@ export default async function ResidenciaDetallePage({ params }: { params: Promis
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                <div className="p-4 bg-gray-50/50 border-t border-gray-100">
+                    <GeneralPagination 
+                        totalItems={totalHabitaciones}
+                        currentPage={page}
+                        itemsPerPage={limit}
+                        label="Habitaciones"
+                    />
                 </div>
             </div>
         </div>

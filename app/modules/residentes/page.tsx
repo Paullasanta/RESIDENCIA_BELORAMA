@@ -7,35 +7,49 @@ import { ResidentesTable } from '@/components/admin/ResidentesTable'
 import { GeneralPagination } from '@/components/shared/GeneralPagination'
 import { ResidenciasExplorer } from '@/components/admin/ResidenciasExplorer'
 
-export default async function ResidentesPage({ searchParams }: { searchParams: Promise<{ status?: string, page?: string, limit?: string }> }) {
+export default async function ResidentesPage({ searchParams }: { searchParams: Promise<{ status?: string, page?: string, limit?: string, q?: string, resId?: string }> }) {
     const session = await auth()
     const { residenciaId, rol } = session!.user
-    const { status, page: pageParam, limit: limitParam } = await searchParams
+    const { status, page: pageParam, limit: limitParam, q, resId } = await searchParams
     const page = parseInt(pageParam || '1')
     const limit = parseInt(limitParam || '10')
     const showInactive = status === 'inactive'
 
     // Aislamiento: Si no es Admin Global (sin sede), filtrar por su residenciaId
-    const whereClause = {
+    const whereClause: any = {
         activo: !showInactive,
-        ...((['ADMIN', 'SUPER_ADMIN'].includes(rol) && !residenciaId) ? {} : {
-            user: { residenciaId: residenciaId || -1 }
-        })
+        user: {
+            role: { name: { not: 'COCINERO' } },
+            ...((['ADMIN', 'SUPER_ADMIN'].includes(rol) && !residenciaId) ? {} : {
+                residenciaId: residenciaId || -1
+            })
+        }
+    }
+
+    if (resId) {
+        whereClause.user = { 
+            ...(whereClause.user || {}),
+            residenciaId: parseInt(resId) 
+        }
+    }
+
+    if (q) {
+        whereClause.OR = [
+            { user: { nombre: { contains: q, mode: 'insensitive' } } },
+            { user: { apellidoPaterno: { contains: q, mode: 'insensitive' } } },
+            { user: { apellidoMaterno: { contains: q, mode: 'insensitive' } } },
+            { user: { email: { contains: q, mode: 'insensitive' } } },
+            { habitacion: { numero: { contains: q, mode: 'insensitive' } } },
+            { habitacion: { residencia: { nombre: { contains: q, mode: 'insensitive' } } } },
+        ]
     }
 
     const totalItems = await prisma.residente.count({ where: whereClause })
     
-    // Traer residencias para el explorador
-    const residencias = await prisma.residencia.findMany({
+    // Traer residencias para el filtro
+    const residenciasList = await prisma.residencia.findMany({
         where: (['ADMIN', 'SUPER_ADMIN'].includes(rol) && !residenciaId) ? {} : { id: residenciaId || -1 },
-        include: {
-            habitaciones: {
-                include: { 
-                    residentes: { where: { activo: true }, include: { user: true } },
-                    reservas: { where: { estado: 'PENDIENTE' } }
-                }
-            }
-        },
+        select: { id: true, nombre: true },
         orderBy: { nombre: 'asc' }
     })
 
@@ -92,7 +106,12 @@ export default async function ResidentesPage({ searchParams }: { searchParams: P
                     </Link>
                 </div>
 
-                <ResidentesTable residentes={residentes} isInactiveView={showInactive} userRole={rol} />
+                <ResidentesTable 
+                    residentes={residentes} 
+                    residencias={residenciasList}
+                    isInactiveView={showInactive} 
+                    userRole={rol} 
+                />
 
                 <GeneralPagination 
                     totalItems={totalItems} 

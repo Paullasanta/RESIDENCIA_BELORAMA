@@ -206,10 +206,10 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
                 value={dni}
                 onChange={(e) => {
                   const val = e.target.value.replace(/[^0-9]/g, '');
-                  if (val.length <= 8) setDni(val);
+                  if (val.length <= 15) setDni(val);
                 }}
                 required
-                maxLength={8}
+                maxLength={15}
                 inputMode="numeric"
                 className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
                 placeholder="Ej. 74582104"

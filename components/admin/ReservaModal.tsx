@@ -103,10 +103,10 @@ export function ReservaModal({ habitacion, onClose }: { habitacion: any, onClose
                                 <input 
                                     name="dni" 
                                     value={dni}
-                                    onChange={(e) => setDni(handleNumericInput(e.target.value, 'int').slice(0, 8))}
+                                    onChange={(e) => setDni(handleNumericInput(e.target.value, 'int').slice(0, 15))}
                                     required 
                                     inputMode="numeric"
-                                    maxLength={8}
+                                    maxLength={15}
                                     className="w-full pl-12 pr-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" 
                                  />
                              </div>

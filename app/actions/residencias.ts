@@ -85,6 +85,31 @@ export async function updateResidencia(id: number, data: Partial<z.infer<typeof 
           await tx.habitacion.createMany({
             data: habitacionesData
           })
+        } else if (numHabitaciones < currentCount) {
+          // Validar que no estemos intentando reducir por debajo de las ocupadas/reservadas
+          const occupiedCount = await tx.habitacion.count({
+            where: { residenciaId: id, estado: { not: 'LIBRE' } }
+          })
+
+          if (numHabitaciones < occupiedCount) {
+            throw new Error(`Hay ${occupiedCount} habitaciones ocupadas o reservadas. No puedes reducir la capacidad por debajo de ese número.`)
+          }
+
+          const toRemove = currentCount - numHabitaciones
+          // Solo podemos eliminar las que están LIBRES
+          const libres = await tx.habitacion.findMany({
+            where: { residenciaId: id, estado: 'LIBRE' },
+            orderBy: { numero: 'desc' },
+            take: toRemove
+          })
+
+          if (libres.length > 0) {
+            await tx.habitacion.deleteMany({
+              where: {
+                id: { in: libres.map(h => h.id) }
+              }
+            })
+          }
         }
       }
 
@@ -117,7 +142,7 @@ export async function updateResidencia(id: number, data: Partial<z.infer<typeof 
     return { success: true, data: res }
   } catch (error: any) {
     console.error('Error updating residencia:', error)
-    return { success: false, error: 'Error al actualizar la residencia' }
+    return { success: false, error: error.message || 'Error al actualizar la residencia' }
   }
 }
 
