@@ -22,7 +22,7 @@ export function PagosSearchFilters({ q, resId, isGlobalAdmin, residencias }: Pag
             if (value === null) params.delete(key)
             else params.set(key, value)
         })
-        router.push(`?${params.toString()}`)
+        router.replace(`?${params.toString()}`, { scroll: false })
     }
 
     // Debounce effect para búsqueda en tiempo real

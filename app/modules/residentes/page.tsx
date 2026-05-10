@@ -67,7 +67,10 @@ export default async function ResidentesPage({ searchParams }: { searchParams: P
                 take: 20,
             },
         },
-        orderBy: { fechaIngreso: 'desc' },
+        orderBy: [
+            { fechaFinal: { sort: 'asc', nulls: 'last' } },
+            { fechaIngreso: 'desc' }
+        ],
         skip: (page - 1) * limit,
         take: limit,
     })

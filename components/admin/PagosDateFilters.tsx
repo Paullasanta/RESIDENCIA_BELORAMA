@@ -44,7 +44,7 @@ export function PagosDateFilters() {
             if (value === null) params.delete(key)
             else params.set(key, value)
         })
-        router.push(`?${params.toString()}`)
+        router.replace(`?${params.toString()}`, { scroll: false })
     }
 
     const months = [
@@ -64,7 +64,7 @@ export function PagosDateFilters() {
         params.delete('fromYear')
         params.delete('toMonth')
         params.delete('toYear')
-        router.push(`?${params.toString()}`)
+        router.replace(`?${params.toString()}`, { scroll: false })
     }
 
     return (

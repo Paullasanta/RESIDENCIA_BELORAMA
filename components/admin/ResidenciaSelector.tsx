@@ -13,7 +13,7 @@ export function ResidenciaSelector({ residencias, currentId }: { residencias: { 
         } else {
             params.delete('residenciaId')
         }
-        router.push(`?${params.toString()}`)
+        router.replace(`?${params.toString()}`, { scroll: false })
     }
 
     return (

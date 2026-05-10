@@ -356,6 +356,7 @@ export async function updateResidente(id: number, data: any) {
       })
 
       // 2. Manejar cambio de Habitación
+      const oldResidenciaId = currentResidente.habitacion?.residenciaId;
       if (currentResidente.habitacionId !== habitacionId) {
         if (currentResidente.habitacionId) {
           await tx.habitacion.update({
@@ -368,6 +369,22 @@ export async function updateResidente(id: number, data: any) {
             where: { id: habitacionId },
             data: { estado: EstadoHabitacion.OCUPADO }
           })
+        }
+        
+        // Limpiar turnos de lavandería de la residencia anterior si hubo cambio de sede
+        const newResidenciaId = residenciaId ? Number(residenciaId) : null;
+        if (oldResidenciaId && newResidenciaId && oldResidenciaId !== newResidenciaId) {
+          await tx.turnoLavanderia.updateMany({
+            where: { residenteId: id, residenciaId: oldResidenciaId },
+            data: { residenteId: null, estado: 'LIBRE' }
+          });
+          // Eliminar turno fijo en la sede anterior
+          await tx.turnoFijo.deleteMany({
+            where: { 
+              residenteId: id,
+              lavadora: { residenciaId: oldResidenciaId }
+            }
+          });
         }
       }
 
@@ -658,15 +675,10 @@ export async function deleteResidente(id: number) {
         }
       })
 
-      // 3. Liberar turnos de lavandería
+      // 3. Liberar turnos de lavandería (dejamos el TurnoFijo para posible restauración)
       await tx.turnoLavanderia.updateMany({
         where: { residenteId: id },
-        data: { residenteId: null, estado: EstadoHabitacion.LIBRE }
-      })
-
-      // 4. Limpiar turnos fijos
-      await tx.turnoFijo.deleteMany({
-        where: { residenteId: id }
+        data: { residenteId: null, estado: 'LIBRE' }
       })
 
       // 5. Desactivar productos en marketplace
@@ -726,6 +738,24 @@ export async function reactivateResidente(id: number, mode: 'restore' | 'reentry
           })
         }
 
+        // Restaurar turnos fijos a TurnoLavanderia si el slot sigue libre
+        const fixedShifts = await tx.turnoFijo.findMany({ where: { residenteId: id } })
+        for (const fs of fixedShifts) {
+          await tx.turnoLavanderia.updateMany({
+            where: {
+              lavadoraId: fs.lavadoraId,
+              dia: fs.dia,
+              horaInicio: fs.horaInicio.trim(),
+              estado: 'LIBRE' // Solo recupera el slot si nadie más lo tomó
+            },
+            data: {
+              residenteId: id,
+              estado: 'OCUPADO',
+              tipoReserva: 'BASE'
+            }
+          })
+        }
+
         return await tx.residente.update({
           where: { id },
           data: { 
@@ -772,7 +802,10 @@ export async function reactivateResidente(id: number, mode: 'restore' | 'reentry
           })
 
           // 1c. Limpiar turnos y asignaciones previas (empezar de cero)
-          await tx.turnoLavanderia.deleteMany({ where: { residenteId: id } })
+          await tx.turnoLavanderia.updateMany({
+            where: { residenteId: id },
+            data: { residenteId: null, estado: 'LIBRE' }
+          })
           await tx.turnoFijo.deleteMany({ where: { residenteId: id } })
         }
 

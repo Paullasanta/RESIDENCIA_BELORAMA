@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { UtensilsCrossed, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { DailyPlanCard } from '@/components/comida/DailyPlanCard'
+import { AutoRefresh } from '@/components/shared/AutoRefresh'
 
 const TIPO_LABEL: Record<string, string> = {
     DESAYUNO: 'Desayuno', ALMUERZO: 'Almuerzo', CENA: 'Cena',
@@ -121,6 +122,7 @@ export default async function ComidaPage({
 
     return (
         <div className="space-y-12 animate-in fade-in duration-700 pb-20">
+            <AutoRefresh interval={60000} />
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-gray-100 pb-6">
                 <div>
                     <h1 className="text-3xl font-black text-[#072E1F] tracking-tight">Cartilla de Alimentación</h1>

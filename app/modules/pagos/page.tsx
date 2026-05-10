@@ -12,6 +12,7 @@ import { PagosDateFilters } from '@/components/admin/PagosDateFilters'
 import { GeneralPagination } from '@/components/shared/GeneralPagination'
 import { PagosSearchFilters } from '@/components/admin/PagosSearchFilters'
 import { RecordarButton } from '@/components/admin/RecordarButton'
+import { AutoRefresh } from '@/components/shared/AutoRefresh'
 
 const months = [
     { v: '01', l: 'Enero' }, { v: '02', l: 'Febrero' }, { v: '03', l: 'Marzo' },
@@ -214,6 +215,8 @@ export default async function PagosPage({ searchParams }: {
         residentesList = residentesList.filter((r: any) => (r.totalMonto - r.totalPagado) > 0)
     } else if (filter === 'revision') {
         residentesList = residentesList.filter((r: any) => r.pagos.some((p: any) => p.estado === 'EN_REVISION'))
+    } else if (filter === 'paid') {
+        residentesList = residentesList.filter((r: any) => r.pagos.length > 0 && (r.totalMonto - r.totalPagado) === 0)
     }
 
     // Ordenar por fecha (más antigua primero). Residentes sin pagos pendientes van al final.
@@ -252,6 +255,7 @@ export default async function PagosPage({ searchParams }: {
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700" suppressHydrationWarning>
+            <AutoRefresh interval={45000} />
             {/* Top Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2" suppressHydrationWarning>
                 <div className="space-y-1" suppressHydrationWarning>
@@ -281,7 +285,7 @@ export default async function PagosPage({ searchParams }: {
 
             {/* Stats Dashboard Compacto */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
-                <Link href="/modules/pagos" className="bg-white rounded-3xl p-4 md:p-8 border border-gray-100 shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-6 group hover:-translate-y-1 transition-all">
+                <Link href="/modules/pagos?filter=paid" className={`bg-white rounded-3xl p-4 md:p-8 border shadow-sm flex flex-col md:flex-row items-start md:items-center gap-3 md:gap-6 group hover:-translate-y-1 transition-all ${filter === 'paid' ? 'border-green-500 ring-4 ring-green-50' : 'border-gray-100'}`}>
                     <div className="w-10 h-10 md:w-16 md:h-16 bg-green-50 rounded-2xl flex items-center justify-center text-green-600 border border-green-100">
                         <CheckCircle size={24} className="md:hidden" />
                         <CheckCircle size={32} className="hidden md:block" />

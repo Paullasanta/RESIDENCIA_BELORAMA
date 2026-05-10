@@ -1,7 +1,23 @@
 'use client'
 
-import { SessionProvider } from 'next-auth/react'
+import { SessionProvider, useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+
+function SessionGuard({ children }: { children: React.ReactNode }) {
+    const { status } = useSession()
+    const pathname = usePathname()
+    const router = useRouter()
+
+    useEffect(() => {
+        // Redirigir inmediatamente al login si la sesión expira o es invalidada (ej. cuando pasa a inactivo)
+        if (status === 'unauthenticated' && !pathname.startsWith('/auth/login')) {
+            router.replace('/auth/login')
+        }
+    }, [status, pathname, router])
+
+    return <>{children}</>
+}
 
 function HydrationSafeWrapper({ children }: { children: React.ReactNode }) {
     const [mounted, setMounted] = useState(false)
@@ -10,18 +26,19 @@ function HydrationSafeWrapper({ children }: { children: React.ReactNode }) {
         setMounted(true)
     }, [])
 
-    // Antes del montaje, renderizamos un div invisible para evitar
-    // el mismatch causado por extensiones de navegador (ej: bis_skin_checked)
     if (!mounted) {
         return <div style={{ visibility: 'hidden', minHeight: '100vh' }} />
     }
 
-    return <>{children}</>
+    return <SessionGuard>{children}</SessionGuard>
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
-        <SessionProvider>
+        // refetchInterval verifica el estado de la sesión en el servidor cada 30 segundos.
+        // Si el admin lo pone como "inactivo", la sesión del servidor devolverá null
+        // y el SessionGuard cerrará la sesión en todos los dispositivos al instante.
+        <SessionProvider refetchInterval={30}>
             <HydrationSafeWrapper>{children}</HydrationSafeWrapper>
         </SessionProvider>
     )

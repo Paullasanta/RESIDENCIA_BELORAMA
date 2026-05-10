@@ -20,14 +20,14 @@ export function GeneralPagination({ totalItems, currentPage, itemsPerPage, label
     const updatePage = (page: number) => {
         const params = new URLSearchParams(searchParams.toString())
         params.set('page', page.toString())
-        router.push(`?${params.toString()}`)
+        router.replace(`?${params.toString()}`, { scroll: false })
     }
 
     const updateLimit = (limit: string) => {
         const params = new URLSearchParams(searchParams.toString())
         params.set('limit', limit)
         params.set('page', '1')
-        router.push(`?${params.toString()}`)
+        router.replace(`?${params.toString()}`, { scroll: false })
     }
 
     return (

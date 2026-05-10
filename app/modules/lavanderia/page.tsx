@@ -6,6 +6,7 @@ import { WashingMachine, Clock } from 'lucide-react'
 import { AddLavadoraButton } from '@/components/admin/AddLavadoraButton'
 import { ResidenciaSelector } from '@/components/admin/ResidenciaSelector'
 import { LavadoraSection } from '@/components/admin/LavadoraSection'
+import { AutoRefresh } from '@/components/shared/AutoRefresh'
 
 const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'] as const
 const DIA_LABEL: Record<string, string> = {
@@ -75,7 +76,10 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
     })
     
     const residentes = canManage ? await prisma.residente.findMany({
-        where: residenciaId ? { user: { residenciaId } } : (isGlobal ? {} : { user: { residenciaId: -1 } }),
+        where: {
+            activo: true,
+            ...(residenciaId ? { user: { residenciaId } } : (isGlobal ? {} : { user: { residenciaId: -1 } }))
+        },
         include: { user: true, habitacion: true },
         orderBy: { user: { nombre: 'asc' } }
     }) : []
@@ -88,7 +92,10 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
     let turnosFijos: any[] = []
     try {
         turnosFijos = await (prisma as any).turnoFijo.findMany({
-            where: residenciaId ? { lavadora: { residenciaId } } : (isGlobal ? {} : { lavadora: { residenciaId: -1 } }),
+            where: {
+                residente: { activo: true },
+                ...(residenciaId ? { lavadora: { residenciaId } } : (isGlobal ? {} : { lavadora: { residenciaId: -1 } }))
+            }
         })
     } catch (e) {
         // Fallback si prisma generate no se ha ejecutado aún (problemas de bloqueo en Windows)
@@ -144,6 +151,7 @@ export default async function LavanderiaPage({ searchParams }: { searchParams: P
 
     return (
         <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
+            <AutoRefresh interval={30000} />
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <PageHeader
                     title="Gestión de Lavandería"

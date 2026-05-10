@@ -42,7 +42,7 @@ export function ResidentesTable({ residentes, residencias, isInactiveView = fals
                 params.delete('q')
             }
             params.set('page', '1')
-            router.push(`${pathname}?${params.toString()}`)
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false })
         }, 400)
 
         return () => clearTimeout(timeout)
@@ -56,7 +56,7 @@ export function ResidentesTable({ residentes, residencias, isInactiveView = fals
             params.delete('resId')
         }
         params.set('page', '1')
-        router.push(`${pathname}?${params.toString()}`)
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     }
 
     const filteredResidentes = residentes

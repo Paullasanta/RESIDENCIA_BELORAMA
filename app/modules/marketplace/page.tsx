@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { Search, MapPin, Sparkles, Sofa, Hammer, Utensils, Heart, ShoppingBag, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { ProductGrid } from '@/components/marketplace/ProductGrid'
+import { AutoRefresh } from '@/components/shared/AutoRefresh'
 
 export default async function MarketplacePage() {
     const session = await auth()
@@ -23,6 +24,7 @@ export default async function MarketplacePage() {
 
     return (
         <div className="space-y-8 pb-10 animate-in fade-in duration-700">
+            <AutoRefresh interval={45000} />
             {/* Header Estilo App Premium */}
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
