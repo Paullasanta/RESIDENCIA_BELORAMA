@@ -924,6 +924,7 @@ export async function reactivateResidente(id: number, mode: 'restore' | 'reentry
         // Generar pagos de garantía respetando las cuotas solicitadas
         const finalCuotasGarantia = requestedCuotas
 
+        const now = new Date();
         if (mGarantia > 0) {
           // Dividir el monto total entre las cuotas finales permitidas
           const montoPorCuota = parseFloat((mGarantia / finalCuotasGarantia).toFixed(2))
