@@ -48,6 +48,8 @@ export default async function NuevoResidentePage({ searchParams }: { searchParam
                 restriccionesAlimentarias: oldResidente.restriccionesAlimentarias,
                 montoMensual: oldResidente.montoMensual,
                 montoGarantia: oldResidente.montoGarantia,
+                garantiaNoReembolsable: oldResidente.garantiaNoReembolsable,
+                comentarios: oldResidente.comentarios,
                 isReintegro: true,
                 oldResidenteId: oldResidente.id
             }

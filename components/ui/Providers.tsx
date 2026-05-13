@@ -11,7 +11,10 @@ function SessionGuard({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         // Redirigir inmediatamente al login si la sesión expira o es invalidada (ej. cuando pasa a inactivo)
-        if (status === 'unauthenticated' && !pathname.startsWith('/auth/login')) {
+        // Solo protegemos las rutas de módulos (/modules), las demás son públicas (landing, habitaciones, etc)
+        const isProtectedRoute = pathname.startsWith('/modules')
+
+        if (status === 'unauthenticated' && isProtectedRoute) {
             router.replace('/auth/login')
         }
     }, [status, pathname, router])

@@ -74,6 +74,8 @@ export async function createResidente(data: any) {
 
   const montoMensual = Math.max(0, Number(data.montoMensual || 0))
   const montoGarantia = Math.max(0, Number(data.montoGarantia || 0))
+  const garantiaNoReembolsable = Math.max(0, Number(data.garantiaNoReembolsable || 0))
+  const comentarios = data.comentarios as string || null
   const cuotasGarantia = Math.max(1, Number(data.cuotasGarantia || 1))
   const diaPagoFinal = Math.max(1, Math.min(31, Number(data.diaPago || 1)))
 
@@ -161,6 +163,8 @@ export async function createResidente(data: any) {
           diaPago: diaPagoFinal,
           montoMensual: montoMensual,
           montoGarantia: montoGarantia,
+          garantiaNoReembolsable: garantiaNoReembolsable,
+          comentarios: comentarios,
           alergias: data.alergias || null,
           restriccionesAlimentarias: data.restriccionesAlimentarias || null
         }
@@ -258,6 +262,21 @@ export async function createResidente(data: any) {
         });
 
         await tx.pago.createMany({ data: garantiasToCreate });
+      }
+
+      if (garantiaNoReembolsable > 0) {
+        const fIngresoNR = (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : new Date();
+        await tx.pago.create({
+          data: {
+            residenteId: residente.id,
+            concepto: 'Garantía No Reembolsable',
+            monto: garantiaNoReembolsable,
+            montoPagado: 0,
+            fechaVencimiento: fIngresoNR,
+            estado: pagoConfirmado ? EstadoPago.EN_REVISION : (fIngresoNR < new Date() ? EstadoPago.VENCIDO : EstadoPago.PENDIENTE),
+            comprobante: pagoConfirmado ? comprobanteUrl : null
+          }
+        })
       }
 
       return residente
@@ -398,6 +417,8 @@ export async function updateResidente(id: number, data: any) {
           diaPago: data.diaPago ? Number(data.diaPago) : undefined,
           montoMensual: data.montoMensual !== undefined && data.montoMensual !== "" ? Number(data.montoMensual) : undefined,
           montoGarantia: data.montoGarantia !== undefined && data.montoGarantia !== "" ? Number(data.montoGarantia) : undefined,
+          garantiaNoReembolsable: data.garantiaNoReembolsable !== undefined && data.garantiaNoReembolsable !== "" ? Number(data.garantiaNoReembolsable) : undefined,
+          comentarios: data.comentarios,
           alergias: data.alergias,
           restriccionesAlimentarias: data.restriccionesAlimentarias
         }
@@ -755,7 +776,6 @@ export async function reactivateResidente(id: number, mode: 'restore' | 'reentry
             }
           })
         }
-
         return await tx.residente.update({
           where: { id },
           data: { 
@@ -766,7 +786,7 @@ export async function reactivateResidente(id: number, mode: 'restore' | 'reentry
       }
 
       if (mode === 'reentry') {
-        const { residenciaId, habitacionId, montoMensual, montoGarantia, cuotasGarantia, diaPago, fechaIngreso } = data
+        const { residenciaId, habitacionId, montoMensual, montoGarantia, cuotasGarantia, garantiaNoReembolsable, comentarios, diaPago, fechaIngreso } = data
         
         // Validar capacidad de la nueva habitación
         const targetRoom = await tx.habitacion.findUnique({
@@ -781,6 +801,8 @@ export async function reactivateResidente(id: number, mode: 'restore' | 'reentry
         const diaPagoInt = parseInt(diaPago || '1')
         const ingresoDate = new Date(fechaIngreso)
         ingresoDate.setUTCHours(12, 0, 0, 0)
+
+        const garantiaNR = Math.max(0, Number(garantiaNoReembolsable || 0))
 
         // 1. Actualizar usuario (para que coincida la sede)
         const residenteData = await tx.residente.findUnique({ where: { id } })
@@ -801,6 +823,80 @@ export async function reactivateResidente(id: number, mode: 'restore' | 'reentry
             }
           })
 
+          // 2. Reactivar residente con nuevos datos
+          await tx.residente.update({
+            where: { id },
+            data: {
+              activo: true,
+              deletedAt: null,
+              habitacionId: parseInt(habitacionId),
+              montoMensual: Number(montoMensual),
+              montoGarantia: Number(montoGarantia),
+              garantiaNoReembolsable: garantiaNR,
+              comentarios: comentarios || null,
+              diaPago: diaPagoInt,
+              fechaIngreso: ingresoDate
+            }
+          })
+
+          // 2b. Marcar nueva habitación como OCUPADO
+          await tx.habitacion.update({
+            where: { id: parseInt(habitacionId) },
+            data: { estado: 'OCUPADO' }
+          })
+
+          // 3. Generar primer mes de pago
+          const mesString = `${ingresoDate.getUTCFullYear()}-${String(ingresoDate.getUTCMonth() + 1).padStart(2, '0')}`;
+          const nombreMes = ingresoDate.toLocaleDateString('es-MX', { timeZone: 'UTC', month: 'long' });
+          
+          await tx.pago.create({
+            data: {
+              residenteId: id,
+              concepto: `Mensualidad (Reingreso) - ${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${ingresoDate.getUTCFullYear()}`,
+              monto: Number(montoMensual),
+              fechaVencimiento: ingresoDate,
+              estado: 'PENDIENTE',
+              mesCorrespondiente: mesString
+            }
+          })
+
+          // 4. Generar Garantía si aplica
+          const mGarantia = Number(montoGarantia)
+          if (mGarantia > 0) {
+            const numCuotas = parseInt(cuotasGarantia || '1')
+            const montoPorCuota = Number((mGarantia / numCuotas).toFixed(2))
+
+            for (let i = 0; i < numCuotas; i++) {
+              const targetDate = new Date(ingresoDate)
+              targetDate.setUTCMonth(ingresoDate.getUTCMonth() + i)
+              
+              const fechaVenc = i === 0 ? new Date(ingresoDate) : calcFechaVencimiento(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), diaPagoInt)
+
+              await tx.pago.create({
+                data: {
+                  residenteId: id,
+                  concepto: `Garantía (Reingreso) - Cuota ${i + 1}/${numCuotas}`,
+                  monto: i === numCuotas - 1 ? Number((mGarantia - (montoPorCuota * (numCuotas - 1))).toFixed(2)) : montoPorCuota,
+                  fechaVencimiento: fechaVenc,
+                  estado: 'PENDIENTE'
+                }
+              })
+            }
+          }
+
+          // 5. Generar Garantía No Reembolsable si aplica
+          if (garantiaNR > 0) {
+            await tx.pago.create({
+              data: {
+                residenteId: id,
+                concepto: 'Garantía No Reembolsable (Reingreso)',
+                monto: garantiaNR,
+                fechaVencimiento: ingresoDate,
+                estado: 'PENDIENTE'
+              }
+            })
+          }
+
           // 1c. Limpiar turnos y asignaciones previas (empezar de cero)
           await tx.turnoLavanderia.updateMany({
             where: { residenteId: id },
@@ -808,30 +904,6 @@ export async function reactivateResidente(id: number, mode: 'restore' | 'reentry
           })
           await tx.turnoFijo.deleteMany({ where: { residenteId: id } })
         }
-
-        // 2. Actualizar residente
-        const res = await tx.residente.update({
-          where: { id },
-          data: {
-            activo: true,
-            deletedAt: null,
-            habitacionId: parseInt(habitacionId),
-            montoMensual: parseFloat(montoMensual),
-            montoGarantia: parseFloat(montoGarantia || '0'),
-            diaPago: diaPagoInt,
-            fechaIngreso: ingresoDate,
-            fechaFinal: data.fechaFinal ? new Date(data.fechaFinal) : null
-          }
-        })
-
-        // 2. Ocupar habitación
-        await tx.habitacion.update({
-          where: { id: parseInt(habitacionId) },
-          data: { estado: 'OCUPADO' }
-        })
-
-        const now = new Date()
-        now.setUTCHours(0, 0, 0, 0)
 
         // 3. Calcular duración de la estadía primero
         const fechaFinal = data.fechaFinal ? utcNoon(data.fechaFinal) : null

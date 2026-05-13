@@ -104,6 +104,8 @@ model Residente {
   fechaFinal                DateTime?
   restriccionesAlimentarias String?
   montoGarantia             Float                 @default(0)
+  garantiaNoReembolsable    Float                 @default(0)
+  comentarios               String?
   montoMensual              Float                 @default(0)
   deletedAt                 DateTime?
   createdAt                 DateTime              @default(now())

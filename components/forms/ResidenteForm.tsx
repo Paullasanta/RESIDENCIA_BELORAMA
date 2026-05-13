@@ -16,7 +16,6 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [residenciaId, setResidenciaId] = useState(initialData?.habitacion?.residenciaId?.toString() || initialData?.user?.residenciaId?.toString() || '')
   const [habitacionId, setHabitacionId] = useState(initialData?.habitacionId || '')
@@ -88,8 +87,6 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
     }
   }, [fechaIngreso, fechaFinal])
 
-  // Estados para confirmación de pago
-  const [pagoConfirmado, setPagoConfirmado] = useState(false)
   const [montoMensualInput, setMontoMensualInput] = useState(initialData?.montoMensual || 0)
   const [montoGarantiaInput, setMontoGarantiaInput] = useState(initialData?.montoGarantia || 0)
   const [cuotasGarantiaInput, setCuotasGarantiaInput] = useState(
@@ -99,19 +96,8 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
       (initialData.fechaIngreso ? new Date(p.fechaVencimiento) >= new Date(initialData.fechaIngreso) : true)
     ).length || 1
   )
-  const [montoGarantiaPrimerPago, setMontoGarantiaPrimerPago] = useState(0)
-
-  // Sincronizar monto inicial de garantía cuando cambian el total o las cuotas
-  useEffect(() => {
-    if (montoGarantiaInput > 0 && cuotasGarantiaInput > 0) {
-      setMontoGarantiaPrimerPago(Number((montoGarantiaInput / cuotasGarantiaInput).toFixed(2)))
-    } else {
-      setMontoGarantiaPrimerPago(0)
-    }
-  }, [montoGarantiaInput, cuotasGarantiaInput])
-
-  const [comprobanteFile, setComprobanteFile] = useState<File | null>(null)
-  const [uploading, setUploading] = useState(false)
+  const [garantiaNoReembolsableInput, setGarantiaNoReembolsableInput] = useState(initialData?.garantiaNoReembolsable || 0)
+  const [comentariosInput, setComentariosInput] = useState(initialData?.comentarios || '')
 
   // Filtrar habitaciones disponibles de la residencia seleccionada
   const residenciaSeleccionada = residencias.find(r => r.id.toString() === residenciaId.toString())
@@ -119,32 +105,8 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
 
   async function handleSubmit(formData: FormData) {
     setError(null)
-    setUploading(true)
 
     try {
-      let comprobanteUrl = null
-
-      // Si se confirma el pago y hay un archivo, subirlo primero
-      if (pagoConfirmado && comprobanteFile) {
-        const uploadFormData = new FormData()
-        uploadFormData.append('file', comprobanteFile)
-        uploadFormData.append('folder', 'comprobantes')
-        uploadFormData.append('prefix', 'vp')
-        uploadFormData.append('dni', dni)
-
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: uploadFormData
-        })
-
-        if (!uploadRes.ok) {
-          throw new Error('Error al subir el comprobante')
-        }
-
-        const uploadData = await uploadRes.json()
-        comprobanteUrl = uploadData.url
-      }
-
       const data = Object.fromEntries(formData.entries())
 
       // Asegurar que todos los campos financieros del estado se incluyan explícitamente
@@ -152,9 +114,9 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
         ...data,
         montoMensual: montoMensualInput,
         montoGarantia: montoGarantiaInput,
+        garantiaNoReembolsable: garantiaNoReembolsableInput,
+        comentarios: comentariosInput,
         cuotasGarantia: cuotasGarantiaInput,
-        pagoConfirmado: pagoConfirmado,
-        comprobanteUrl: comprobanteUrl
       }
 
       startTransition(async () => {
@@ -176,12 +138,10 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
           router.refresh()
         } else {
           setError(result.error)
-          setUploading(false)
         }
       })
     } catch (err: any) {
       setError(err.message || 'Error al procesar el formulario')
-      setUploading(false)
     }
   }
 
@@ -450,7 +410,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
               type="text"
 
               required
-              value={montoMensualInput || ''}
+              value={montoMensualInput}
               onChange={(e) => {
                 let val = e.target.value.replace(/[^0-9.]/g, '');
                 const parts = val.split('.');
@@ -474,7 +434,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
               type="text"
 
               required
-              value={montoGarantiaInput || ''}
+              value={montoGarantiaInput}
               onChange={(e) => {
                 let val = e.target.value.replace(/[^0-9.]/g, '');
                 const parts = val.split('.');
@@ -503,140 +463,39 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
           </select>
         </div>
 
-        {initialData && (
-          <div className="col-span-full pt-4">
-            <div className="bg-gray-50 rounded-3xl p-6 border border-gray-100">
-              <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Estado de Pagos Registrados</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {['Alquiler Inicial', 'Garantía'].map(concepto => {
-                  const pago = initialData.pagos?.find((p: any) => p.concepto === concepto)
-                  return (
-                    <div key={concepto} className="bg-white p-4 rounded-2xl border border-gray-50 flex items-center justify-between">
-                      <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">{concepto}</p>
-                        <p className="text-xs font-black text-gray-700">S/ {pago?.monto?.toFixed(2) || '0.00'}</p>
-                      </div>
-                      <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${pago?.estado === 'PAGADO' ? 'bg-green-100 text-green-600' :
-                          pago?.estado === 'PENDIENTE' ? 'bg-amber-100 text-amber-600' :
-                            pago?.estado === 'EN_REVISION' ? 'bg-blue-100 text-blue-600' :
-                              'bg-gray-100 text-gray-400'
-                        }`}>
-                        {pago?.estado || 'NO GENERADO'}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+        <div className="space-y-2">
+          <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Garantía No Reembolsable</label>
+          <div className="relative group/input">
+            <span className="absolute left-5 inset-y-0 flex items-center text-gray-300 font-black group-focus-within/input:text-[#1D9E75] transition-colors">$</span>
+            <input
+              name="garantiaNoReembolsable"
+              type="text"
+              required
+              value={garantiaNoReembolsableInput}
+              onChange={(e) => {
+                let val = e.target.value.replace(/[^0-9.]/g, '');
+                const parts = val.split('.');
+                if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+                setGarantiaNoReembolsableInput(val === '' ? 0 : Number(val));
+              }}
+              className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
+              inputMode="decimal"
+              placeholder="0.00"
+            />
           </div>
-        )}
+        </div>
 
-        {!initialData && (
-          <>
-            {/* Sección: Confirmación de Pago */}
-            <div className="col-span-full pt-8 mt-4 border-t border-gray-50">
-              <div className="bg-[#1D9E75]/5 p-8 rounded-3xl border border-[#1D9E75]/10 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-black text-[#1D9E75] uppercase tracking-widest mb-1">Confirmación de Pago Entrada</h4>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">¿Confirmar pago de Renta + Garantía (Parte 1)?</p>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <div className="text-[10px] font-black text-[#1D9E75] bg-white px-3 py-1 rounded-lg shadow-sm border border-[#1D9E75]/10 mb-2">
-                      MONTO A PAGAR: S/ {(montoMensualInput + montoGarantiaPrimerPago).toFixed(2)}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setPagoConfirmado(!pagoConfirmado)}
-                      className={`w-14 h-8 rounded-full transition-all relative ${pagoConfirmado ? 'bg-[#1D9E75]' : 'bg-gray-200'}`}
-                    >
-                      <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm ${pagoConfirmado ? 'left-7' : 'left-1'}`} />
-                    </button>
-                  </div>
-                </div>
-
-                {pagoConfirmado && (
-                  <div className="pt-4 animate-in slide-in-from-top-4 duration-300">
-                    <div className="bg-white/50 rounded-2xl p-6 mb-4 border border-[#1D9E75]/20 space-y-4">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Ajuste de Montos a Confirmar:</p>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-black text-gray-400 uppercase">Renta a Confirmar</label>
-                          <div className="relative">
-                            <span className="absolute left-3 inset-y-0 flex items-center text-gray-300 text-[10px]">S/</span>
-                            <input
-                              type="number"
-                              value={montoMensualInput}
-                              onChange={(e) => setMontoMensualInput(Number(e.target.value))}
-                              className="w-full pl-7 pr-3 py-2 bg-white border border-gray-100 rounded-xl text-xs font-black text-[#072E1F] outline-none focus:border-[#1D9E75] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              onWheel={(e) => (e.target as HTMLElement).blur()}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-black text-gray-400 uppercase">Garantía Parte 1 (Editable)</label>
-                          <div className="relative">
-                            <span className="absolute left-3 inset-y-0 flex items-center text-gray-300 text-[10px]">S/</span>
-                            <input
-                              name="montoGarantiaPrimerPago"
-                              type="number"
-                              value={montoGarantiaPrimerPago || ''}
-                              onChange={(e) => setMontoGarantiaPrimerPago(e.target.value === '' ? 0 : Number(e.target.value))}
-                              className="w-full pl-7 pr-3 py-2 bg-white border border-gray-100 rounded-xl text-xs font-black text-[#1D9E75] outline-none focus:border-[#1D9E75] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              placeholder="0.00"
-                              onWheel={(e) => (e.target as HTMLElement).blur()}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="pt-3 border-t border-gray-50 flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase">Restante por pagar Garantía:</span>
-                        <span className="text-xs font-black text-[#EF9F27]">S/ {Math.max(0, montoGarantiaInput - montoGarantiaPrimerPago).toFixed(2)}</span>
-                      </div>
-                    </div>
-                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 block mb-3">Subir Comprobante (Voucher)</label>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={(e) => setComprobanteFile(e.target.files?.[0] || null)}
-                      className="hidden"
-                      accept="image/*,application/pdf"
-                    />
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`w-full border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-4 cursor-pointer transition-all ${comprobanteFile ? 'border-[#1D9E75] bg-[#1D9E75]/5' : 'border-gray-200 hover:border-[#1D9E75] hover:bg-gray-50'}`}
-                    >
-                      {comprobanteFile ? (
-                        <>
-                          <div className="w-12 h-12 bg-[#1D9E75] rounded-xl flex items-center justify-center text-white">
-                            <Check size={24} />
-                          </div>
-                          <div className="text-center">
-                            <p className="text-sm font-black text-gray-700">{comprobanteFile.name}</p>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase">Click para cambiar archivo</p>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400">
-                            <Upload size={24} />
-                          </div>
-                          <div className="text-center">
-                            <p className="text-sm font-black text-gray-700">Seleccionar Comprobante</p>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase">JPG, PNG o PDF (Max 5MB)</p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        )}
+        <div className="space-y-2 col-span-full">
+          <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Comentarios / Notas Adicionales</label>
+          <textarea
+            name="comentarios"
+            value={comentariosInput}
+            onChange={(e) => setComentariosInput(e.target.value)}
+            rows={3}
+            className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-medium text-gray-700 placeholder:text-gray-300 resize-none"
+            placeholder="Escribe aquí cualquier observación relevante..."
+          />
+        </div>
 
         <div className="pt-8 mt-4 border-t border-gray-50 col-span-full">
           <h3 className="text-sm font-black text-[#1D9E75] uppercase tracking-[0.2em] mb-2">Contacto de Emergencia</h3>
@@ -730,13 +589,13 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
           </Button>
           <Button
             type="submit"
-            disabled={isPending || uploading}
+            disabled={isPending}
             className={`px-10 py-6 rounded-2xl font-black uppercase tracking-widest shadow-xl transition-all flex items-center gap-2 ${
               initialData?.isReintegro ? 'bg-[#EF9F27] hover:bg-[#d88d1d] shadow-[#EF9F27]/20' : 
               'bg-[#1D9E75] hover:bg-[#167e5d] shadow-[#1D9E75]/20'
             }`}
           >
-            {isPending || uploading ? (
+            {isPending ? (
               <Loader2 className="animate-spin" size={20} />
             ) : (
               <Save size={20} />
