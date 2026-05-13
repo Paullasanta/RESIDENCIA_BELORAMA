@@ -805,6 +805,7 @@ export async function reactivateResidente(id: number, mode: 'restore' | 'reentry
         const garantiaNR = Math.max(0, Number(garantiaNoReembolsable || 0))
 
         // 1. Actualizar usuario (para que coincida la sede)
+        let res;
         const residenteData = await tx.residente.findUnique({ where: { id } })
         if (residenteData) {
           await tx.user.update({
@@ -824,7 +825,7 @@ export async function reactivateResidente(id: number, mode: 'restore' | 'reentry
           })
 
           // 2. Reactivar residente con nuevos datos
-          await tx.residente.update({
+          res = await tx.residente.update({
             where: { id },
             data: {
               activo: true,
