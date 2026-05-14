@@ -357,8 +357,8 @@ export default async function PagosPage({ searchParams }: {
                                 <tr className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">
                                     <th className="text-left px-10 py-6">Residente</th>
                                     <th className="text-left px-6 py-6">Ubicación</th>
-                                    <th className="text-center px-6 py-6">Total Cargo</th>
                                     <th className="text-center px-6 py-6">Recaudado</th>
+                                    <th className="text-center px-6 py-6">Monto Mensual</th>
                                     <th className="text-center px-6 py-6">Estado</th>
                                     <th className="text-center px-6 py-6">Fécha</th>
                                     <th className="text-right px-10 py-6">Acción</th>
@@ -386,11 +386,11 @@ export default async function PagosPage({ searchParams }: {
                                                     Res {entry.residente.habitacion?.numero?.charAt(0) || 'D'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-6 text-center font-black text-gray-700">
-                                                S/ {entry.totalMonto.toLocaleString('es-MX')}
-                                            </td>
                                             <td className="px-6 py-6 text-center font-black text-gray-900">
                                                 S/ {entry.totalPagado.toLocaleString('es-MX')}
+                                            </td>
+                                            <td className="px-6 py-6 text-center font-black text-gray-700">
+                                                S/ {entry.residente.montoMensual.toLocaleString('es-MX')}
                                             </td>
                                             <td className="px-6 py-6 text-center uppercase">
                                                 <StatusBadge status={statusVisual as any} />
@@ -446,8 +446,8 @@ export default async function PagosPage({ searchParams }: {
                                     
                                     <div className="grid grid-cols-2 gap-3 bg-gray-50 p-3 rounded-2xl border border-gray-100">
                                         <div>
-                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Cargo Total</p>
-                                            <p className="font-black text-[#072E1F]">S/ {entry.totalMonto.toLocaleString('es-MX')}</p>
+                                            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Monto Mensual</p>
+                                            <p className="font-black text-[#072E1F]">S/ {entry.residente.montoMensual.toLocaleString('es-MX')}</p>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Saldo Pendiente</p>
