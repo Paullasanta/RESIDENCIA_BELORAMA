@@ -178,7 +178,7 @@ export async function createResidente(data: any) {
           emergenciaParentesco,
           fechaNacimiento: (validated.fechaNacimiento && validated.fechaNacimiento !== "") ? new Date(validated.fechaNacimiento) : undefined,
           roleId: role.id,
-          residencia: residenciaId ? { connect: { id: residenciaId } } : undefined
+          residenciaId: residenciaId
         }
       })
 
@@ -186,7 +186,7 @@ export async function createResidente(data: any) {
       const residente = await tx.residente.create({
         data: {
           userId: user.id,
-          habitacion: habitacionId ? { connect: { id: habitacionId } } : undefined,
+          habitacionId: habitacionId,
           activo: true,
           fechaIngreso: (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : new Date(),
           fechaFinal: (validated.fechaFinal && validated.fechaFinal !== "") ? utcNoon(validated.fechaFinal) : null,
@@ -388,9 +388,7 @@ export async function updateResidente(id: number, data: any) {
         apellidoPaterno, 
         apellidoMaterno, 
         email, 
-        residencia: residenciaId 
-          ? { connect: { id: residenciaId } } 
-          : { disconnect: true }, 
+        residenciaId: residenciaId, 
         telefono,
         emergenciaNombre,
         emergenciaTelefono,
@@ -445,15 +443,13 @@ export async function updateResidente(id: number, data: any) {
       const residente = await tx.residente.update({
         where: { id },
         data: { 
-          habitacion: habitacionId 
-            ? { connect: { id: habitacionId } } 
-            : { disconnect: true },
+          habitacionId: habitacionId,
           fechaIngreso: (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : undefined,
           fechaFinal: (validated.fechaFinal && validated.fechaFinal !== "") ? utcNoon(validated.fechaFinal) : null,
           diaPago: validated.diaPago ? Number(validated.diaPago) : undefined,
-          montoMensual: validated.montoMensual !== undefined && validated.montoMensual !== "" ? Number(validated.montoMensual) : undefined,
-          montoGarantia: validated.montoGarantia !== undefined && validated.montoGarantia !== "" ? Number(validated.montoGarantia) : undefined,
-          garantiaNoReembolsable: validated.garantiaNoReembolsable !== undefined && validated.garantiaNoReembolsable !== "" ? Number(validated.garantiaNoReembolsable) : undefined,
+          montoMensual: validated.montoMensual !== undefined ? Number(validated.montoMensual) : undefined,
+          montoGarantia: validated.montoGarantia !== undefined ? Number(validated.montoGarantia) : undefined,
+          garantiaNoReembolsable: validated.garantiaNoReembolsable !== undefined ? Number(validated.garantiaNoReembolsable) : undefined,
           comentarios: validated.comentarios,
           alergias: validated.alergias,
           restriccionesAlimentarias: validated.restriccionesAlimentarias
