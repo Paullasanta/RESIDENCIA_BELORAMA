@@ -150,8 +150,11 @@ export async function deleteAviso(id: number) {
       }
     }
 
-    // Eliminar reacciones primero si existen (aunque Prisma cascade podría manejarlo si lo configuramos, pero hagámoslo explícito o confiemos en el schema)
-    // Para simplificar, eliminamos el aviso
+    // Eliminar reacciones manualmente antes de borrar el aviso para evitar errores de llave foránea
+    await prisma.reaccion.deleteMany({
+      where: { avisoId: id }
+    })
+
     await prisma.aviso.delete({
       where: { id }
     })
