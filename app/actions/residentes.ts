@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import bcrypt from 'bcryptjs'
+import { auth } from '@/lib/auth'
 import { EstadoHabitacion, EstadoPago, EstadoProducto } from '@prisma/client'
 import { z } from 'zod'
 
@@ -1057,19 +1058,27 @@ export async function hardDeleteResidente(id: number) {
     if (!residente) throw new Error('Residente no encontrado')
 
     await prisma.$transaction(async (tx) => {
-      // 1. Eliminar datos vinculados al Residente
+      // 1. Verificar sesión y rol (Solo SUPER_ADMIN puede hacer hard delete)
+      const session = await auth()
+      if (!session || session.user.rol !== 'SUPER_ADMIN') {
+        throw new Error('No tiene permisos para realizar esta acción. Solo el Super Administrador puede eliminar registros permanentemente.')
+      }
+
+      // 2. Eliminar datos vinculados al Residente
       await tx.pago.deleteMany({ where: { residenteId: id } })
       await tx.turnoLavanderia.deleteMany({ where: { residenteId: id } })
       await tx.turnoFijo.deleteMany({ where: { residenteId: id } })
       await tx.asistenciaComida.deleteMany({ where: { residenteId: id } })
       await tx.ticketMantenimiento.deleteMany({ where: { residenteId: id } })
       await tx.productoMarketplace.deleteMany({ where: { residenteId: id } })
+      await tx.historialLavanderia.deleteMany({ where: { residenteId: id } })
 
-      // 2. Eliminar datos vinculados al Usuario
+      // 3. Eliminar datos vinculados al Usuario
       const userId = residente.userId
       await tx.notificacion.deleteMany({ where: { userId } })
       await tx.reaccion.deleteMany({ where: { userId } })
       await tx.aviso.deleteMany({ where: { autorId: userId } })
+      await tx.egreso.deleteMany({ where: { adminId: userId } })
       
       // 3. Eliminar Perfil de Residente
       await tx.residente.delete({ where: { id } })
