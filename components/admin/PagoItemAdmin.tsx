@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import VoucherPreviewModal from '@/components/shared/VoucherPreviewModal'
 import { Eye } from 'lucide-react'
+import { useConfirmStore } from '@/store/useConfirmStore'
+import { toast } from 'sonner'
 
 export function PagoItemAdmin({ pago, isHistorical = false }: { pago: any; isHistorical?: boolean }) {
     const { data: session } = useSession()
@@ -17,14 +19,23 @@ export function PagoItemAdmin({ pago, isHistorical = false }: { pago: any; isHis
     const isSuperAdmin = session?.user.rol === 'SUPER_ADMIN'
     const canPayManual = isSuperAdmin && pago.estado !== 'PAGADO'
 
+    const confirmAction = useConfirmStore(state => state.confirm)
+
     const handleManualPay = async () => {
-        if (!confirm('¿Estás seguro de marcar este pago como PAGADO manualmente?')) return
+        const ok = await confirmAction({
+            title: 'Marcar como Pagado',
+            message: '¿Estás seguro de marcar este pago como PAGADO manualmente? Esta acción registrará el pago sin voucher.',
+            confirmText: 'Confirmar Pago',
+            variant: 'warning'
+        })
+        if (!ok) return
         setLoading(true)
         const res = await payPagoManual(pago.id)
         if (res.success) {
+            toast.success('Pago registrado correctamente')
             router.refresh()
         } else {
-            alert(res.error)
+            toast.error(res.error || 'Error al procesar pago')
         }
         setLoading(false)
     }

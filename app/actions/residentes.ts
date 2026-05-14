@@ -4,6 +4,35 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import bcrypt from 'bcryptjs'
 import { EstadoHabitacion, EstadoPago, EstadoProducto } from '@prisma/client'
+import { z } from 'zod'
+
+const residenteSchema = z.object({
+  nombre: z.string().min(2, 'El nombre es muy corto').trim(),
+  apellidoPaterno: z.string().min(2, 'El apellido paterno es muy corto').trim(),
+  apellidoMaterno: z.string().min(2, 'El apellido materno es muy corto').trim(),
+  dni: z.string().min(8, 'El DNI/ID debe tener al menos 8 caracteres').trim(),
+  email: z.string().email('Correo electrónico inválido').trim(),
+  telefono: z.string().min(9, 'El teléfono es inválido').trim(),
+  emergenciaNombre: z.string().trim().optional().or(z.literal('')),
+  emergenciaTelefono: z.string().trim().optional().or(z.literal('')),
+  emergenciaParentesco: z.string().trim().optional().or(z.literal('')),
+  residenciaId: z.any().optional(),
+  habitacionId: z.any().optional(),
+  montoMensual: z.coerce.number().min(0),
+  montoGarantia: z.coerce.number().min(0),
+  garantiaNoReembolsable: z.coerce.number().min(0),
+  comentarios: z.string().trim().optional().or(z.literal('')),
+  cuotasGarantia: z.coerce.number().min(1),
+  diaPago: z.coerce.number().min(1).max(31),
+  fechaIngreso: z.string().optional().or(z.literal('')),
+  fechaFinal: z.string().optional().or(z.literal('')),
+  fechaNacimiento: z.string().optional().or(z.literal('')),
+  alergias: z.string().trim().optional().or(z.literal('')),
+  restriccionesAlimentarias: z.string().trim().optional().or(z.literal('')),
+  pagoConfirmado: z.any().optional(),
+  comprobanteUrl: z.string().optional().or(z.literal('')),
+  password: z.string().optional().or(z.literal('')),
+})
 
 /**
  * Parsea un string 'YYYY-MM-DD' como mediodia UTC (12:00:00Z).
@@ -57,33 +86,34 @@ export async function getResidente(id: number) {
 }
 
 export async function createResidente(data: any) {
-  const nombre = data.nombre as string
-  const apellidoPaterno = data.apellidoPaterno as string
-  const apellidoMaterno = data.apellidoMaterno as string
-  const dni = data.dni as string
-  const email = data.email as string
-  const password = await bcrypt.hash(dni, 10) // Contraseña por defecto es el DNI hasheado
-  const telefono = data.telefono as string
-  
-  const emergenciaNombre = data.emergenciaNombre as string
-  const emergenciaTelefono = data.emergenciaTelefono as string
-  const emergenciaParentesco = data.emergenciaParentesco as string
-
-  const residenciaId = (data.residenciaId && data.residenciaId !== "") ? Number(data.residenciaId) : null
-  const habitacionId = (data.habitacionId && data.habitacionId !== "") ? Number(data.habitacionId) : null
-
-  const montoMensual = Math.max(0, Number(data.montoMensual || 0))
-  const montoGarantia = Math.max(0, Number(data.montoGarantia || 0))
-  const garantiaNoReembolsable = Math.max(0, Number(data.garantiaNoReembolsable || 0))
-  const comentarios = data.comentarios as string || null
-  const cuotasGarantia = Math.max(1, Number(data.cuotasGarantia || 1))
-  const diaPagoFinal = Math.max(1, Math.min(31, Number(data.diaPago || 1)))
-
-  // Nuevos campos para confirmación de pago
-  const pagoConfirmado = data.pagoConfirmado === true || data.pagoConfirmado === 'true'
-  const comprobanteUrl = data.comprobanteUrl as string || null
-
   try {
+    const validated = residenteSchema.parse(data)
+    
+    const nombre = validated.nombre
+    const apellidoPaterno = validated.apellidoPaterno
+    const apellidoMaterno = validated.apellidoMaterno
+    const dni = validated.dni
+    const email = validated.email
+    const password = await bcrypt.hash(dni, 10) // Contraseña por defecto es el DNI hasheado
+    const telefono = validated.telefono
+    
+    const emergenciaNombre = validated.emergenciaNombre || null
+    const emergenciaTelefono = validated.emergenciaTelefono || null
+    const emergenciaParentesco = validated.emergenciaParentesco || null
+
+    const residenciaId = (validated.residenciaId && validated.residenciaId !== "") ? Number(validated.residenciaId) : null
+    const habitacionId = (validated.habitacionId && validated.habitacionId !== "") ? Number(validated.habitacionId) : null
+
+    const montoMensual = validated.montoMensual
+    const montoGarantia = validated.montoGarantia
+    const garantiaNoReembolsable = validated.garantiaNoReembolsable
+    const comentarios = validated.comentarios || null
+    const cuotasGarantia = validated.cuotasGarantia
+    const diaPagoFinal = validated.diaPago
+
+    const pagoConfirmado = validated.pagoConfirmado === true || validated.pagoConfirmado === 'true'
+    const comprobanteUrl = validated.comprobanteUrl || null
+
     // Verificar capacidad de habitación si se asigna una
     if (habitacionId) {
       const room = await prisma.habitacion.findUnique({
@@ -146,9 +176,9 @@ export async function createResidente(data: any) {
           emergenciaNombre,
           emergenciaTelefono,
           emergenciaParentesco,
-          fechaNacimiento: (data.fechaNacimiento && data.fechaNacimiento !== "") ? new Date(data.fechaNacimiento) : undefined,
+          fechaNacimiento: (validated.fechaNacimiento && validated.fechaNacimiento !== "") ? new Date(validated.fechaNacimiento) : undefined,
           roleId: role.id,
-          residenciaId: residenciaId
+          residencia: residenciaId ? { connect: { id: residenciaId } } : undefined
         }
       })
 
@@ -156,17 +186,17 @@ export async function createResidente(data: any) {
       const residente = await tx.residente.create({
         data: {
           userId: user.id,
-          habitacionId: habitacionId,
+          habitacion: habitacionId ? { connect: { id: habitacionId } } : undefined,
           activo: true,
-          fechaIngreso: (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : new Date(),
-          fechaFinal: (data.fechaFinal && data.fechaFinal !== "") ? utcNoon(data.fechaFinal) : null,
+          fechaIngreso: (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : new Date(),
+          fechaFinal: (validated.fechaFinal && validated.fechaFinal !== "") ? utcNoon(validated.fechaFinal) : null,
           diaPago: diaPagoFinal,
           montoMensual: montoMensual,
           montoGarantia: montoGarantia,
           garantiaNoReembolsable: garantiaNoReembolsable,
           comentarios: comentarios,
-          alergias: data.alergias || null,
-          restriccionesAlimentarias: data.restriccionesAlimentarias || null
+          alergias: validated.alergias || null,
+          restriccionesAlimentarias: validated.restriccionesAlimentarias || null
         }
       })
 
@@ -180,8 +210,8 @@ export async function createResidente(data: any) {
 
       // 5. Generar Pagos Mensuales
       if (montoMensual > 0) {
-        const fIngreso = (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : new Date();
-        const fFinal = (data.fechaFinal && data.fechaFinal !== "") ? utcNoon(data.fechaFinal) : null;
+        const fIngreso = (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : new Date();
+        const fFinal = (validated.fechaFinal && validated.fechaFinal !== "") ? utcNoon(validated.fechaFinal) : null;
         
         let numMeses = 1;
         if (fFinal) {
@@ -224,8 +254,8 @@ export async function createResidente(data: any) {
       }
 
       if (montoGarantia > 0) {
-        const fIngresoG = (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : new Date();
-        const fFinalG = (data.fechaFinal && data.fechaFinal !== "") ? utcNoon(data.fechaFinal) : null;
+        const fIngresoG = (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : new Date();
+        const fFinalG = (validated.fechaFinal && validated.fechaFinal !== "") ? utcNoon(validated.fechaFinal) : null;
         let stayMonths = 12;
         if (fFinalG) {
           const totalDays = Math.round((fFinalG.getTime() - fIngresoG.getTime()) / (1000 * 60 * 60 * 24))
@@ -265,7 +295,7 @@ export async function createResidente(data: any) {
       }
 
       if (garantiaNoReembolsable > 0) {
-        const fIngresoNR = (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : new Date();
+        const fIngresoNR = (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : new Date();
         await tx.pago.create({
           data: {
             residenteId: residente.id,
@@ -291,22 +321,24 @@ export async function createResidente(data: any) {
 }
 
 export async function updateResidente(id: number, data: any) {
-  const dni = data.dni as string
-  const nombre = data.nombre as string
-  const apellidoPaterno = data.apellidoPaterno as string
-  const apellidoMaterno = data.apellidoMaterno as string
-  const email = data.email as string
-  const password = data.password as string
-  const telefono = data.telefono as string
-  
-  const emergenciaNombre = data.emergenciaNombre as string
-  const emergenciaTelefono = data.emergenciaTelefono as string
-  const emergenciaParentesco = data.emergenciaParentesco as string
-
-  const residenciaId = (data.residenciaId && data.residenciaId !== "") ? Number(data.residenciaId) : null
-  const habitacionId = (data.habitacionId && data.habitacionId !== "") ? Number(data.habitacionId) : null
-
   try {
+    const validated = residenteSchema.partial().parse(data)
+    
+    const dni = validated.dni
+    const nombre = validated.nombre
+    const apellidoPaterno = validated.apellidoPaterno
+    const apellidoMaterno = validated.apellidoMaterno
+    const email = validated.email
+    const password = validated.password
+    const telefono = validated.telefono
+    
+    const emergenciaNombre = validated.emergenciaNombre
+    const emergenciaTelefono = validated.emergenciaTelefono
+    const emergenciaParentesco = validated.emergenciaParentesco
+
+    const residenciaId = (validated.residenciaId && validated.residenciaId !== "") ? Number(validated.residenciaId) : null
+    const habitacionId = (validated.habitacionId && validated.habitacionId !== "") ? Number(validated.habitacionId) : null
+
     const currentResidente = await prisma.residente.findUnique({
       where: { id },
       include: { user: true, habitacion: true }
@@ -356,12 +388,14 @@ export async function updateResidente(id: number, data: any) {
         apellidoPaterno, 
         apellidoMaterno, 
         email, 
-        residenciaId, 
+        residencia: residenciaId 
+          ? { connect: { id: residenciaId } } 
+          : { disconnect: true }, 
         telefono,
         emergenciaNombre,
         emergenciaTelefono,
         emergenciaParentesco,
-        fechaNacimiento: (data.fechaNacimiento && data.fechaNacimiento !== "") ? new Date(data.fechaNacimiento) : undefined
+        fechaNacimiento: (validated.fechaNacimiento && validated.fechaNacimiento !== "") ? new Date(validated.fechaNacimiento) : undefined
       }
       if (password && password.trim() !== "") {
         userData.password = await bcrypt.hash(password, 10)
@@ -411,16 +445,18 @@ export async function updateResidente(id: number, data: any) {
       const residente = await tx.residente.update({
         where: { id },
         data: { 
-          habitacionId,
-          fechaIngreso: (data.fechaIngreso && data.fechaIngreso !== "") ? utcNoon(data.fechaIngreso) : undefined,
-          fechaFinal: (data.fechaFinal && data.fechaFinal !== "") ? utcNoon(data.fechaFinal) : null,
-          diaPago: data.diaPago ? Number(data.diaPago) : undefined,
-          montoMensual: data.montoMensual !== undefined && data.montoMensual !== "" ? Number(data.montoMensual) : undefined,
-          montoGarantia: data.montoGarantia !== undefined && data.montoGarantia !== "" ? Number(data.montoGarantia) : undefined,
-          garantiaNoReembolsable: data.garantiaNoReembolsable !== undefined && data.garantiaNoReembolsable !== "" ? Number(data.garantiaNoReembolsable) : undefined,
-          comentarios: data.comentarios,
-          alergias: data.alergias,
-          restriccionesAlimentarias: data.restriccionesAlimentarias
+          habitacion: habitacionId 
+            ? { connect: { id: habitacionId } } 
+            : { disconnect: true },
+          fechaIngreso: (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : undefined,
+          fechaFinal: (validated.fechaFinal && validated.fechaFinal !== "") ? utcNoon(validated.fechaFinal) : null,
+          diaPago: validated.diaPago ? Number(validated.diaPago) : undefined,
+          montoMensual: validated.montoMensual !== undefined && validated.montoMensual !== "" ? Number(validated.montoMensual) : undefined,
+          montoGarantia: validated.montoGarantia !== undefined && validated.montoGarantia !== "" ? Number(validated.montoGarantia) : undefined,
+          garantiaNoReembolsable: validated.garantiaNoReembolsable !== undefined && validated.garantiaNoReembolsable !== "" ? Number(validated.garantiaNoReembolsable) : undefined,
+          comentarios: validated.comentarios,
+          alergias: validated.alergias,
+          restriccionesAlimentarias: validated.restriccionesAlimentarias
         }
       })
 
@@ -661,11 +697,29 @@ export async function updateResidente(id: number, data: any) {
     revalidatePath('/modules/residentes')
     revalidatePath(`/modules/residentes/${id}`)
     revalidatePath(`/modules/residentes/${id}/editar`)
-    revalidatePath('/modules/pagos')
     return { success: true, data: result }
   } catch (error: any) {
-    console.error('Error updating residente:', error)
-    return { success: false, error: error.message || 'Error al actualizar residente' }
+    console.error('Error al actualizar residente:', error)
+    
+    // Proporcionar un mensaje más explicativo según el tipo de error
+    let userFriendlyError = 'Ocurrió un error inesperado al actualizar los datos del residente.'
+    
+    if (error.message?.includes('capacity')) {
+      userFriendlyError = 'La habitación seleccionada ya no tiene cupo disponible.'
+    } else if (error.message?.includes('Unique constraint')) {
+      userFriendlyError = 'El DNI o correo electrónico ya están registrados con otro usuario.'
+    } else if (error.message?.includes('Unknown argument')) {
+      // Extraer el nombre del argumento si es posible del mensaje de Prisma
+      const match = error.message.match(/Unknown argument `(.+?)`/)
+      const field = match ? match[1] : 'desconocido'
+      userFriendlyError = `Error de Esquema: El campo '${field}' no es reconocido por la base de datos en esta operación.`
+    }
+
+    return { 
+      success: false, 
+      error: userFriendlyError,
+      technicalDetail: error.message 
+    }
   }
 }
 

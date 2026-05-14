@@ -5,6 +5,7 @@ import { Calendar, MapPin, Trash2, Megaphone, AlertTriangle, Bell, ChevronLeft, 
 import Link from 'next/link'
 import { deleteAviso } from '@/app/actions/avisos'
 import { Reactions } from './Reactions'
+import { useConfirmStore } from '@/store/useConfirmStore'
 
 const PRIORIDAD_CONFIG: Record<string, { label: string, color: string, icon: any, glow: string }> = {
     URGENTE: { 
@@ -28,6 +29,8 @@ const PRIORIDAD_CONFIG: Record<string, { label: string, color: string, icon: any
 }
 
 export function AvisoFeed({ avisos, isAdmin, currentUserEmail }: { avisos: any[], isAdmin: boolean, currentUserEmail: string }) {
+    const confirmAction = useConfirmStore(state => state.confirm)
+
     return (
         <div className="flex flex-col items-center gap-12 max-w-2xl mx-auto w-full">
             {avisos.map((aviso) => (
@@ -114,7 +117,13 @@ export function AvisoFeed({ avisos, isAdmin, currentUserEmail }: { avisos: any[]
                                     </Link>
                                     <button 
                                         onClick={async () => {
-                                            if (confirm('¿Eliminar este comunicado?')) {
+                                            const ok = await confirmAction({
+                                                title: 'Eliminar Comunicado',
+                                                message: '¿Estás seguro de que deseas eliminar este comunicado?',
+                                                confirmText: 'Eliminar',
+                                                variant: 'danger'
+                                            })
+                                            if (ok) {
                                                 await deleteAviso(aviso.id)
                                             }
                                         }}

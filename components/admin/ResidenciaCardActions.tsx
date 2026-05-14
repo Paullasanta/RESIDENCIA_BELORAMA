@@ -4,19 +4,28 @@ import { useState } from 'react'
 import { Pencil, Trash2, X, CheckCircle2 } from 'lucide-react'
 import { deleteResidencia, updateResidencia, activateResidencia } from '@/app/actions/residencias'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+import { useConfirmStore } from '@/store/useConfirmStore'
 
 export function ResidenciaCardActions({ residencia }: { residencia: any }) {
     const [loading, setLoading] = useState(false)
     const [isEditOpen, setIsEditOpen] = useState(false)
+    const confirmAction = useConfirmStore(state => state.confirm)
     const router = useRouter()
 
     const handleDelete = async () => {
-        if (!confirm('¿Estás seguro de que deseas desactivar esta residencia? Se ocultará del catálogo público.')) return
+        const ok = await confirmAction({
+            title: 'Desactivar Residencia',
+            message: '¿Estás seguro de que deseas desactivar esta residencia? Se ocultará del catálogo público.',
+            confirmText: 'Desactivar',
+            variant: 'danger'
+        })
+        if (!ok) return
         setLoading(true)
         const res = await deleteResidencia(residencia.id)
         setLoading(false)
         if (res.success) router.refresh()
-        else alert(res.error)
+        else toast.error(res.error || 'Ocurrió un error')
     }
 
     const handleActivate = async () => {
@@ -24,7 +33,7 @@ export function ResidenciaCardActions({ residencia }: { residencia: any }) {
         const res = await activateResidencia(residencia.id)
         setLoading(false)
         if (res.success) router.refresh()
-        else alert(res.error)
+        else toast.error(res.error || 'Ocurrió un error')
     }
 
     const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -43,8 +52,11 @@ export function ResidenciaCardActions({ residencia }: { residencia: any }) {
         setLoading(false)
         if (res.success) {
             setIsEditOpen(false)
+            toast.success('Residencia actualizada')
             router.refresh()
-        } else alert(res.error)
+        } else {
+            toast.error(res.error || 'Error al actualizar')
+        }
     }
 
     return (

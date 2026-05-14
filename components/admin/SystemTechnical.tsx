@@ -7,6 +7,8 @@ import {
     Settings, Image as ImageIcon, ExternalLink, RefreshCw
 } from 'lucide-react'
 import { getSystemStats, getStorageAudit, deleteModelImage } from '@/app/actions/technical'
+import { useConfirmStore } from '@/store/useConfirmStore'
+import { toast } from 'sonner'
 
 export function SystemTechnical() {
     const [stats, setStats] = useState<any>(null)
@@ -27,13 +29,22 @@ export function SystemTechnical() {
         }
     }
 
+    const confirmAction = useConfirmStore(state => state.confirm)
+
     const handleDeleteImage = async (id: number, model: string, url: string) => {
-        if (!confirm('¿Seguro que quieres borrar esta imagen de la base de datos?')) return
+        const ok = await confirmAction({
+            title: 'Borrar Imagen',
+            message: '¿Seguro que quieres borrar esta imagen de la base de datos?',
+            confirmText: 'Borrar',
+            variant: 'danger'
+        })
+        if (!ok) return
         try {
             await deleteModelImage(id, model, url)
+            toast.success('Imagen eliminada de la base de datos')
             loadData() // Recargar para ver cambios
         } catch (error) {
-            alert('Error al borrar imagen')
+            toast.error('Error al borrar imagen')
         }
     }
 
@@ -179,13 +190,21 @@ export function SystemTechnical() {
                         
                         <div className="space-y-2">
                             <button 
-                                onClick={() => { if(confirm('¿BORRAR TODO? Esta acción limpiará todas las tablas excepto roles y el admin maestro.')) alert('Acción de limpieza total simulada (requiere script de base de datos)') }}
+                                onClick={async () => { 
+                                    const ok = await confirmAction({
+                                        title: '¡PURGA TOTAL!',
+                                        message: '¿BORRAR TODO? Esta acción limpiará todas las tablas excepto roles y el admin maestro. ¡ESTO ES IRREVERSIBLE!',
+                                        confirmText: 'SÍ, PURGAR TODO',
+                                        variant: 'danger'
+                                    })
+                                    if(ok) toast.info('Acción de limpieza total simulada (requiere script de base de datos)') 
+                                }}
                                 className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-black text-xs transition-colors uppercase tracking-widest shadow-lg shadow-red-500/30"
                             >
                                 PURGAR BASE DE DATOS TOTAL
                             </button>
                             <button 
-                                onClick={() => alert('Generando backup JSON... (Función de descarga en desarrollo)')}
+                                onClick={() => toast.info('Generando backup JSON... (Función de descarga en desarrollo)')}
                                 className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-black text-xs transition-colors uppercase tracking-widest"
                             >
                                 DESCARGAR BACKUP COMPLETO (JSON)

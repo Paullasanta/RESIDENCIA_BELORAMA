@@ -3,16 +3,29 @@
 import { useTransition } from 'react'
 import { deleteResidente } from '@/app/actions/residentes'
 import { Trash2, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { useConfirmStore } from '@/store/useConfirmStore'
 
 export function DeleteResidenteButton({ id, nombre }: { id: number, nombre: string }) {
   const [isPending, startTransition] = useTransition()
 
+  const confirmAction = useConfirmStore(state => state.confirm)
+
   async function handleDelete() {
-    if (confirm(`¿Estás seguro de que deseas inactivar a ${nombre}? Se liberará su habitación y pasará a la lista de inactivos.`)) {
+    const ok = await confirmAction({
+      title: 'Inactivar Residente',
+      message: `¿Estás seguro de que deseas inactivar a ${nombre}? Se liberará su habitación y pasará a la lista de inactivos.`,
+      confirmText: 'Inactivar',
+      variant: 'danger'
+    })
+
+    if (ok) {
       startTransition(async () => {
         const result = await deleteResidente(id)
         if (!result.success) {
-          alert('Error: ' + result.error)
+          toast.error(result.error || 'Error al inactivar residente')
+        } else {
+          toast.success('Residente inactivado con éxito')
         }
       })
     }

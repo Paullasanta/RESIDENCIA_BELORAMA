@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { moderarProducto } from '@/app/actions/marketplace'
 import { Check, X, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 export function ModeracionButtons({ id }: { id: number }) {
     const [loading, setLoading] = useState<'APROBADO' | 'RECHAZADO' | null>(null)
@@ -10,7 +11,11 @@ export function ModeracionButtons({ id }: { id: number }) {
     const handleModerar = async (estado: 'APROBADO' | 'RECHAZADO') => {
         setLoading(estado)
         const res = await moderarProducto(id, estado)
-        if (!res.success) alert(res.error)
+        if (!res.success) {
+            toast.error(res.error || 'Error al moderar')
+        } else {
+            toast.success(estado === 'APROBADO' ? 'Producto aprobado' : 'Producto rechazado')
+        }
         setLoading(null)
     }
 

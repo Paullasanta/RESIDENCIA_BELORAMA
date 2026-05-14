@@ -2,6 +2,7 @@
 import { useState, useTransition } from 'react'
 import { sendPaymentReminder } from '@/app/actions/pagos'
 import { Loader2, Bell } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface RecordarButtonProps {
     residenteId: number
@@ -15,10 +16,11 @@ export function RecordarButton({ residenteId }: RecordarButtonProps) {
         startTransition(async () => {
             const result = await sendPaymentReminder(residenteId)
             if (result.success) {
+                toast.success('Recordatorio enviado correctamente')
                 setSent(true)
                 setTimeout(() => setSent(false), 3000)
             } else {
-                alert(result.error)
+                toast.error(result.error || 'Error al enviar recordatorio')
             }
         })
     }

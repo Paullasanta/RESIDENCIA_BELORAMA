@@ -148,9 +148,14 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
   return (
     <form action={handleSubmit} className="space-y-8 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-2xl shadow-gray-200/50">
       {error && (
-        <div className="p-5 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-bold flex items-center gap-3 animate-in shake duration-500">
-          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-          {error}
+        <div className="p-6 bg-red-50/50 backdrop-blur-sm border-l-4 border-red-500 text-red-700 rounded-2xl text-sm font-bold flex items-center gap-4 animate-in slide-in-from-top-2 duration-500 shadow-sm shadow-red-100">
+          <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+             <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-widest text-red-400 font-black mb-0.5">Error de Validación</span>
+            {error}
+          </div>
         </div>
       )}
 
@@ -497,53 +502,65 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
           />
         </div>
 
-        <div className="pt-8 mt-4 border-t border-gray-50 col-span-full">
-          <h3 className="text-sm font-black text-[#1D9E75] uppercase tracking-[0.2em] mb-2">Contacto de Emergencia</h3>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-6">Persona a contactar en caso de urgencias.</p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Nombre Completo</label>
-              <input
-                name="emergenciaNombre"
-                value={emergenciaNombre}
-                onChange={(e) => setEmergenciaNombre(e.target.value)}
-                className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
-                placeholder="Ej. María Pérez"
-              />
+        <div className="col-span-full mt-4">
+          <div className="p-8 rounded-[2rem] bg-gradient-to-br from-red-50/30 to-orange-50/20 border border-red-100/50 relative overflow-hidden group hover:border-red-200/50 transition-all">
+            {/* Decoración de fondo */}
+            <div className="absolute -top-12 -right-12 w-32 h-32 bg-red-500/5 rounded-full blur-3xl group-hover:bg-red-500/10 transition-all" />
+            
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 bg-red-500 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/20 text-white">
+                <X size={24} className="rotate-45" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-gray-800 uppercase tracking-widest">Contacto de Emergencia</h3>
+                <p className="text-[10px] text-red-500/60 font-black uppercase tracking-widest">Protocolo de Seguridad y Urgencias</p>
+              </div>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Teléfono Emergencia</label>
-              <input
-                name="emergenciaTelefono"
-                value={emergenciaTelefono}
-                onChange={(e) => {
-                  let val = e.target.value;
-                  if (!val.startsWith('+51 ')) {
-                    val = '+51 ' + val.replace(/^\+51\s?/, '');
-                  }
-                  const clean = val.replace(/^\+51\s?/, '');
-                  const numbersOnly = clean.replace(/[^0-9]/g, '');
-                  if (numbersOnly.length <= 9) {
-                    setEmergenciaTelefono('+51 ' + numbersOnly);
-                  }
-                }}
-                inputMode="numeric"
-                className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
-                placeholder="+51 999888777"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Parentesco</label>
-              <input
-                name="emergenciaParentesco"
-                value={emergenciaParentesco}
-                onChange={(e) => setEmergenciaParentesco(e.target.value)}
-                className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
-                placeholder="Ej. Madre, Padre, Hermano..."
-              />
+  
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Nombre Completo</label>
+                <input
+                  name="emergenciaNombre"
+                  value={emergenciaNombre}
+                  onChange={(e) => setEmergenciaNombre(e.target.value)}
+                  className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-white/50 focus:bg-white focus:border-red-400 focus:ring-4 focus:ring-red-400/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300 shadow-sm"
+                  placeholder="Ej. María Pérez"
+                />
+              </div>
+  
+              <div className="space-y-2">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Teléfono Emergencia</label>
+                <input
+                  name="emergenciaTelefono"
+                  value={emergenciaTelefono}
+                  onChange={(e) => {
+                    let val = e.target.value;
+                    if (!val.startsWith('+51 ')) {
+                      val = '+51 ' + val.replace(/^\+51\s?/, '');
+                    }
+                    const clean = val.replace(/^\+51\s?/, '');
+                    const numbersOnly = clean.replace(/[^0-9]/g, '');
+                    if (numbersOnly.length <= 9) {
+                      setEmergenciaTelefono('+51 ' + numbersOnly);
+                    }
+                  }}
+                  inputMode="numeric"
+                  className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-white/50 focus:bg-white focus:border-red-400 focus:ring-4 focus:ring-red-400/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300 shadow-sm"
+                  placeholder="+51 999888777"
+                />
+              </div>
+  
+              <div className="space-y-2">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Parentesco</label>
+                <input
+                  name="emergenciaParentesco"
+                  value={emergenciaParentesco}
+                  onChange={(e) => setEmergenciaParentesco(e.target.value)}
+                  className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-white/50 focus:bg-white focus:border-red-400 focus:ring-4 focus:ring-red-400/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300 shadow-sm"
+                  placeholder="Ej. Madre, Padre, Hermano..."
+                />
+              </div>
             </div>
           </div>
         </div>

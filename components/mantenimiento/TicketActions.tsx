@@ -14,6 +14,8 @@ import {
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { useRouter } from 'next/navigation'
+import { useConfirmStore } from '@/store/useConfirmStore'
+import { toast } from 'sonner'
 
 export function TicketActions({ ticket, isAdmin }: { ticket: any, isAdmin: boolean }) {
     const [loading, setLoading] = useState(false)
@@ -31,13 +33,23 @@ export function TicketActions({ ticket, isAdmin }: { ticket: any, isAdmin: boole
         }
     }
 
+    const confirmAction = useConfirmStore(state => state.confirm)
+
     const handleDelete = async () => {
-        if (!confirm('¿Seguro que deseas eliminar este ticket?')) return
+        const ok = await confirmAction({
+            title: 'Eliminar Ticket',
+            message: '¿Seguro que deseas eliminar este ticket?',
+            confirmText: 'Eliminar',
+            variant: 'danger'
+        })
+        if (!ok) return
         setLoading(true)
         try {
             await deleteTicket(ticket.id)
+            toast.success('Ticket eliminado')
             router.refresh()
         } catch (error) {
+            toast.error('Error al eliminar ticket')
             console.error(error)
         } finally {
             setLoading(false)

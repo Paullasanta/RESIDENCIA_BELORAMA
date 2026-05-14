@@ -3,6 +3,8 @@
 import { SessionProvider, useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { Toaster } from 'sonner'
+import { ConfirmModal } from '@/components/shared/ConfirmModal'
 
 function SessionGuard({ children }: { children: React.ReactNode }) {
     const { status } = useSession()
@@ -43,6 +45,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         // y el SessionGuard cerrará la sesión en todos los dispositivos al instante.
         <SessionProvider refetchInterval={30}>
             <HydrationSafeWrapper>{children}</HydrationSafeWrapper>
+            <Toaster position="top-center" expand={false} richColors closeButton />
+            <ConfirmModal />
         </SessionProvider>
     )
 }

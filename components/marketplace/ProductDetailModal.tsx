@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { X, ChevronLeft, ChevronRight, Mail, DollarSign, User, Calendar, ExternalLink } from 'lucide-react'
 import { marcarVendido } from '@/app/actions/marketplace'
+import { useConfirmStore } from '@/store/useConfirmStore'
+import { toast } from 'sonner'
 
 interface ProductProps {
     id: number
@@ -38,15 +40,24 @@ export function ProductDetailModal({
     const [loading, setLoading] = useState(false)
     const hasMultipleImages = producto.fotos.length > 1
     
+    const confirmAction = useConfirmStore(state => state.confirm)
+    
     const handleVendido = async () => {
-        if (!confirm('¿Seguro que quieres marcar este producto como vendido? Ya no será visible en el Marketplace.')) return
+        const ok = await confirmAction({
+            title: 'Marcar como Vendido',
+            message: '¿Seguro que quieres marcar este producto como vendido? Ya no será visible en el Marketplace.',
+            confirmText: 'Sí, Vendido',
+            variant: 'warning'
+        })
+        if (!ok) return
         setLoading(true)
         const res = await marcarVendido(producto.id)
         setLoading(false)
         if (res.success) {
+            toast.success('Producto marcado como vendido')
             onClose()
         } else {
-            alert(res.error)
+            toast.error(res.error || 'Ocurrió un error')
         }
     }
 

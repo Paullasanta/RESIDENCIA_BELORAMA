@@ -4,6 +4,7 @@ import { useState, useEffect, useTransition } from 'react'
 import { reactivateResidente } from '@/app/actions/residentes'
 import { getResidenciasConHabitaciones } from '@/app/actions/residentes'
 import { X, RefreshCw, UserPlus, Home, DollarSign, Calendar, Loader2, AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface ReactivateResidenteModalProps {
     id: number
@@ -72,14 +73,14 @@ export function ReactivateResidenteModal({ id, nombre, isOpen, onClose, defaultM
             if (result.success) {
                 onClose()
             } else {
-                alert('Error: ' + result.error)
+                toast.error(result.error || 'Ocurrió un error')
             }
         })
     }
 
     const handleReentry = () => {
         if (!formData.residenciaId || !formData.habitacionId || !formData.montoMensual || !formData.montoGarantia || !formData.fechaIngreso || !formData.fechaFinal) {
-            alert('Por favor completa TODOS los campos obligatorios, incluyendo las fechas.')
+            toast.error('Por favor completa TODOS los campos obligatorios, incluyendo las fechas.')
             return
         }
 
@@ -88,7 +89,7 @@ export function ReactivateResidenteModal({ id, nombre, isOpen, onClose, defaultM
             if (result.success) {
                 onClose()
             } else {
-                alert('Error: ' + result.error)
+                toast.error(result.error || 'Ocurrió un error')
             }
         })
     }

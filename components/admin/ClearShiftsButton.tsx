@@ -3,25 +3,41 @@
 import { Trash2, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { clearAllShifts } from '@/app/actions/lavanderia'
+import { useConfirmStore } from '@/store/useConfirmStore'
+import { toast } from 'sonner'
 
 export function ClearShiftsButton({ lavadoraId, residenciaId, hasAssignments }: { lavadoraId: number, residenciaId: number, hasAssignments: boolean }) {
     const [loading, setLoading] = useState(false)
 
+    const confirmAction = useConfirmStore(state => state.confirm)
+
     const handleClear = async () => {
         if (!hasAssignments) return
         
-        // Primera confirmación
-        if (!confirm('¿Estás seguro de que deseas liberar TODOS los turnos de esta lavadora?')) return
+        const ok1 = await confirmAction({
+            title: 'Liberar Turnos',
+            message: '¿Estás seguro de que deseas liberar TODOS los turnos de esta lavadora?',
+            confirmText: 'Sí, Continuar',
+            variant: 'warning'
+        })
+        if (!ok1) return
         
-        // Segunda confirmación crítica
-        if (!confirm('¡ATENCIÓN! Esta acción borrará todas las reservas de los residentes para esta lavadora. ¿Estás COMPLETAMENTE seguro de proceder?')) return
+        const ok2 = await confirmAction({
+            title: '¡ACCIÓN CRÍTICA!',
+            message: '¡ATENCIÓN! Esta acción borrará todas las reservas de los residentes para esta lavadora. ¿Estás COMPLETAMENTE seguro de proceder?',
+            confirmText: 'SÍ, LIMPIAR TODO',
+            variant: 'danger'
+        })
+        if (!ok2) return
         
         setLoading(true)
         const res = await clearAllShifts(lavadoraId, residenciaId)
         setLoading(false)
         
         if (!res.success) {
-            alert(res.error || 'Error al limpiar turnos')
+            toast.error(res.error || 'Error al limpiar turnos')
+        } else {
+            toast.success('Lavadora liberada correctamente')
         }
     }
 

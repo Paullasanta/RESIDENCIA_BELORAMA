@@ -16,7 +16,13 @@ const residenciaSchema = z.object({
 
 export async function createResidencia(data: z.infer<typeof residenciaSchema>) {
   try {
-    const { numHabitaciones, numLavadoras, ...validated } = residenciaSchema.parse(data)
+    const validatedData = residenciaSchema.parse(data)
+    const { numHabitaciones, numLavadoras, ...validated } = validatedData
+    
+    // Limpiar strings
+    validated.nombre = validated.nombre.trim()
+    validated.direccion = validated.direccion.trim()
+    if (validated.descripcion) validated.descripcion = validated.descripcion.trim()
     
     const res = await prisma.$transaction(async (tx) => {
       const residencia = await tx.residencia.create({
@@ -61,8 +67,15 @@ export async function createResidencia(data: z.infer<typeof residenciaSchema>) {
 
 export async function updateResidencia(id: number, data: Partial<z.infer<typeof residenciaSchema>>) {
   try {
-    const { numHabitaciones, numLavadoras, ...validated } = data
+    // Validar con el esquema parcial
+    const validatedData = residenciaSchema.partial().parse(data)
+    const { numHabitaciones, numLavadoras, ...validated } = validatedData
     
+    // Limpiar strings si existen
+    if (validated.nombre) validated.nombre = validated.nombre.trim()
+    if (validated.direccion) validated.direccion = validated.direccion.trim()
+    if (validated.descripcion) validated.descripcion = validated.descripcion.trim()
+
     const res = await prisma.$transaction(async (tx) => {
       const residencia = await tx.residencia.update({
         where: { id },

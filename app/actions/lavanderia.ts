@@ -6,6 +6,27 @@ import { EstadoTurno, TipoReserva, DiaSemana } from '@prisma/client'
 import { checkAuth, checkResidenciaAccess } from '@/lib/auth-utils'
 import { createNotification, notifyAdmins } from './notificaciones'
 
+const MAP_DAYS: Record<string, number> = {
+  'LUNES': 1,
+  'MARTES': 2,
+  'MIERCOLES': 3,
+  'JUEVES': 4,
+  'VIERNES': 5,
+  'SABADO': 6,
+  'DOMINGO': 7,
+}
+
+function checkDayNotPast(dia: string) {
+  // Obtenemos el día actual (1-7, donde 1 es Lunes y 7 es Domingo)
+  const today = new Date().getDay()
+  const todayNumeric = today === 0 ? 7 : today
+  const turnoNumeric = MAP_DAYS[dia] || 0
+  
+  if (turnoNumeric < todayNumeric) {
+    throw new Error(`No se pueden realizar acciones en días pasados (${dia}).`)
+  }
+}
+
 /**
  * ASIGNAR O SOLICITAR TURNO (Lógica 1+1)
  * - Si hay cupo y es el primer extra -> Directo (EXTRA)
@@ -22,6 +43,11 @@ export async function reservarTurnoLavanderia(turnoId: number, residenteId: numb
     
     if (!turno) throw new Error('Turno no encontrado')
     checkResidenciaAccess(user, turno.residenciaId)
+
+    // Bloquear si el día ya pasó
+    if (!['ADMIN', 'SUPER_ADMIN'].includes(user.rol)) {
+        checkDayNotPast(turno.dia)
+    }
 
     // 1. Contar turnos actuales del residente en esta instancia (semana)
     // Consideramos OCUPADOS (su base + extras)
@@ -115,6 +141,11 @@ export async function aprobarTurnoSolicitado(turnoId: number) {
     try {
         const user = await checkAuth('MANAGE_LAVANDERIA')
         
+        const turnoInfo = await prisma.turnoLavanderia.findUnique({ where: { id: turnoId } })
+        if (turnoInfo && !['ADMIN', 'SUPER_ADMIN'].includes(user.rol)) {
+            checkDayNotPast(turnoInfo.dia)
+        }
+
         const turno = await prisma.turnoLavanderia.update({
             where: { id: turnoId },
             data: { 
@@ -179,6 +210,15 @@ export async function liberarTurnoLavanderia(turnoId: number) {
     })
     
     if (!turno || !turno.residenteId) return { success: false, error: 'Turno no válido' }
+
+    // Bloquear si el día ya pasó
+    if (!['ADMIN', 'SUPER_ADMIN'].includes(user.rol)) {
+        try {
+            checkDayNotPast(turno.dia)
+        } catch (e: any) {
+            return { success: false, error: e.message }
+        }
+    }
 
     // 1. Verificar si este slot tiene un dueño permanente (TurnoFijo)
     const fixed = await prisma.turnoFijo.findFirst({

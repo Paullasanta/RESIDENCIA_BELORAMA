@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Upload, X, Loader2, Check, CreditCard, Smartphone, Banknote } from 'lucide-react'
 import { enviarComprobantePago } from '@/app/actions/pagos'
+import { toast } from 'sonner'
 
 interface EnviarVoucherModalProps {
     pagoId: number
@@ -60,15 +61,16 @@ export default function EnviarVoucherModal({ pagoId, concepto, isOpen, onClose }
                 })
 
                 if (res.success) {
+                    toast.success('Comprobante enviado. Espera la validación.')
                     router.refresh()
                     onClose()
                 } else {
-                    alert('Error: ' + res.error)
+                    toast.error(res.error || 'Error al enviar comprobante')
                 }
             })
         } catch (error) {
             console.error(error)
-            alert('Error al procesar el envío')
+            toast.error('Error al procesar el envío')
         } finally {
             setUploading(false)
         }

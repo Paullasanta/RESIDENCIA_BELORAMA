@@ -13,12 +13,15 @@ import {
 import { confirmReserva, cancelReserva } from '@/app/actions/reservas'
 import { useRouter } from 'next/navigation'
 import { ReservaModal } from './ReservaModal'
+import { useConfirmStore } from '@/store/useConfirmStore'
+import { toast } from 'sonner'
 
 export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
     const [isOpen, setIsOpen] = useState(false)
     const [activeTab, setActiveTab] = useState<'EDITAR' | 'FOTOS' | 'RESIDENTES'>('EDITAR')
     const [loading, setLoading] = useState(false)
     const [showReserva, setShowReserva] = useState(false)
+    const confirmAction = useConfirmStore(state => state.confirm)
 
     const { data: session } = useSession()
     const rol = session?.user?.rol
@@ -182,16 +185,23 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
                                                     type="button"
                                                     disabled={loading}
                                                     onClick={async () => {
-                                                        if (confirm('¿Confirmar la ocupación de esta habitación? Se creará el perfil de residente automáticamente.')) {
+                                                        const ok = await confirmAction({
+                                                            title: 'Confirmar Ocupación',
+                                                            message: '¿Confirmar la ocupación de esta habitación? Se creará el perfil de residente automáticamente.',
+                                                            confirmText: 'Confirmar',
+                                                            variant: 'info'
+                                                        })
+                                                        if (ok) {
                                                             setLoading(true)
                                                             const resId = habitacion.reservas?.find((r: any) => r.estado === 'PENDIENTE')?.id
                                                             if (resId) {
                                                                 const res = await confirmReserva(resId)
                                                                 if (res.success) {
+                                                                    toast.success('Residente creado correctamente')
                                                                     router.refresh()
                                                                     setIsOpen(false)
                                                                 } else {
-                                                                    alert('Error: ' + res.error)
+                                                                    toast.error(res.error || 'Error al confirmar')
                                                                 }
                                                             }
                                                             setLoading(false)
@@ -205,19 +215,26 @@ export function ManageHabitacionModal({ habitacion }: { habitacion: any }) {
                                                     type="button"
                                                     disabled={loading}
                                                     onClick={async () => {
-                                                        if (confirm('¿Seguro que deseas eliminar esta reserva? Se borrarán los datos del solicitante y la habitación quedará LIBRE.')) {
+                                                        const ok = await confirmAction({
+                                                            title: 'Eliminar Reserva',
+                                                            message: '¿Seguro que deseas eliminar esta reserva? Se borrarán los datos del solicitante y la habitación quedará LIBRE.',
+                                                            confirmText: 'Eliminar Reserva',
+                                                            variant: 'danger'
+                                                        })
+                                                        if (ok) {
                                                             setLoading(true)
                                                             const resId = habitacion.reservas?.find((r: any) => r.estado === 'PENDIENTE')?.id
                                                             if (resId) {
                                                                 const res = await cancelReserva(resId)
                                                                 if (res.success) {
+                                                                    toast.success('Reserva eliminada')
                                                                     router.refresh()
                                                                     setIsOpen(false)
                                                                 } else {
-                                                                    alert('Error al cancelar: ' + res.error)
+                                                                    toast.error(res.error || 'Error al cancelar')
                                                                 }
                                                             } else {
-                                                                alert('No se encontró el ID de la reserva.')
+                                                                toast.error('No se encontró el ID de la reserva.')
                                                             }
                                                             setLoading(false)
                                                         }

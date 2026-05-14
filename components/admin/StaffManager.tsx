@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react'
 import { useSession } from 'next-auth/react'
 import { Plus, User, Edit2, Trash2, Mail, Shield, Building, Save, X, Loader2, Users, Eye, EyeOff, Phone } from 'lucide-react'
 import { upsertUsuario, eliminarUsuario } from '@/app/actions/usuarios'
+import { useConfirmStore } from '@/store/useConfirmStore'
+import { toast } from 'sonner'
 
 interface StaffMember {
     id: number
@@ -47,10 +49,19 @@ export function StaffManager({ staff, roles, residencias }: { staff: StaffMember
         })
     }
 
+    const confirmAction = useConfirmStore(state => state.confirm)
+
     const handleDelete = async (id: number) => {
-        if (confirm('¿Estás seguro de eliminar a este miembro del equipo?')) {
+        const ok = await confirmAction({
+            title: 'Eliminar Miembro',
+            message: '¿Estás seguro de eliminar a este miembro del equipo?',
+            confirmText: 'Eliminar',
+            variant: 'danger'
+        })
+        if (ok) {
             const result = await eliminarUsuario(id)
-            if (!result.success) alert(result.error)
+            if (!result.success) toast.error(result.error || 'Error al eliminar')
+            else toast.success('Miembro eliminado')
         }
     }
 

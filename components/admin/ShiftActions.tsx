@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { reservarTurnoLavanderia, liberarTurnoLavanderia, aprobarTurnoSolicitado, toggleRecurringShift } from '@/app/actions/lavanderia'
 import { Loader2, UserPlus, UserMinus, CheckCircle, Clock, Edit2, X, Star } from 'lucide-react'
+import { toast } from 'sonner'
 
 export function ShiftActions({ 
     turno, 
@@ -27,6 +28,15 @@ export function ShiftActions({
     const [showAssign, setShowAssign] = useState(false)
     const [updatingFixed, setUpdatingFixed] = useState(false)
 
+    // Lógica para bloquear días pasados
+    const MAP_DAYS: Record<string, number> = {
+        'LUNES': 1, 'MARTES': 2, 'MIERCOLES': 3, 'JUEVES': 4, 'VIERNES': 5, 'SABADO': 6, 'DOMINGO': 7,
+    }
+    const today = new Date().getDay()
+    const todayNumeric = today === 0 ? 7 : today
+    const turnoNumeric = MAP_DAYS[turno.dia] || 0
+    const esDiaPasado = turnoNumeric < todayNumeric && !['ADMIN', 'SUPER_ADMIN'].includes(userRole || '')
+
     const esMio = turno.residenteId === currentUserResidenteId && turno.estado === 'OCUPADO'
     const esMiSolicitud = turno.residenteId === currentUserResidenteId && turno.estado === 'SOLICITADO'
 
@@ -36,8 +46,9 @@ export function ShiftActions({
         setLoading(false)
         if (res.success) {
             setShowAssign(false)
+            toast.success('Operación realizada con éxito')
         } else {
-            alert(res.error || 'Error en la operación')
+            toast.error(res.error || 'Error en la operación')
         }
     }
 
@@ -46,14 +57,16 @@ export function ShiftActions({
         const res = await toggleRecurringShift(turno.id, !turno.esFijo)
         setUpdatingFixed(false)
         if (!res.success) {
-            alert(res.error || 'Error al actualizar permanencia')
+            toast.error(res.error || 'Error al actualizar permanencia')
+        } else {
+            toast.success(turno.esFijo ? 'Permanencia desactivada' : 'Turno marcado como permanente')
         }
     }
 
     const handleLiberar = () => handleAction(() => liberarTurnoLavanderia(turno.id))
     
     const handleAsignarPropio = () => {
-        if (!currentUserResidenteId) return alert('No se encontró perfil de residente')
+        if (!currentUserResidenteId) return toast.error('No se encontró perfil de residente')
         handleAction(() => reservarTurnoLavanderia(turno.id, currentUserResidenteId))
     }
     
@@ -182,6 +195,15 @@ export function ShiftActions({
         )
     }
 
+    // Si el día ya pasó y no es admin, no mostramos acciones o mostramos un estado bloqueado
+    if (esDiaPasado) {
+        return (
+            <div className="w-full flex items-center justify-center gap-1 py-2 bg-gray-50 text-gray-400 rounded-lg text-[9px] font-black border border-gray-100">
+                <Clock size={12} /> DÍA PASADO
+            </div>
+        )
+    }
+
     // Si la lavadora no está activa y no es admin, bloqueamos interacción
     if (!lavadoraActiva && !canManage) {
         return (
@@ -223,8 +245,8 @@ export function ShiftActions({
             {esMiSolicitud && (
                 <button
                     onClick={handleLiberar}
-                    disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 py-3 md:py-1.5 bg-yellow-500 text-white rounded-xl md:rounded-lg transition-colors text-xs md:text-[9px] font-black shadow-lg shadow-yellow-500/20"
+                    disabled={loading || esDiaPasado}
+                    className="w-full flex items-center justify-center gap-2 py-3 md:py-1.5 bg-yellow-500 text-white rounded-xl md:rounded-lg transition-colors text-xs md:text-[9px] font-black shadow-lg shadow-yellow-500/20 disabled:opacity-50"
                 >
                     {loading ? <Loader2 size={14} className="animate-spin" /> : <><X size={14} /> Cancelar Solicitud</>}
                 </button>

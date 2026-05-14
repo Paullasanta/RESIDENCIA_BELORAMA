@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { createHabitacion } from '@/app/actions/habitaciones'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 export function AddHabitacionButton({ residenciaId }: { residenciaId: number }) {
     const [isOpen, setIsOpen] = useState(false)
@@ -28,9 +29,10 @@ export function AddHabitacionButton({ residenciaId }: { residenciaId: number }) 
         
         if (res.success) {
             setIsOpen(false)
+            toast.success('Habitación registrada')
             router.refresh()
         } else {
-            alert(res.error)
+            toast.error(res.error || 'Error al registrar habitación')
         }
     }
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Search, Users, Edit2, FileText, AlertCircle, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { DeleteResidenteButton } from '@/components/shared/DeleteResidenteButton'
@@ -71,7 +72,7 @@ export function ResidentesTable({ residentes, residencias, isInactiveView = fals
             })
 
             if (!result.success || !result.data) {
-                alert(result.error || 'Error al obtener datos para el PDF')
+                toast.error(result.error || 'Error al obtener datos para el PDF')
                 return
             }
 
@@ -147,7 +148,7 @@ export function ResidentesTable({ residentes, residencias, isInactiveView = fals
             window.open(doc.output('bloburl'), '_blank')
         } catch (error) {
             console.error('Error exporting PDF:', error)
-            alert('Error al generar el PDF')
+            toast.error('Error al generar el PDF')
         } finally {
             setIsExporting(false)
         }
@@ -161,7 +162,7 @@ export function ResidentesTable({ residentes, residencias, isInactiveView = fals
         })
 
         if (!result.success || !result.data) {
-            alert(result.error || 'Error al obtener datos para Excel')
+            toast.error(result.error || 'Error al obtener datos para Excel')
             return []
         }
 

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { createResidencia } from '@/app/actions/residencias'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 export function AddResidenciaButton() {
     const [isOpen, setIsOpen] = useState(false)
@@ -30,9 +31,10 @@ export function AddResidenciaButton() {
         
         if (res.success) {
             setIsOpen(false)
+            toast.success('Residencia creada exitosamente')
             router.refresh()
         } else {
-            alert(res.error)
+            toast.error(res.error || 'Error al crear la residencia')
         }
     }
 

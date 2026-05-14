@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react'
 import { updateConfig } from '@/app/actions/config'
 import { Loader2, Save, Globe, Info, Mail } from 'lucide-react'
+import { useConfirmStore } from '@/store/useConfirmStore'
+import { toast } from 'sonner'
 
 interface ConfigFormProps {
     initialConfig: Record<string, string>
@@ -37,15 +39,23 @@ export function ConfigForm({ initialConfig }: ConfigFormProps) {
             return
         }
 
-        if (!window.confirm('¿Estás seguro de que deseas guardar estos cambios en la configuración del sistema?')) {
-            return
-        }
+        const confirmAction = useConfirmStore(state => state.confirm)
+
+        const ok = await confirmAction({
+            title: 'Guardar Configuración',
+            message: '¿Estás seguro de que deseas guardar estos cambios en la configuración del sistema?',
+            confirmText: 'Guardar',
+            variant: 'info'
+        })
+        if (!ok) return
 
         startTransition(async () => {
             const result = await updateConfig(data)
             if (result.success) {
+                toast.success('Configuración guardada')
                 setSuccess(true)
             } else {
+                toast.error(result.error || 'Error al guardar')
                 setError(result.error as string)
             }
         })
