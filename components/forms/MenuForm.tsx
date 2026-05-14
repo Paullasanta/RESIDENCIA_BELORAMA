@@ -4,23 +4,41 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { publishDailyMenu } from '@/app/actions/comida'
 import { Loader2, Save, X, Utensils, Calendar, Building, Clock } from 'lucide-react'
+import { getLimaNow } from '@/lib/utils'
 
 interface MenuFormProps {
   residencias: any[]
+  initialData?: any[]
 }
 
-export function MenuForm({ residencias }: MenuFormProps) {
+export function MenuForm({ residencias, initialData }: MenuFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [selectedResidencias, setSelectedResidencias] = useState<number[]>([])
+  const [selectedResidencias, setSelectedResidencias] = useState<number[]>(
+    initialData?.[0]?.residencias.map((r: any) => r.residenciaId) || []
+  )
 
   // Controlled fields to prevent data loss
-  const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
-  const [fechaLimite, setFechaLimite] = useState('')
-  const [desayuno, setDesayuno] = useState({ nombre: '', descripcion: '' })
-  const [almuerzo, setAlmuerzo] = useState({ nombre: '', descripcion: '' })
-  const [cena, setCena] = useState({ nombre: '', descripcion: '' })
+  const [fecha, setFecha] = useState(
+    initialData?.[0]?.fecha 
+      ? new Date(initialData[0].fecha).toISOString().split('T')[0] 
+      : new Date().toISOString().split('T')[0]
+  )
+  const [fechaLimite, setFechaLimite] = useState(
+    initialData?.[0]?.fechaLimite 
+      ? new Date(initialData[0].fechaLimite).toISOString().slice(0, 16) 
+      : ''
+  )
+
+  const findMenu = (tipo: string) => {
+    const m = initialData?.find(x => x.tipo === tipo)
+    return m ? { nombre: m.nombre, descripcion: m.descripcion || '' } : { nombre: '', descripcion: '' }
+  }
+
+  const [desayuno, setDesayuno] = useState(findMenu('DESAYUNO'))
+  const [almuerzo, setAlmuerzo] = useState(findMenu('ALMUERZO'))
+  const [cena, setCena] = useState(findMenu('CENA'))
 
   async function handleSubmit() {
     setError(null)
@@ -32,6 +50,17 @@ export function MenuForm({ residencias }: MenuFormProps) {
     if (!desayuno.nombre && !almuerzo.nombre && !cena.nombre) {
       setError('Debes ingresar al menos un menú (Desayuno, Almuerzo o Cena).')
       return;
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0]
+    if (fecha < todayStr) {
+      setError('No puedes programar menús para fechas pasadas.')
+      return
+    }
+
+    if (fechaLimite && new Date(fechaLimite) < getLimaNow()) {
+      setError('La fecha límite para confirmar no puede ser anterior al momento actual.')
+      return
     }
 
     const data = {
@@ -82,6 +111,7 @@ export function MenuForm({ residencias }: MenuFormProps) {
               <input
                 type="date"
                 required
+                min={new Date().toISOString().split('T')[0]}
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
                 className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
@@ -93,6 +123,15 @@ export function MenuForm({ residencias }: MenuFormProps) {
               </label>
               <input
                 type="datetime-local"
+                min={(() => {
+                  const now = getLimaNow();
+                  const y = now.getFullYear();
+                  const m = String(now.getMonth() + 1).padStart(2, '0');
+                  const d = String(now.getDate()).padStart(2, '0');
+                  const h = String(now.getHours()).padStart(2, '0');
+                  const mm = String(now.getMinutes()).padStart(2, '0');
+                  return `${y}-${m}-${d}T${h}:${mm}`;
+                })()}
                 value={fechaLimite}
                 onChange={(e) => setFechaLimite(e.target.value)}
                 className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"

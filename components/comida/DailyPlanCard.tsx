@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Clock, X, Users, CheckCircle2, XCircle, Calendar } from 'lucide-react'
+import { Clock, X, Users, CheckCircle2, XCircle, Calendar, Trash2, Edit2 } from 'lucide-react'
+import { deleteDailyPlan } from '@/app/actions/comida'
+import Link from 'next/link'
 import { MealEntry } from './MealEntry'
 import { AsistenciaButtons } from './AsistenciaButtons'
 
@@ -17,8 +19,25 @@ interface DailyPlanCardProps {
 
 export function DailyPlanCard({ plan, canManage, residentesActivos, residenteId, hoy, tipoLabel, tipoColorBar }: DailyPlanCardProps) {
     const [isDailyModalOpen, setIsDailyModalOpen] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
     const isLocked = plan.fechaLimite ? hoy > new Date(plan.fechaLimite) : false
     const dateObj = new Date(plan.fecha)
+
+    const handleDelete = async () => {
+        if (!confirm('¿Estás seguro de que deseas eliminar TODA la programación de este día?')) return
+        
+        setIsDeleting(true)
+        try {
+            const result = await deleteDailyPlan(plan.fecha)
+            if (!result.success) {
+                alert(result.error)
+            }
+        } catch (error) {
+            alert('Error al eliminar el plan')
+        } finally {
+            setIsDeleting(false)
+        }
+    }
 
     // Preparar datos consolidados para el día
     const mealResidenciasIds = Array.from(new Set(plan.menus.flatMap((m: any) => m.residencias.map((mr: any) => mr.residenciaId))))
@@ -66,17 +85,42 @@ export function DailyPlanCard({ plan, canManage, residentesActivos, residenteId,
                     onClick={() => canManage && setIsDailyModalOpen(true)}
                     className={`p-6 pb-4 border-b border-gray-100 bg-gray-50/20 ${canManage ? 'cursor-pointer hover:bg-gray-50/50' : ''}`}
                 >
-                    <div className="flex items-baseline justify-between mb-1">
-                        <h3 className="text-xl font-black text-[#072E1F] uppercase tracking-tighter">
-                            {dateObj.toLocaleDateString('es-MX', { weekday: 'long', timeZone: 'UTC' })}
-                        </h3>
-                        <span className="text-sm font-black text-gray-300">
-                            {dateObj.getUTCDate()}
-                        </span>
+                    <div className="flex items-start justify-between mb-1">
+                        <div className="flex flex-col">
+                            <h3 className="text-xl font-black text-[#072E1F] uppercase tracking-tighter">
+                                {dateObj.toLocaleDateString('es-MX', { weekday: 'long', timeZone: 'UTC' })}
+                            </h3>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">
+                                {dateObj.toLocaleDateString('es-MX', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
+                            </p>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                             <span className="text-sm font-black text-gray-300 mr-1">
+                                {dateObj.getUTCDate()}
+                            </span>
+                            {canManage && !isLocked && (
+                                <div className="flex items-center gap-1 animate-in fade-in zoom-in duration-300">
+                                    <Link 
+                                        href={`/modules/comida/editar?fecha=${dateObj.toISOString().split('T')[0]}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="p-1.5 hover:bg-blue-50 text-blue-400 rounded-lg transition-colors"
+                                        title="Editar plan del día"
+                                    >
+                                        <Edit2 size={14} />
+                                    </Link>
+                                    <button 
+                                        disabled={isDeleting}
+                                        onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+                                        className="p-1.5 hover:bg-red-50 text-red-400 rounded-lg transition-colors disabled:opacity-50"
+                                        title="Eliminar plan del día"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest truncate">
-                        {dateObj.toLocaleDateString('es-MX', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
-                    </p>
                     
                     {plan.fechaLimite && (
                         <div className={`mt-4 flex items-center gap-2 text-[9px] font-bold ${isLocked ? 'text-red-400' : 'text-gray-400'}`}>

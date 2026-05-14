@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs'
 import { auth } from '@/lib/auth'
 import { EstadoHabitacion, EstadoPago, EstadoProducto } from '@prisma/client'
 import { z } from 'zod'
+import { getLimaNow } from '@/lib/utils'
 
 const residenteSchema = z.object({
   nombre: z.string().min(2, 'El nombre es muy corto').trim(),
@@ -189,7 +190,7 @@ export async function createResidente(data: any) {
           userId: user.id,
           habitacionId: habitacionId,
           activo: true,
-          fechaIngreso: (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : new Date(),
+          fechaIngreso: (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : getLimaNow(),
           fechaFinal: (validated.fechaFinal && validated.fechaFinal !== "") ? utcNoon(validated.fechaFinal) : null,
           diaPago: diaPagoFinal,
           montoMensual: montoMensual,
@@ -211,7 +212,7 @@ export async function createResidente(data: any) {
 
       // 5. Generar Pagos Mensuales
       if (montoMensual > 0) {
-        const fIngreso = (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : new Date();
+        const fIngreso = (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : getLimaNow();
         const fFinal = (validated.fechaFinal && validated.fechaFinal !== "") ? utcNoon(validated.fechaFinal) : null;
         
         let numMeses = 1;
@@ -225,7 +226,7 @@ export async function createResidente(data: any) {
           numMeses = 1;
         }
 
-        const now = new Date();
+        const now = getLimaNow();
         now.setUTCHours(0, 0, 0, 0);
 
         const pagosToCreate = Array.from({ length: numMeses }, (_, i) => {
@@ -255,7 +256,7 @@ export async function createResidente(data: any) {
       }
 
       if (montoGarantia > 0) {
-        const fIngresoG = (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : new Date();
+        const fIngresoG = (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : getLimaNow();
         const fFinalG = (validated.fechaFinal && validated.fechaFinal !== "") ? utcNoon(validated.fechaFinal) : null;
         let stayMonths = 12;
         if (fFinalG) {
@@ -265,7 +266,7 @@ export async function createResidente(data: any) {
         
         // Usar las cuotas solicitadas directamente
         const finalCuotas = cuotasGarantia;
-        const nowG = new Date();
+        const nowG = getLimaNow();
         nowG.setUTCHours(0, 0, 0, 0);
         
         const montoPrimerPago = Number(data.montoGarantiaPrimerPago || (montoGarantia / finalCuotas))
@@ -296,7 +297,7 @@ export async function createResidente(data: any) {
       }
 
       if (garantiaNoReembolsable > 0) {
-        const fIngresoNR = (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : new Date();
+        const fIngresoNR = (validated.fechaIngreso && validated.fechaIngreso !== "") ? utcNoon(validated.fechaIngreso) : getLimaNow();
         await tx.pago.create({
           data: {
             residenteId: residente.id,
@@ -304,7 +305,7 @@ export async function createResidente(data: any) {
             monto: garantiaNoReembolsable,
             montoPagado: 0,
             fechaVencimiento: fIngresoNR,
-            estado: pagoConfirmado ? EstadoPago.EN_REVISION : (fIngresoNR < new Date() ? EstadoPago.VENCIDO : EstadoPago.PENDIENTE),
+            estado: pagoConfirmado ? EstadoPago.EN_REVISION : (fIngresoNR < getLimaNow() ? EstadoPago.VENCIDO : EstadoPago.PENDIENTE),
             comprobante: pagoConfirmado ? comprobanteUrl : null
           }
         })
@@ -618,7 +619,7 @@ export async function updateResidente(id: number, data: any) {
       }
 
       // --- Sincronización Global de Pagos (Fuera del bloque de fechaFinal para que afecte a todos) ---
-      const now = new Date()
+      const now = getLimaNow()
       now.setUTCHours(0, 0, 0, 0)
 
       // 6. Mensualidades (Búsqueda más amplia para evitar fallos por concepto o acentos)
@@ -743,7 +744,7 @@ export async function deleteResidente(id: number) {
         where: { id },
         data: { 
           activo: false,
-          deletedAt: new Date()
+          deletedAt: getLimaNow()
         }
       })
 

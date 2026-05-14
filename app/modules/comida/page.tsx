@@ -5,6 +5,7 @@ import { UtensilsCrossed, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { DailyPlanCard } from '@/components/comida/DailyPlanCard'
 import { AutoRefresh } from '@/components/shared/AutoRefresh'
+import { getLimaNow } from '@/lib/utils'
 
 const TIPO_LABEL: Record<string, string> = {
     DESAYUNO: 'Desayuno', ALMUERZO: 'Almuerzo', CENA: 'Cena',
@@ -42,19 +43,15 @@ export default async function ComidaPage({
         residenteId = profile?.id ?? null
     }
 
-    // Lógica de Corte: Cada viernes a las 23:00
-    const now = new Date()
-    const cutoff = new Date(now)
-    cutoff.setHours(23, 0, 0, 0)
-    // Buscamos el viernes a las 23h más cercano en el pasado (o hoy si ya pasó las 23h)
-    while (cutoff.getDay() !== 5 || cutoff > now) {
-        cutoff.setDate(cutoff.getDate() - 1)
-    }
+    const now = getLimaNow()
+    // Los menús de días anteriores a hoy pasan a la pestaña de "Pasadas"
+    // Usamos Date.UTC con los componentes locales (ya ajustados a Lima) para coincidir con la DB
+    const todayStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
 
     const menus = await prisma.menu.findMany({
         where: {
             activo: true,
-            fecha: view === 'actuales' ? { gt: cutoff } : { lte: cutoff },
+            fecha: view === 'actuales' ? { gte: todayStart } : { lt: todayStart },
             ...(isGlobalAdmin ? {} : { residencias: { some: { residenciaId: residenciaId || -1 } } })
         },
         include: {

@@ -31,8 +31,8 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
       ? new Date(initialData.fechaFinal).toISOString().split('T')[0]
       : ''
   )
-  const [diaPago, setDiaPago] = useState(
-    initialData?.diaPago || (initialData?.fechaIngreso ? new Date(initialData.fechaIngreso).getDate() : new Date().getDate())
+  const [diaPago, setDiaPago] = useState<string | number>(
+    initialData?.diaPago || (initialData?.fechaIngreso ? new Date(initialData.fechaIngreso).getDate() : '')
   )
   const [duracion, setDuracion] = useState('')
 
@@ -87,8 +87,8 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
     }
   }, [fechaIngreso, fechaFinal])
 
-  const [montoMensualInput, setMontoMensualInput] = useState(initialData?.montoMensual || 0)
-  const [montoGarantiaInput, setMontoGarantiaInput] = useState(initialData?.montoGarantia || 0)
+  const [montoMensualInput, setMontoMensualInput] = useState<string | number>(initialData?.montoMensual ?? '')
+  const [montoGarantiaInput, setMontoGarantiaInput] = useState<string | number>(initialData?.montoGarantia ?? '')
   const [cuotasGarantiaInput, setCuotasGarantiaInput] = useState(
     initialData?.pagos?.filter((p: any) => 
       p.concepto.includes('Garantía') && 
@@ -96,7 +96,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
       (initialData.fechaIngreso ? new Date(p.fechaVencimiento) >= new Date(initialData.fechaIngreso) : true)
     ).length || 1
   )
-  const [garantiaNoReembolsableInput, setGarantiaNoReembolsableInput] = useState(initialData?.garantiaNoReembolsable || 0)
+  const [garantiaNoReembolsableInput, setGarantiaNoReembolsableInput] = useState<string | number>(initialData?.garantiaNoReembolsable ?? '')
   const [comentariosInput, setComentariosInput] = useState(initialData?.comentarios || '')
 
   // Filtrar habitaciones disponibles de la residencia seleccionada
@@ -108,6 +108,11 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
 
     try {
       const data = Object.fromEntries(formData.entries())
+
+      // Validación de campos obligatorios financieros
+      if (montoMensualInput === '' || montoGarantiaInput === '' || garantiaNoReembolsableInput === '' || diaPago === '' || diaPago === 0) {
+        throw new Error('Todos los campos financieros (Monto Mensual, Garantía, Garantía No Reembolsable) y el Día de Pago son obligatorios.')
+      }
 
       // Asegurar que todos los campos financieros del estado se incluyan explícitamente
       const finalData = {
@@ -386,7 +391,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
               if (!isNaN(val) && val >= 1 && val <= 31) {
                 setDiaPago(val)
               } else if (e.target.value === '') {
-                setDiaPago(0)
+                setDiaPago('')
               }
             }}
             required
@@ -420,7 +425,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
                 let val = e.target.value.replace(/[^0-9.]/g, '');
                 const parts = val.split('.');
                 if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
-                setMontoMensualInput(val === '' ? 0 : Number(val));
+                setMontoMensualInput(val === '' ? '' : Number(val));
               }}
               className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
               inputMode="decimal"
@@ -444,7 +449,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
                 let val = e.target.value.replace(/[^0-9.]/g, '');
                 const parts = val.split('.');
                 if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
-                setMontoGarantiaInput(val === '' ? 0 : Number(val));
+                setMontoGarantiaInput(val === '' ? '' : Number(val));
               }}
               className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
               inputMode="decimal"
@@ -481,7 +486,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
                 let val = e.target.value.replace(/[^0-9.]/g, '');
                 const parts = val.split('.');
                 if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
-                setGarantiaNoReembolsableInput(val === '' ? 0 : Number(val));
+                setGarantiaNoReembolsableInput(val === '' ? '' : Number(val));
               }}
               className="w-full pl-10 pr-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-black text-gray-700"
               inputMode="decimal"
