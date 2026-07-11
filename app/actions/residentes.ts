@@ -319,7 +319,7 @@ export async function createResidente(data: any) {
   } catch (error: any) {
     console.error('Error creating residente:', error)
     if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors.map(e => e.message).join(', ') }
+      return { success: false, error: error.issues.map(e => e.message).join(', ') }
     }
     return { success: false, error: error.message || 'Error al crear residente' }
   }
@@ -706,7 +706,7 @@ export async function updateResidente(id: number, data: any) {
     let userFriendlyError = 'Ocurrió un error inesperado al actualizar los datos del residente.'
     
     if (error instanceof z.ZodError) {
-      userFriendlyError = error.errors.map(e => e.message).join(', ')
+      userFriendlyError = error.issues.map(e => e.message).join(', ')
     } else if (error.message?.includes('capacity')) {
       userFriendlyError = 'La habitación seleccionada ya no tiene cupo disponible.'
     } else if (error.message?.includes('Unique constraint')) {
