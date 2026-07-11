@@ -8,7 +8,7 @@ const residenciaSchema = z.object({
   nombre: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
   direccion: z.string().min(5, 'La dirección debe ser más descriptiva'),
   capacidad: z.number().min(1, 'La capacidad debe ser al menos 1'),
-  descripcion: z.string().optional(),
+  descripcion: z.string().nullable().optional(),
   activa: z.boolean().default(true),
   numHabitaciones: z.number().min(0).optional(),
   numLavadoras: z.number().min(0).optional(),
@@ -22,7 +22,9 @@ export async function createResidencia(data: z.infer<typeof residenciaSchema>) {
     // Limpiar strings
     validated.nombre = validated.nombre.trim()
     validated.direccion = validated.direccion.trim()
-    if (validated.descripcion) validated.descripcion = validated.descripcion.trim()
+    if (typeof validated.descripcion === 'string') {
+      validated.descripcion = validated.descripcion.trim()
+    }
     
     const res = await prisma.$transaction(async (tx) => {
       const residencia = await tx.residencia.create({
@@ -74,7 +76,9 @@ export async function updateResidencia(id: number, data: Partial<z.infer<typeof 
     // Limpiar strings si existen
     if (validated.nombre) validated.nombre = validated.nombre.trim()
     if (validated.direccion) validated.direccion = validated.direccion.trim()
-    if (validated.descripcion) validated.descripcion = validated.descripcion.trim()
+    if (typeof validated.descripcion === 'string') {
+      validated.descripcion = validated.descripcion.trim()
+    }
 
     const res = await prisma.$transaction(async (tx) => {
       const residencia = await tx.residencia.update({
@@ -117,10 +121,27 @@ export async function updateResidencia(id: number, data: Partial<z.infer<typeof 
           })
 
           if (libres.length > 0) {
+            const libreIds = libres.map(h => h.id)
+            
+            // 1. Eliminar publicaciones asociadas
+            await tx.publicacionHabitacion.deleteMany({
+              where: { habitacionId: { in: libreIds } }
+            })
+            
+            // 2. Eliminar reservas asociadas
+            await tx.reserva.deleteMany({
+              where: { habitacionId: { in: libreIds } }
+            })
+            
+            // 3. Desvincular residentes (poner habitacionId en null)
+            await tx.residente.updateMany({
+              where: { habitacionId: { in: libreIds } },
+              data: { habitacionId: null }
+            })
+            
+            // 4. Eliminar las habitaciones
             await tx.habitacion.deleteMany({
-              where: {
-                id: { in: libres.map(h => h.id) }
-              }
+              where: { id: { in: libreIds } }
             })
           }
         }

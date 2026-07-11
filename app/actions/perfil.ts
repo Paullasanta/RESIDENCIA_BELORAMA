@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import bcrypt from 'bcryptjs'
+import { capitalizeName } from '@/lib/utils'
 
 export async function updateProfile(data: {
     nombre?: string,
@@ -23,9 +24,9 @@ export async function updateProfile(data: {
 
     try {
         const updateData: any = {
-            nombre: data.nombre,
-            apellidoPaterno: data.apellidoPaterno,
-            apellidoMaterno: data.apellidoMaterno,
+            nombre: data.nombre ? capitalizeName(data.nombre) : undefined,
+            apellidoPaterno: data.apellidoPaterno ? capitalizeName(data.apellidoPaterno) : undefined,
+            apellidoMaterno: data.apellidoMaterno ? capitalizeName(data.apellidoMaterno) : undefined,
             telefono: data.telefono,
             emergenciaNombre: data.emergenciaNombre,
             emergenciaTelefono: data.emergenciaTelefono,

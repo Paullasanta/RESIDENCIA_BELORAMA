@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createResidente, updateResidente, reactivateResidente } from '@/app/actions/residentes'
 import { Button } from '@/components/ui/button'
 import { Loader2, Save, X, Upload, Check, Eye, EyeOff } from 'lucide-react'
+import { capitalizeName } from '@/lib/utils'
 
 interface ResidenteFormProps {
   residencias: any[]
@@ -175,14 +176,13 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
                 name="dni"
                 value={dni}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
                   if (val.length <= 15) setDni(val);
                 }}
                 required
                 maxLength={15}
-                inputMode="numeric"
                 className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
-                placeholder="Ej. 74582104"
+                placeholder="DNI, Pasaporte, C.E."
               />
             </div>
 
@@ -191,7 +191,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
               <input
                 name="nombre"
                 value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
+                onChange={(e) => setNombre(capitalizeName(e.target.value))}
                 required
                 className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
                 placeholder="Ej. Juan"
@@ -203,7 +203,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
               <input
                 name="apellidoPaterno"
                 value={apellidoPaterno}
-                onChange={(e) => setApellidoPaterno(e.target.value)}
+                onChange={(e) => setApellidoPaterno(capitalizeName(e.target.value))}
                 required
                 className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
                 placeholder="Ej. Pérez"
@@ -215,7 +215,7 @@ export function ResidenteForm({ residencias, initialData }: ResidenteFormProps) 
               <input
                 name="apellidoMaterno"
                 value={apellidoMaterno}
-                onChange={(e) => setApellidoMaterno(e.target.value)}
+                onChange={(e) => setApellidoMaterno(capitalizeName(e.target.value))}
                 required
                 className="w-full px-5 py-4 rounded-2xl border border-gray-100 bg-gray-50/30 focus:bg-white focus:border-[#1D9E75] focus:ring-4 focus:ring-[#1D9E75]/5 outline-none transition-all font-bold text-gray-700 placeholder:text-gray-300"
                 placeholder="Ej. Gómez"

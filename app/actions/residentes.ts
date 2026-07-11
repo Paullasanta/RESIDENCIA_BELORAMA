@@ -6,13 +6,13 @@ import bcrypt from 'bcryptjs'
 import { auth } from '@/lib/auth'
 import { EstadoHabitacion, EstadoPago, EstadoProducto } from '@prisma/client'
 import { z } from 'zod'
-import { getLimaNow } from '@/lib/utils'
+import { getLimaNow, capitalizeName } from '@/lib/utils'
 
 const residenteSchema = z.object({
   nombre: z.string().min(2, 'El nombre es muy corto').trim(),
   apellidoPaterno: z.string().min(2, 'El apellido paterno es muy corto').trim(),
   apellidoMaterno: z.string().min(2, 'El apellido materno es muy corto').trim(),
-  dni: z.string().min(8, 'El DNI/ID debe tener al menos 8 caracteres').trim(),
+  dni: z.string().min(5, 'El DNI/ID/Pasaporte debe tener al menos 5 caracteres').trim(),
   email: z.string().email('Correo electrónico inválido').trim(),
   telefono: z.string().min(9, 'El teléfono es inválido').trim(),
   emergenciaNombre: z.string().trim().optional().or(z.literal('')),
@@ -91,9 +91,9 @@ export async function createResidente(data: any) {
   try {
     const validated = residenteSchema.parse(data)
     
-    const nombre = validated.nombre
-    const apellidoPaterno = validated.apellidoPaterno
-    const apellidoMaterno = validated.apellidoMaterno
+    const nombre = capitalizeName(validated.nombre)
+    const apellidoPaterno = capitalizeName(validated.apellidoPaterno)
+    const apellidoMaterno = capitalizeName(validated.apellidoMaterno)
     const dni = validated.dni
     const email = validated.email
     const password = await bcrypt.hash(dni, 10) // Contraseña por defecto es el DNI hasheado
@@ -318,6 +318,9 @@ export async function createResidente(data: any) {
     return { success: true, data: result }
   } catch (error: any) {
     console.error('Error creating residente:', error)
+    if (error instanceof z.ZodError) {
+      return { success: false, error: error.errors.map(e => e.message).join(', ') }
+    }
     return { success: false, error: error.message || 'Error al crear residente' }
   }
 }
@@ -327,9 +330,9 @@ export async function updateResidente(id: number, data: any) {
     const validated = residenteSchema.partial().parse(data)
     
     const dni = validated.dni
-    const nombre = validated.nombre
-    const apellidoPaterno = validated.apellidoPaterno
-    const apellidoMaterno = validated.apellidoMaterno
+    const nombre = validated.nombre ? capitalizeName(validated.nombre) : undefined
+    const apellidoPaterno = validated.apellidoPaterno ? capitalizeName(validated.apellidoPaterno) : undefined
+    const apellidoMaterno = validated.apellidoMaterno ? capitalizeName(validated.apellidoMaterno) : undefined
     const email = validated.email
     const password = validated.password
     const telefono = validated.telefono
@@ -702,7 +705,9 @@ export async function updateResidente(id: number, data: any) {
     // Proporcionar un mensaje más explicativo según el tipo de error
     let userFriendlyError = 'Ocurrió un error inesperado al actualizar los datos del residente.'
     
-    if (error.message?.includes('capacity')) {
+    if (error instanceof z.ZodError) {
+      userFriendlyError = error.errors.map(e => e.message).join(', ')
+    } else if (error.message?.includes('capacity')) {
       userFriendlyError = 'La habitación seleccionada ya no tiene cupo disponible.'
     } else if (error.message?.includes('Unique constraint')) {
       userFriendlyError = 'El DNI o correo electrónico ya están registrados con otro usuario.'

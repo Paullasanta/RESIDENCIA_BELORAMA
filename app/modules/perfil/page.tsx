@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect } from 'react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { updateProfile } from '@/app/actions/perfil'
 import { User, Mail, Phone, Lock, Save, AlertCircle, CheckCircle2, ShieldCheck, HeartPulse, Calendar } from 'lucide-react'
-import { getInitials } from '@/lib/utils'
+import { getInitials, capitalizeName } from '@/lib/utils'
 import { useSession } from 'next-auth/react'
 
 export default function PerfilPage() {
@@ -12,12 +12,20 @@ export default function PerfilPage() {
     const [isPending, startTransition] = useTransition()
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
     const [userData, setUserData] = useState<any>(null)
+    const [nombre, setNombre] = useState('')
+    const [apellidoPaterno, setApellidoPaterno] = useState('')
+    const [apellidoMaterno, setApellidoMaterno] = useState('')
 
     useEffect(() => {
         if (session?.user?.id) {
             fetch(`/api/user/${session.user.id}`)
                 .then(res => res.json())
-                .then(data => setUserData(data))
+                .then(data => {
+                    setUserData(data)
+                    setNombre(data.nombre || '')
+                    setApellidoPaterno(data.apellidoPaterno || '')
+                    setApellidoMaterno(data.apellidoMaterno || '')
+                })
         }
     }, [session])
 

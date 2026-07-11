@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { EstadoHabitacion } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { capitalizeName } from '@/lib/utils'
 
 export async function createReserva(data: any) {
   try {
@@ -52,9 +53,9 @@ export async function createReserva(data: any) {
       const reserva = await tx.reserva.create({
         data: {
           habitacionId: parseInt(habitacionId),
-          nombre: reservaData.nombre,
-          apellidoPaterno: reservaData.apellidoPaterno,
-          apellidoMaterno: reservaData.apellidoMaterno,
+          nombre: capitalizeName(reservaData.nombre),
+          apellidoPaterno: capitalizeName(reservaData.apellidoPaterno),
+          apellidoMaterno: capitalizeName(reservaData.apellidoMaterno),
           dni: reservaData.dni,
           email: reservaData.email,
           telefono: reservaData.telefono,

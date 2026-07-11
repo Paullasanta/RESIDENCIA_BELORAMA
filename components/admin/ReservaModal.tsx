@@ -4,12 +4,16 @@ import { useState } from 'react'
 import { X, Calendar, User, CreditCard, Mail, Phone, FileText } from 'lucide-react'
 import { createReserva } from '@/app/actions/reservas'
 import { useRouter } from 'next/navigation'
+import { capitalizeName } from '@/lib/utils'
 
 export function ReservaModal({ habitacion, onClose }: { habitacion: any, onClose: () => void }) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const router = useRouter()
 
+    const [nombre, setNombre] = useState('')
+    const [apellidoPaterno, setApellidoPaterno] = useState('')
+    const [apellidoMaterno, setApellidoMaterno] = useState('')
     const [dni, setDni] = useState('')
     const [montoMensual, setMontoMensual] = useState(habitacion.montoMensual?.toString() || '0')
     const [montoGarantia, setMontoGarantia] = useState(habitacion.montoGarantia?.toString() || '0')
@@ -33,6 +37,9 @@ export function ReservaModal({ habitacion, onClose }: { habitacion: any, onClose
         
         const res = await createReserva({
             ...data,
+            nombre,
+            apellidoPaterno,
+            apellidoMaterno,
             dni,
             montoMensual: Number(montoMensual),
             montoGarantia: Number(montoGarantia),
@@ -82,18 +89,36 @@ export function ReservaModal({ habitacion, onClose }: { habitacion: any, onClose
                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Nombre Completo</label>
                              <div className="relative">
                                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                                <input name="nombre" placeholder="Nombres" required className="w-full pl-12 pr-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" />
+                                <input 
+                                    name="nombre" 
+                                    placeholder="Nombres" 
+                                    value={nombre}
+                                    onChange={(e) => setNombre(capitalizeName(e.target.value))}
+                                    required 
+                                    className="w-full pl-12 pr-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" 
+                                />
                              </div>
                         </div>
 
                         <div className="space-y-2">
                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Apellido Paterno</label>
-                             <input name="apellidoPaterno" required className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" />
+                             <input 
+                                name="apellidoPaterno" 
+                                value={apellidoPaterno}
+                                onChange={(e) => setApellidoPaterno(capitalizeName(e.target.value))}
+                                required 
+                                className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" 
+                             />
                         </div>
 
                         <div className="space-y-2">
                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Apellido Materno</label>
-                             <input name="apellidoMaterno" className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" />
+                             <input 
+                                name="apellidoMaterno" 
+                                value={apellidoMaterno}
+                                onChange={(e) => setApellidoMaterno(capitalizeName(e.target.value))}
+                                className="w-full px-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" 
+                             />
                         </div>
 
                         <div className="space-y-2">
@@ -103,9 +128,8 @@ export function ReservaModal({ habitacion, onClose }: { habitacion: any, onClose
                                 <input 
                                     name="dni" 
                                     value={dni}
-                                    onChange={(e) => setDni(handleNumericInput(e.target.value, 'int').slice(0, 15))}
+                                    onChange={(e) => setDni(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 15))}
                                     required 
-                                    inputMode="numeric"
                                     maxLength={15}
                                     className="w-full pl-12 pr-5 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:border-[#1D9E75] outline-none font-bold" 
                                  />
