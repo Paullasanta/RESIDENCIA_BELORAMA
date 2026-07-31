@@ -114,7 +114,15 @@ export default async function DashboardPage() {
         where: { user: { email: email as string } },
         include: {
             habitacion: { include: { residencia: true } },
-            pagos: { take: 3, orderBy: { createdAt: 'desc' } },
+            pagos: {
+                where: {
+                    NOT: {
+                        concepto: { contains: 'Garantía No Reembolsable', mode: 'insensitive' }
+                    }
+                },
+                take: 3,
+                orderBy: { createdAt: 'desc' }
+            },
             turnos: { where: { estado: 'OCUPADO' }, include: { lavadora: true }, take: 2 }
         }
     })

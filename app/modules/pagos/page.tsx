@@ -147,7 +147,7 @@ export default async function PagosPage({ searchParams }: {
 
         // Transformamos al formato que la tabla espera
         residentesList = residentsWithPagos.map(res => {
-            const pagos = res.pagos
+            const pagos = res.pagos.filter(p => !p.concepto?.toLowerCase().includes('garantía no reembolsable'))
             const totalMonto = pagos.filter(p => p.estado !== 'RECHAZADO').reduce((sum, p) => sum + p.monto, 0)
             const totalPagado = pagos.filter(p => p.estado !== 'RECHAZADO').reduce((sum, p) => sum + p.montoPagado, 0)
             
@@ -202,7 +202,12 @@ export default async function PagosPage({ searchParams }: {
             where: { user: { email: session!.user.email as string } },
             include: {
                 pagos: {
-                    where: dateWhere,
+                    where: {
+                        ...dateWhere,
+                        NOT: {
+                            concepto: { contains: 'Garantía No Reembolsable', mode: 'insensitive' }
+                        }
+                    },
                     orderBy: { fechaVencimiento: 'asc' },
                 },
             },
@@ -232,18 +237,18 @@ export default async function PagosPage({ searchParams }: {
 
     const stats = isAdmin ? {
         t1: 'Total Recaudado',
-        v1: pagosRaw.filter(p => p.estado === 'PAGADO').reduce((s, p) => s + p.montoPagado, 0),
+        v1: pagosRaw.filter(p => p.estado === 'PAGADO' && !p.concepto?.toLowerCase().includes('garantía no reembolsable')).reduce((s, p) => s + p.montoPagado, 0),
         t2: 'Por Cobrar',
-        v2: pagosRaw.filter(p => ['PENDIENTE', 'VENCIDO', 'CRITICO'].includes(p.estado)).reduce((s, p) => s + (p.monto - (p.montoPagado || 0)), 0),
+        v2: pagosRaw.filter(p => ['PENDIENTE', 'VENCIDO', 'CRITICO'].includes(p.estado) && !p.concepto?.toLowerCase().includes('garantía no reembolsable')).reduce((s, p) => s + (p.monto - (p.montoPagado || 0)), 0),
         t3: 'Revisión Pendiente',
         v3: vouchersPendientes.length
     } : {
         t1: 'Total Pagado',
-        v1: pagosRaw.reduce((s, p) => s + p.montoPagado, 0),
+        v1: pagosRaw.filter(p => !p.concepto?.toLowerCase().includes('garantía no reembolsable')).reduce((s, p) => s + p.montoPagado, 0),
         t2: 'Saldo Pendiente',
-        v2: pagosRaw.filter(p => ['PENDIENTE', 'VENCIDO', 'CRITICO'].includes(p.estado)).reduce((s, p) => s + (p.monto - (p.montoPagado || 0)), 0),
+        v2: pagosRaw.filter(p => ['PENDIENTE', 'VENCIDO', 'CRITICO'].includes(p.estado) && !p.concepto?.toLowerCase().includes('garantía no reembolsable')).reduce((s, p) => s + (p.monto - (p.montoPagado || 0)), 0),
         t3: 'Próximo Vencimiento',
-        v3: pagosRaw.filter(p => ['PENDIENTE'].includes(p.estado)).sort((a,b) => new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime())[0]?.fechaVencimiento || '—'
+        v3: pagosRaw.filter(p => ['PENDIENTE'].includes(p.estado) && !p.concepto?.toLowerCase().includes('garantía no reembolsable')).sort((a,b) => new Date(a.fechaVencimiento).getTime() - new Date(b.fechaVencimiento).getTime())[0]?.fechaVencimiento || '—'
     }
 
     const todayString = new Date().toLocaleDateString('es-MX', { 

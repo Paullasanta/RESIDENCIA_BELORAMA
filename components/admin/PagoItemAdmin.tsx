@@ -17,7 +17,8 @@ export function PagoItemAdmin({ pago, isHistorical = false }: { pago: any; isHis
     const [loading, setLoading] = useState(false)
 
     const isSuperAdmin = session?.user.rol === 'SUPER_ADMIN'
-    const canPayManual = isSuperAdmin && pago.estado !== 'PAGADO'
+    const isNoReembolsable = pago.concepto?.toLowerCase().includes('garantía no reembolsable')
+    const canPayManual = isSuperAdmin && pago.estado !== 'PAGADO' && !isNoReembolsable
 
     const confirmAction = useConfirmStore(state => state.confirm)
 
@@ -81,6 +82,11 @@ export function PagoItemAdmin({ pago, isHistorical = false }: { pago: any; isHis
                             }`}
                         >
                             {pago.concepto}
+                            {isNoReembolsable && (
+                                <span className="ml-2 text-[9px] font-black text-[#EF9F27] bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100 uppercase tracking-wider">
+                                    Info Adicional
+                                </span>
+                            )}
                         </p>
                         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                             <span className={isHistorical ? 'text-gray-300' : 'text-[#1D9E75] font-black'}>
@@ -133,7 +139,13 @@ export function PagoItemAdmin({ pago, isHistorical = false }: { pago: any; isHis
                             {loading ? '...' : 'Pagar'}
                         </button>
                     )}
-                    <StatusBadge status={pago.estado as any} />
+                    {isNoReembolsable ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                            Adicional
+                        </span>
+                    ) : (
+                        <StatusBadge status={pago.estado as any} />
+                    )}
                 </div>
             </div>
 

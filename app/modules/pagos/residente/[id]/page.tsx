@@ -40,8 +40,8 @@ export default async function DetallePagosResidentePage({ params }: { params: Pr
     return fV < fI || p.estado === 'RECHAZADO'
   })
 
-  const totalPagado = pagosVigentes.filter(p => p.estado === 'PAGADO').reduce((acc, p) => acc + p.monto, 0)
-  const totalDeuda = pagosVigentes.filter(p => ['PENDIENTE', 'VENCIDO', 'CRITICO'].includes(p.estado)).reduce((acc, p) => acc + p.monto, 0)
+  const totalPagado = pagosVigentes.filter(p => p.estado === 'PAGADO' && !p.concepto?.toLowerCase().includes('garantía no reembolsable')).reduce((acc, p) => acc + p.monto, 0)
+  const totalDeuda = pagosVigentes.filter(p => ['PENDIENTE', 'VENCIDO', 'CRITICO'].includes(p.estado) && !p.concepto?.toLowerCase().includes('garantía no reembolsable')).reduce((acc, p) => acc + p.monto, 0)
 
   return (
     <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500 max-w-5xl mx-auto pb-20">

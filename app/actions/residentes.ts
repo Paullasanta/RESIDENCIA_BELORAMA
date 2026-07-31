@@ -753,6 +753,40 @@ export async function deleteResidente(id: number) {
         }
       })
 
+      // Subtract "Garantía No Reembolsable" from the paid guarantee if they have paid the guarantee.
+      const paidGarantias = await tx.pago.findMany({
+        where: {
+          residenteId: id,
+          concepto: { contains: 'Garantía', mode: 'insensitive' },
+          NOT: {
+            concepto: { contains: 'No Reembolsable', mode: 'insensitive' }
+          },
+          estado: 'PAGADO'
+        },
+        orderBy: { fechaVencimiento: 'desc' }
+      })
+
+      if (paidGarantias.length > 0 && res.garantiaNoReembolsable > 0) {
+        let amountToSubtract = res.garantiaNoReembolsable
+        for (const pg of paidGarantias) {
+          if (amountToSubtract <= 0) break
+          
+          const subtractFromThis = Math.min(pg.monto, amountToSubtract)
+          const newMonto = pg.monto - subtractFromThis
+          const newMontoPagado = pg.montoPagado - subtractFromThis
+          
+          await tx.pago.update({
+            where: { id: pg.id },
+            data: {
+              monto: newMonto,
+              montoPagado: newMontoPagado
+            }
+          })
+          
+          amountToSubtract -= subtractFromThis
+        }
+      }
+
       // 3. Liberar turnos de lavandería (dejamos el TurnoFijo para posible restauración)
       await tx.turnoLavanderia.updateMany({
         where: { residenteId: id },
@@ -770,6 +804,7 @@ export async function deleteResidente(id: number) {
     })
 
     revalidatePath('/modules/residentes')
+    revalidatePath('/modules/pagos')
     return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message }
